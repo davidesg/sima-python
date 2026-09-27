@@ -1,0 +1,38 @@
+name: Tests
+
+# The assistant's battery against the engine it declares (drvarma >= 0.2.0).
+# Until drvarma 0.2.0 is on PyPI, `DRVARMA_SPEC` points at its repository,
+# built with GSL so the compiled likelihood is there, as in the wheels.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DRVARMA_SPEC: "drvarma @ git+https://github.com/davidesg/drvarma-python@ladder"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: GSL, for drvarma's compiled engine
+        run: sudo apt-get update && sudo apt-get install -y libgsl-dev
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "$DRVARMA_SPEC" cffi
+          python -m pip install -e ".[dev]"
+      - name: The compiled engine is there (the ladder is ~250x slower without it)
+        run: python -c "import drvarma._drvarma_engine"
+      - name: Tests
+        run: python -m pytest -q
