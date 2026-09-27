@@ -55,3 +55,16 @@ def test_n5_the_yardstick(ext_json):
 def test_estimate_before_the_gate_is_refused(trio_json):
     M.load_pre("g", trio_json)
     assert "gate first" in M.estimate("g", 1, 0)
+
+
+def test_arriving_from_an_mtram_cycle():
+    """m6: the case whose network identification in mtram is CYCLIC
+    (EP -> EC -> EA -> EP). mtram hands over the same six .pre files; sima
+    loads them and certifies the univariate base."""
+    from conftest import DATA
+    import os
+    paths = [os.path.join(DATA, "m6", f"M6_{n}.pre") for n in ("EP", "EI", "EU", "EC", "EA", "P")]
+    assert "EA" in M.load_pre("m6", json.dumps(paths))
+    g = M.run_gate("m6")
+    assert "GATE: PASSED" in g
+    assert "trimmed sample" in g            # different operators, one window
