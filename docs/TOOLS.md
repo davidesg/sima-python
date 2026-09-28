@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**12 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**13 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -16,6 +16,7 @@
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
 | [`record_decision`](#record-decision) | Record a decision, WHY, on WHAT evidence, and what was set aside. |
+| [`reorder`](#reorder) | N6 — The impulse responses under ANOTHER Cholesky order, against the files'. |
 | [`run_gate`](#run-gate) | N1 — The diagonal gate: does the joint cast reproduce the univariate models? |
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
@@ -196,6 +197,28 @@ Record a decision, WHY, on WHAT evidence, and what was set aside.
     full: better in sample (LR p 0.01), worse out of sample". In the
     AUTONOMOUS lane this is where your reasoning is written down, with
     decided_by="LLM"; a decision without its reason is not documented.
+
+---
+
+## `reorder`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `order_json` | string | yes | — |
+| `horizon` | integer | no | `12` |
+
+N6 — The impulse responses under ANOTHER Cholesky order, against the files'.
+
+    The reduced-form model (Phi, Theta, Sigma) does not depend on the order of
+    the series; only the orthogonalisation does. So nothing is re-estimated:
+    the model is permuted, the responses recomputed, and put back in the
+    files' order to compare cell by cell. A response that changes sign or
+    size with the order is an assumption, not a finding. With a diagonal
+    covariance the order does not matter at all, and the tool says so.
+    `order_json`: the series names in the new order, e.g. '["WTI", "IPC_ES"]'.
 
 ---
 

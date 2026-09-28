@@ -110,7 +110,8 @@ writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
                       not sufficient. If none wins, the univariate models are
                       the result: a finding, stated plainly.
   N6 forecast, impulse_response, variance_decomposition — with the chosen
-                      model; state the Cholesky order as an assumption.
+                      model; state the Cholesky order as an assumption, and
+                      with correlated innovations compare it with reorder.
 
 NEVER DECIDE NODES IN BATCH. Choosing the candidates and the covariance before
 the CCF exists, or the model before evaluate, flattens the loop into one pass
@@ -503,6 +504,67 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
     s.guion.add("N6", "impulse_response", {"horizon": horizon, "bands": b is not None},
                 "Cholesky, files order")
     return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
+
+
+@mcp.tool()
+def reorder(name: str, order_json: str, horizon: int = 12) -> str:
+    """N6 — The impulse responses under ANOTHER Cholesky order, against the files'.
+
+    The reduced-form model (Phi, Theta, Sigma) does not depend on the order of
+    the series; only the orthogonalisation does. So nothing is re-estimated:
+    the model is permuted, the responses recomputed, and put back in the
+    files' order to compare cell by cell. A response that changes sign or
+    size with the order is an assumption, not a finding. With a diagonal
+    covariance the order does not matter at all, and the tool says so.
+    `order_json`: the series names in the new order, e.g. '["WTI", "IPC_ES"]'.
+    """
+    import numpy as np
+    from drvarma.irf import oirf
+    s = _sess.get(name)
+    try:
+        r = _current(s).result
+    except Exception as e:
+        return f"{e}"
+    names = _names(s)
+    try:
+        order = json.loads(order_json)
+        perm = [names.index(x) for x in order]
+    except Exception:
+        return f"order_json must be a JSON list of the series names: {names}"
+    if sorted(perm) != list(range(len(names))):
+        return f"order_json must name every series exactly once: {names}"
+    sig = np.asarray(r.sigma, float)
+    off = sig - np.diag(np.diag(sig))
+    if not np.any(np.abs(off) > 1e-12 * np.max(np.abs(np.diag(sig)))):
+        return ("The innovation covariance is diagonal: the Cholesky order does not "
+                "change the responses. Nothing to compare.")
+    H = int(horizon)
+    P = np.eye(len(names))[perm]
+    base = oirf(r.phi, r.theta, sig, H)
+    ph = np.array([P @ a @ P.T for a in r.phi]) if len(r.phi) else r.phi
+    th = np.array([P @ a @ P.T for a in r.theta]) if len(r.theta) else r.theta
+    alt = oirf(ph, th, P @ sig @ P.T, H)
+    alt = np.array([P.T @ alt[h] @ P for h in range(H + 1)])  # back to files order
+    d = np.sqrt(np.diag(sig))
+    corr = sig / np.outer(d, d)
+    out = [f"CHOLESKY ORDER: files {' -> '.join(names)}  vs  {' -> '.join(order)}",
+           "Same estimated model; only the orthogonalisation changes. Largest",
+           "innovation correlation: " + ", ".join(
+               f"{names[i]}-{names[j]} {corr[i, j]:+.3f}"
+               for i in range(len(names)) for j in range(i) ), ""]
+    for j, sj in enumerate(names):
+        out += [f"shock to {sj}:  (files order | new order)",
+                "  h  " + "".join(f"{x:>26}" for x in names)]
+        for h in range(H + 1):
+            out.append(f"  {h:<3}" + "".join(
+                f"{f'{base[h, i, j]:+.5f} | {alt[h, i, j]:+.5f}':>26}"
+                for i in range(len(names))))
+        dmax = float(np.max(np.abs(base[:, :, j] - alt[:, :, j])))
+        flips = int(np.sum(np.sign(base[1:, :, j]) * np.sign(alt[1:, :, j]) < 0))
+        out += [f"  largest change {dmax:.5f}; sign changes {flips}", ""]
+    s.guion.add("N6", "reorder", {"order": order, "horizon": H},
+                "Cholesky order compared")
+    return "\n".join(out)
 
 
 @mcp.tool()

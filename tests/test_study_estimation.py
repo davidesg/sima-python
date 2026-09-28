@@ -84,3 +84,18 @@ def test_irf_and_fevd_come_with_bands():
     assert "the row marked *" in fv and "12*" in fv
     plain = _fn(M.impulse_response)("b1", 4, bands=False)
     assert "Point estimates only" in plain
+
+
+def test_reorder_compares_the_cholesky_orders_without_reestimating():
+    pair = [os.path.join(os.path.dirname(__file__), "data", n)
+            for n in ("IPC_ES_m10.pre", "IPC_FR_msar.pre")]
+    _fn(M.load_pre)("r1", json.dumps(pair))
+    _fn(M.run_gate)("r1")
+    _fn(M.estimate)("r1", 1, 0, False)
+    txt = _fn(M.reorder)("r1", json.dumps(["IPC_FR", "IPC_ES"]), 4)
+    assert "CHOLESKY ORDER" in txt and "largest change" in txt
+    same = _fn(M.reorder)("r1", json.dumps(["IPC_ES", "IPC_FR"]), 4)
+    assert "largest change 0.00000" in same          # the files' own order
+    assert "must name every series" in _fn(M.reorder)("r1", '["IPC_ES", "IPC_ES"]')
+    _fn(M.estimate)("r1", 1, 0, True)
+    assert "diagonal" in _fn(M.reorder)("r1", json.dumps(["IPC_FR", "IPC_ES"]))

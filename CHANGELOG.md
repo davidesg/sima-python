@@ -2,6 +2,15 @@
 
 ## 0.1.0 — unreleased
 
+### `reorder`: the impulse responses under another Cholesky order
+
+- **Nothing is re-estimated.** The reduced form does not depend on the
+  order; only the orthogonalisation does.
+- **What it shows:** every response in the files' order and in the new one,
+  side by side, with the largest change and the sign changes per shock, and
+  the innovation correlations that make the order matter.
+- With a diagonal covariance it says the order changes nothing.
+
 ### IRF and FEVD with bands
 
 `impulse_response` and `variance_decomposition` show 95% Monte-Carlo bands by

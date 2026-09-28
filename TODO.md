@@ -39,7 +39,7 @@ missing, in order:
 - [ ] **Restricted cross terms**: estimate only the pairs the evidence points at
       (today p, q apply to every pair). Needs an engine option in
       `drvarma.ladder` (a mask on the cross coefficients).
-- [ ] **Reorder** tool: reload in another Cholesky order and compare IRFs.
+- [x] **Reorder** tool (2026-09-28): permutes the fitted model, no re-estimation.
 - [ ] **HTML guion** (as art's `export_guion_html`).
 - [ ] **Resources**: `sima://defects` from `bugs/` (with `fue.bugs`, no copy),
       `sima://protocol`.

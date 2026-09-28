@@ -5,7 +5,7 @@ from sima import mcp_server as M
 
 EXPECTED = {"load_pre", "run_gate", "identify_cross", "estimate", "evaluate",
             "forecast", "impulse_response", "variance_decomposition",
-            "record_decision", "export_guion", "split_inp", "study_estimation"}
+            "record_decision", "export_guion", "split_inp", "study_estimation", "reorder"}
 
 
 def _tools():
