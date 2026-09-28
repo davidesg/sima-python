@@ -6,7 +6,7 @@ missing, in order:
 
 ## Next
 
-- [ ] **Studying an ill-defined estimation** (decided 2026-09-28). When a fit
+- [x] **Studying an ill-defined estimation** (decided 2026-09-28; done the same day: `study_estimation`). When a fit
       stops on the MA invertibility wall, drvarma C 5.0 says so as a fact
       (`OPTIMIZER STOPPED at the MA invertibility boundary`,
       `MA boundary: k of n inverse roots at modulus >= 1`) and adds no

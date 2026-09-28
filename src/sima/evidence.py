@@ -174,7 +174,10 @@ def estimation_text(L, nlags):
     names = [s.name for s in L.series]
     out = [f"ESTIMATED: cross orders p = {L.p}, q = {L.q}, "
            f"{'diagonal' if L.diagcov else 'full'} innovation covariance",
-           f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations)",
+           f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations)"
+           + (f"\n  STOPPED AT THE MA INVERTIBILITY BOUNDARY: "
+              f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots at modulus >= 1"
+              if getattr(r, "ma_boundary", 0) else ""),
            f"  {'parameter':<34}{'estimate':>12}{'s.e.':>12}{'t':>9}"]
     for n, v, se in zip(r.names, r.x, r.std_errors):
         t = v / se if se > 0 else float("nan")
@@ -275,3 +278,68 @@ def fevd_text(phi, theta, sigma, names, horizon):
         for h in sorted({1, max(1, horizon // 4), max(1, horizon // 2), horizon}):
             out.append(f"  {h:<3}" + "".join(f"{F[h - 1, i, j]:>10.1f}" for j in range(len(names))))
     return "\n".join(out)
+
+
+# --------------------------------------------------------------------------- #
+#  Studying an ill-defined estimation (the MA wall)                            #
+# --------------------------------------------------------------------------- #
+
+def inverse_roots(poly):
+    """Inverse roots of Phi(B) = I - sum_k poly[k] B^k: the companion eigenvalues.
+
+    Same computation as the engine's chekma for the MA side (the wall is
+    modulus >= 1; the engine refuses beyond 1.00005).
+    """
+    poly = np.asarray(poly, float)
+    if poly.ndim != 3 or poly.shape[0] == 0 or not np.any(poly):
+        return np.zeros(0, complex)
+    k, m, _ = poly.shape
+    A = np.zeros((m * k, m * k))
+    for j in range(k):
+        A[:m, j * m:(j + 1) * m] = poly[j]
+    for j in range(k - 1):
+        A[(j + 1) * m:(j + 2) * m, j * m:(j + 1) * m] = np.eye(m)
+    return np.linalg.eigvals(A)
+
+
+def _root_row(z, freq):
+    ang = abs(np.angle(z))
+    period = (2 * math.pi / ang) if ang > 1e-9 else float("inf")
+    per = "real (frequency 0)" if period == float("inf") else (
+          "Nyquist (real, negative)" if abs(ang - math.pi) < 1e-6 else f"{period:6.2f} obs")
+    return f"{z.real:+9.4f} {z.imag:+9.4f}i   modulus {abs(z):8.5f}   period {per}"
+
+
+def roots_text(fit, freq, near=0.10):
+    """The AR and MA inverse roots of the joint model, and the pairs that nearly
+    cancel. Evidence, not a verdict: a near-common pair makes the likelihood a
+    ridge along the cancellation; whether to remove it is the analyst's call."""
+    ar = inverse_roots(fit.phi)
+    ma = inverse_roots(fit.theta)
+    out = [f"INVERSE ROOTS of the joint model (period in observations; freq {freq})",
+           "  AR:"]
+    out += [f"    {_root_row(z, freq)}" for z in sorted(ar, key=lambda z: -abs(z))] or ["    (none)"]
+    out += ["  MA:"]
+    out += [f"    {_root_row(z, freq)}" + ("   <- ON THE WALL" if abs(z) >= 1.0 else "")
+            for z in sorted(ma, key=lambda z: -abs(z))] or ["    (none)"]
+    pairs = []
+    for zm in ma:
+        if ar.size:
+            j = int(np.argmin(np.abs(ar - zm)))
+            d = abs(ar[j] - zm)
+            if d < near:
+                pairs.append((d, ar[j], zm))
+    out += ["", f"NEAR-COMMON AR/MA ROOTS (distance < {near}):"]
+    if pairs:
+        for d, za, zm in sorted(pairs, key=lambda t: t[0]):
+            out.append(f"  AR {za.real:+.4f}{za.imag:+.4f}i  ~  MA {zm.real:+.4f}{zm.imag:+.4f}i"
+                       f"   distance {d:.4f}   modulus AR {abs(za):.4f} / MA {abs(zm):.4f}")
+    else:
+        out.append("  none")
+    return "\n".join(out)
+
+
+def wall_frequencies(fit, freq, tol=1e-6):
+    """The frequencies (in cycles per observation) of the MA roots on the wall."""
+    ma = inverse_roots(fit.theta)
+    return sorted({round(abs(np.angle(z)) / (2 * math.pi), 6) for z in ma if abs(z) >= 1.0})

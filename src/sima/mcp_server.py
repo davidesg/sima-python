@@ -72,6 +72,11 @@ N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
 N3  estimate          a candidate: cross orders p, q; full or diagonal
                       covariance.
 N4  (in estimate)     LR against the univariates, residuals, convergence.
+N4b study_estimation  when estimate says the fit STOPPED ON THE MA
+                      INVERTIBILITY WALL: the estimation is ill-defined there.
+                      Show the roots, the second path (Shea) and the restarts,
+                      and give the menu. Never present a point on the wall as
+                      an optimum.
 N5  evaluate          THE YARDSTICK: fixed-parameter forecasts from every origin,
                       the candidate against the univariates, same window.
 N6  forecast, impulse_response, variance_decomposition — with the chosen model.
@@ -254,7 +259,100 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
     s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
-    return txt + "\n\nNext: evaluate — the candidate against the univariates."
+    nxt = "Next: evaluate — the candidate against the univariates."
+    if getattr(L.result, "ma_boundary", 0):
+        nxt = ("The fit stopped on the MA invertibility wall: study it before "
+               "reading its numbers (study_estimation).")
+    return txt + "\n\n" + nxt
+
+
+@mcp.tool()
+def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str:
+    """N4b — Study the current fit when the estimation may be ill-defined.
+
+    For a fit that stopped on the MA invertibility wall (estimate says so), or
+    any fit whose optimum you doubt. Evidence, then a menu; no verdict:
+
+    1. the AR and MA inverse roots of the joint model, and the pairs that nearly
+       cancel (a near-common factor makes the likelihood a ridge);
+    2. a SECOND PATH: the same model optimised with Shea's exact likelihood
+       (AS 242) instead of elf (AS 311) -- same function, independent code,
+       another path;
+    3. RESTARTS: from the stopping point, step back towards the start
+       (x = start + retreat * (stop - start)) and re-optimise; repeat while the
+       likelihood rises. If it keeps rising, the ridge climbs along the wall and
+       the reported point is not a maximum.
+    """
+    import copy
+    from drvarma.ladder import Ladder
+    s = _sess.get(name)
+    if s.current is None or s.current not in s.fits:
+        return "Estimate a model first (estimate)."
+    p, q, diagcov = s.current
+    L = s.fits[s.current]
+    r = L.result
+    freq = s.series[0].freq
+    out = [f"STUDY of the fit p = {p}, q = {q}, "
+           f"{'diagonal' if diagcov else 'full'} covariance",
+           f"  as estimated: logL {r.logL:.6f}, {r.nit} iterations, "
+           + (f"STOPPED ON THE MA WALL ({r.ma_boundary} of {r.ma_nroots} roots)"
+              if getattr(r, "ma_boundary", 0) else "not on the MA wall"), "",
+           evidence.roots_text(r, freq), ""]
+    # 2. the second path
+    try:
+        Ls = Ladder(list(s.files), p, q, diagcov=diagcov, lik="shea")
+        rs = Ls.fit()
+        out += ["SECOND PATH (Shea's likelihood, AS 242):",
+                f"  logL {rs.logL:.6f}  ({rs.nit} iterations; "
+                + (f"on the MA wall, {rs.ma_boundary} of {rs.ma_nroots} roots)"
+                   if rs.ma_boundary else "not on the MA wall)")
+                + f"   difference to the fit: {rs.logL - r.logL:+.6f}", ""]
+    except Exception as e:                                # pragma: no cover
+        out += [f"SECOND PATH failed: {e}", ""]
+    # 3. restarts
+    rows = []
+    if L.x_start is not None and 0.0 < retreat < 1.0:
+        Lr = copy.deepcopy(L)
+        x, best = r.x.copy(), r.logL
+        for k in range(1, int(restarts) + 1):
+            xk = L.x_start + retreat * (x - L.x_start)
+            try:
+                rk = Lr.refit(xk)
+            except Exception as e:                        # pragma: no cover
+                rows.append(f"  round {k}: failed ({e})")
+                break
+            rows.append(f"  round {k}: logL {rk.logL:.6f}  ({rk.nit} it.)  "
+                        + (f"on the wall ({rk.ma_boundary} of {rk.ma_nroots})"
+                           if rk.ma_boundary else "inside"))
+            if not rk.logL > best + 1e-6:
+                break
+            x, best = rk.x.copy(), rk.logL
+        out += [f"RESTARTS (retreat {retreat} towards the start, re-optimise):"] + rows
+        out += [f"  highest reached: logL {best:.6f}  ({best - r.logL:+.6f} over the fit)", ""]
+    out += ["MENU (the analyst decides):",
+            "  a) Remove the near-common factor, or lower p or q, and re-estimate:",
+            "     a model whose likelihood has an interior maximum.",
+            "  b) Keep the model knowing it sits on the invertibility boundary: its",
+            "     values are one point of a ridge, and they depend on the path.",
+            "  c) If the restarts or the second path climbed, the fit as estimated",
+            "     is not the top of the ridge; report the highest point as such,",
+            "     stating that it is on the wall."]
+    wall = evidence.wall_frequencies(r, freq)
+    seasonal = sorted({round(k / freq, 6) for k in range(1, freq // 2 + 1)}) if freq > 1 else []
+    if 0.0 in wall:
+        out += ["  d) An MA root ON THE WALL AT FREQUENCY 0 is the signature of",
+                "     over-differencing: the series may be differenced once too often.",
+                "     That is the univariate model's decision (art: its d), not this",
+                "     rung's. For: it removes the wall at its cause. Against: the",
+                "     univariate diagnosis chose that d for its own reasons."]
+    if any(f in seasonal for f in wall if f > 0):
+        out += ["  e) An MA root ON THE WALL AT A SEASONAL FREQUENCY suggests a seasonal",
+                "     over-difference (or a deterministic seasonality treated as",
+                "     stochastic): again the univariate model's decision (art)."]
+    s.guion.add("N4b", "study_estimation", {"p": p, "q": q, "diagcov": diagcov},
+                f"fit logL {r.logL:.4f}; boundary {getattr(r, 'ma_boundary', 0)}",
+                "")
+    return "\n".join(out)
 
 
 # --------------------------------------------------------------------------- #

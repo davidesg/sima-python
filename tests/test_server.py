@@ -5,7 +5,7 @@ from sima import mcp_server as M
 
 EXPECTED = {"load_pre", "run_gate", "identify_cross", "estimate", "evaluate",
             "forecast", "impulse_response", "variance_decomposition",
-            "record_decision", "export_guion", "split_inp"}
+            "record_decision", "export_guion", "split_inp", "study_estimation"}
 
 
 def _tools():
@@ -25,7 +25,7 @@ def test_the_docstrings_are_the_product():
 
 def test_the_instructions_carry_the_protocol_and_its_rules():
     ins = M._INSTRUCTIONS
-    for node in ("N0", "N1", "N2", "N3", "N4", "N5", "N6"):
+    for node in ("N0", "N1", "N2", "N3", "N4", "N4b", "N5", "N6"):
         assert node in ins
     assert "YARDSTICK" in ins                  # the univariate model
     assert "CYCLE" in ins and "mtram" in ins   # the hand-over

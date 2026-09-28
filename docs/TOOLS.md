@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**11 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**12 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -18,6 +18,7 @@
 | [`record_decision`](#record-decision) | Record a decision and its reason in the guion. |
 | [`run_gate`](#run-gate) | N1 — The diagonal gate: does the joint cast reproduce the univariate models? |
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
+| [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
 
 ---
@@ -226,6 +227,33 @@ Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series.
     asked, an estimated mean, seasonal harmonics, a free regular AR/MA). Take
     each one through art to build its univariate model, then come back with the
     .pre files: the univariate models are the seed and the yardstick.
+
+---
+
+## `study_estimation`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `restarts` | integer | no | `6` |
+| `retreat` | number | no | `0.97` |
+
+N4b — Study the current fit when the estimation may be ill-defined.
+
+    For a fit that stopped on the MA invertibility wall (estimate says so), or
+    any fit whose optimum you doubt. Evidence, then a menu; no verdict:
+
+    1. the AR and MA inverse roots of the joint model, and the pairs that nearly
+       cancel (a near-common factor makes the likelihood a ridge);
+    2. a SECOND PATH: the same model optimised with Shea's exact likelihood
+       (AS 242) instead of elf (AS 311) -- same function, independent code,
+       another path;
+    3. RESTARTS: from the stopping point, step back towards the start
+       (x = start + retreat * (stop - start)) and re-optimise; repeat while the
+       likelihood rises. If it keeps rising, the ridge climbs along the wall and
+       the reported point is not a maximum.
 
 ---
 

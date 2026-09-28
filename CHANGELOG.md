@@ -2,6 +2,29 @@
 
 ## 0.1.0 — unreleased
 
+### Studying an ill-defined estimation — `study_estimation` (N4b)
+
+- **When.** drvarma reports a fit that stops on the MA invertibility wall as
+  a fact (`Fit.ma_boundary`). `estimate` now says so and points to the new
+  tool.
+- **What the tool shows,** as evidence:
+  - the AR and MA inverse roots of the joint model, with modulus and
+    period;
+  - the pairs that nearly cancel;
+  - a **second path**: the same model optimised with Shea's exact
+    likelihood;
+  - **restarts**: from the stop, a step back towards the start, then
+    `Ladder.refit`, repeated while ℓ rises.
+- **The menu.** It ends with a menu and no verdict: remove the common
+  factor or lower p and q; keep the boundary model knowing it is one; report
+  the highest point reached. When the wall root is at frequency 0 or at a
+  seasonal frequency, it adds over-differencing as an option, since that is
+  the univariate model's decision (art).
+- **The motivating case** is drvarma C's bench case c2, where the ridge
+  climbs along the wall from ℓ 66.21 to 71.22.
+- **Needs drvarma's ladder branch:** `lik`, `refit`, `x_start` and
+  `ma_boundary`.
+
 The first version of sima as its own package. Until now sima lived inside
 drvarma (`drvarma.mcp_server`) and worked on raw series. From here:
 
