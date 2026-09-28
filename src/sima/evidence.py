@@ -176,7 +176,7 @@ def estimation_text(L, nlags):
            f"{'diagonal' if L.diagcov else 'full'} innovation covariance",
            f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations)"
            + (f"\n  STOPPED AT THE MA INVERTIBILITY BOUNDARY: "
-              f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots at modulus >= 1"
+              f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots within 5e-5 of the unit circle"
               if getattr(r, "ma_boundary", 0) else ""),
            f"  {'parameter':<34}{'estimate':>12}{'s.e.':>12}{'t':>9}"]
     for n, v, se in zip(r.names, r.x, r.std_errors):
@@ -307,11 +307,16 @@ def fevd_text(phi, theta, sigma, names, horizon, bands=None, why=None):
 #  Studying an ill-defined estimation (the MA wall)                            #
 # --------------------------------------------------------------------------- #
 
+# The MA invertibility wall, one tolerance for both sides, as the engines
+# (atsw-gui lib/lik/lik.h MA_WALL_TOL; drvarma.ladder.MA_WALL_TOL).
+MA_WALL_TOL = 5e-5
+
+
 def inverse_roots(poly):
     """Inverse roots of Phi(B) = I - sum_k poly[k] B^k: the companion eigenvalues.
 
     Same computation as the engine's chekma for the MA side (the wall is
-    modulus >= 1; the engine refuses beyond 1.00005).
+    modulus >= 1 - MA_WALL_TOL; the engine refuses beyond 1 + MA_WALL_TOL).
     """
     poly = np.asarray(poly, float)
     if poly.ndim != 3 or poly.shape[0] == 0 or not np.any(poly):
@@ -343,7 +348,7 @@ def roots_text(fit, freq, near=0.10):
            "  AR:"]
     out += [f"    {_root_row(z, freq)}" for z in sorted(ar, key=lambda z: -abs(z))] or ["    (none)"]
     out += ["  MA:"]
-    out += [f"    {_root_row(z, freq)}" + ("   <- ON THE WALL" if abs(z) >= 1.0 else "")
+    out += [f"    {_root_row(z, freq)}" + ("   <- ON THE WALL" if abs(z) >= 1.0 - MA_WALL_TOL else "")
             for z in sorted(ma, key=lambda z: -abs(z))] or ["    (none)"]
     pairs = []
     for zm in ma:
@@ -365,4 +370,4 @@ def roots_text(fit, freq, near=0.10):
 def wall_frequencies(fit, freq, tol=1e-6):
     """The frequencies (in cycles per observation) of the MA roots on the wall."""
     ma = inverse_roots(fit.theta)
-    return sorted({round(abs(np.angle(z)) / (2 * math.pi), 6) for z in ma if abs(z) >= 1.0})
+    return sorted({round(abs(np.angle(z)) / (2 * math.pi), 6) for z in ma if abs(z) >= 1.0 - MA_WALL_TOL})

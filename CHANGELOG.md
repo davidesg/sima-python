@@ -2,6 +2,11 @@
 
 ## 0.1.0 — unreleased
 
+### The MA wall: one tolerance for both sides
+
+- `roots_text` marks, and `wall_frequencies` lists, an MA root within 5e-5 of
+  the unit circle, as the engines now report it (drvarma `MA_WALL_TOL`).
+
 ### `reorder`: the impulse responses under another Cholesky order
 
 - **Nothing is re-estimated.** The reduced form does not depend on the

@@ -56,6 +56,8 @@ def test_roots_and_near_common_pairs():
 def test_wall_frequencies():
     fit = type("F", (), {"theta": np.array([[[1.00003, 0.0], [0.0, -0.3]]])})()
     assert evidence.wall_frequencies(fit, 4) == [0.0]
+    inside = type("F", (), {"theta": np.array([[[0.99999999, 0.0], [0.0, -0.3]]])})()
+    assert evidence.wall_frequencies(inside, 4) == [0.0]      # one tolerance, both sides
 
 
 def test_record_decision_keeps_reason_evidence_and_alternatives():
