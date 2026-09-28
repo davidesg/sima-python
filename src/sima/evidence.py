@@ -168,6 +168,12 @@ _TERM = {0: "not run (no free parameters, or the starting point failed)",
          4: "stopped: iteration limit", 5: "stopped: five maximal steps"}
 
 
+def _is_covariance(name):
+    """The ladder's names for the innovation covariance parameters:
+    `log(Q[b]/Q[a])` and `Q[b,a]` (drvarma.ladder)."""
+    return name.startswith("log(Q[") or name.startswith("Q[")
+
+
 def estimation_text(L, nlags):
     from drvarma.diagnostics import hosking_q
     r = L.result
@@ -179,10 +185,23 @@ def estimation_text(L, nlags):
               f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots within 5e-5 of the unit circle"
               if getattr(r, "ma_boundary", 0) else ""),
            f"  {'parameter':<34}{'estimate':>12}{'s.e.':>12}{'t':>9}"]
+    cov = []
     for n, v, se in zip(r.names, r.x, r.std_errors):
+        if _is_covariance(n):
+            cov.append((n, v))
+            continue
         t = v / se if se > 0 else float("nan")
         mark = "  *" if se > 0 and abs(t) > 1.96 else ""
         out.append(f"  {n:<34}{v:>12.6f}{se:>12.6f}{t:>9.2f}{mark}")
+    if cov:
+        # drvarma BUG-0008: the covariance of the innovations is concentrated
+        # out of the likelihood and parametrised free of scale (log ratios and
+        # a Cholesky-type factor), so a t-ratio on these numbers tests nothing
+        # anyone asked. They are reported, not tested; the correlations below
+        # are what to read.
+        out += ["", "  innovation covariance, parametrised (no inference: read the "
+                    "correlations below)"]
+        out += [f"  {n:<34}{v:>12.6f}" for n, v in cov]
     out += ["", f"exact log-likelihood {r.logL:.6f}  ({r.npar} parameters)"]
     if not (L.p == 0 and L.q == 0 and L.diagcov):
         lr, df, pv = L.lr_test()

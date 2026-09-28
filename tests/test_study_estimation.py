@@ -101,3 +101,17 @@ def test_reorder_compares_the_cholesky_orders_without_reestimating():
     assert "must name every series" in _fn(M.reorder)("r1", '["IPC_ES", "IPC_ES"]')
     _fn(M.estimate)("r1", 1, 0, True)
     assert "diagonal" in _fn(M.reorder)("r1", json.dumps(["IPC_FR", "IPC_ES"]))
+
+
+def test_the_covariance_parameters_carry_no_t_ratio():
+    """drvarma BUG-0008: the innovation covariance is concentrated out and
+    parametrised free of scale; its numbers are reported, not tested."""
+    _fn(M.load_pre)("cov", json.dumps(PAIR))
+    _fn(M.run_gate)("cov")
+    txt = _fn(M.estimate)("cov", 1, 0, False)          # full covariance
+    block = txt.split("innovation covariance, parametrised")[1].split("exact log-likelihood")[0]
+    rows = [l for l in block.splitlines()[1:] if l.strip()]
+    assert rows and all(l.strip().startswith(("log(Q[", "Q[")) for l in rows)
+    assert all("*" not in l and len(l.split()) == 2 for l in rows)
+    table = txt.split("innovation covariance, parametrised")[0]
+    assert "log(Q[" not in table and "Q[" not in table

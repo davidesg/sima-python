@@ -2,6 +2,13 @@
 
 ## 0.1.0 — unreleased
 
+### The covariance parameters carry no t-ratio (drvarma BUG-0008)
+
+- `estimate` lists the innovation covariance parameters (`log(Q[b]/Q[a])`,
+  `Q[b,a]`) apart, with no s.e., t or star: they are concentrated out and
+  parametrised free of scale, so a t on them tests nothing. The correlations
+  are what to read.
+
 ### The MA wall: one tolerance for both sides
 
 - `roots_text` marks, and `wall_frequencies` lists, an MA root within 5e-5 of
