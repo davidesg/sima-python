@@ -83,6 +83,52 @@ N6  forecast, impulse_response, variance_decomposition — with the chosen model
 Record every decision with its reason: export_guion shows the path.
 
 ══════════════════════════════════════════════════════
+THE AUTONOMOUS LANE — YOU ARE THE ANALYST
+══════════════════════════════════════════════════════
+You decide every node yourself: there is no human to confirm. That does NOT
+mean going fast. It means each decision is yours and has to be reasoned in
+writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
+
+  N0 load_pre         the files are given; note any series trimmed to the
+                      common window (it changes the sample of the others).
+  N1 run_gate         if it FAILS, stop and say why. If a file MOVED (it was a
+                      specification, not an optimum), decide whether to go on
+                      and write it down: its univariate model has not been
+                      validated here.
+  N2 identify_cross   read the CCFs of the diagonal system: which pairs, at
+                      which lags, and whether the innovations correlate
+                      (full or diagonal covariance). Choose the candidates to
+                      estimate FROM THIS EVIDENCE, not from a grid.
+  N3/N4 estimate      one candidate at a time. A tie (LR p near 0.05, or two
+                      candidates that read the same) is resolved by ESTIMATING
+                      BOTH and comparing, not by choosing on paper.
+  N4b study_estimation if a fit stops on the MA wall. Decide from its menu and
+                      write why; never report a point on the wall as an optimum.
+  N5 evaluate         every surviving candidate against the univariates, same
+                      window. The rule: a VARMA is kept only if it forecasts
+                      better OUT OF SAMPLE. In-sample significance is necessary,
+                      not sufficient. If none wins, the univariate models are
+                      the result: a finding, stated plainly.
+  N6 forecast, impulse_response, variance_decomposition — with the chosen
+                      model; state the Cholesky order as an assumption.
+
+NEVER DECIDE NODES IN BATCH. Choosing the candidates and the covariance before
+the CCF exists, or the model before evaluate, flattens the loop into one pass
+forward: the decision is taken before the evidence that could correct it.
+
+DOCUMENTATION — mandatory. After EVERY node:
+    record_decision(name, node="N…", decision=…, reason=<WHY>,
+                    evidence=<the numbers>, alternatives=<what you set aside
+                    and why>, decided_by="LLM")
+A branch you abandon is recorded too: what a failed candidate contributes is
+the reason it failed.
+
+WHAT YOU HAND OVER at the end: the guion (export_guion); the chosen model, or
+the univariate models if no VARMA beat them; the yardstick numbers (N5) that
+decided it; and the caveats that stay open (a fit on the MA wall, a moved
+file, the Cholesky order).
+
+══════════════════════════════════════════════════════
 RULES THAT ARE NOT NEGOTIATED
 ══════════════════════════════════════════════════════
 1. THE UNIVARIATE MODEL IS THE YARDSTICK. A VARMA that does not forecast better
@@ -467,17 +513,26 @@ def variance_decomposition(name: str, horizon: int = 12) -> str:
 # --------------------------------------------------------------------------- #
 
 @mcp.tool()
-def record_decision(name: str, node: str, decision: str) -> str:
-    """Record a decision and its reason in the guion.
+def record_decision(name: str, node: str, decision: str, reason: str = "",
+                    evidence: str = "", alternatives: str = "",
+                    decided_by: str = "analyst") -> str:
+    """Record a decision, WHY, on WHAT evidence, and what was set aside.
 
     Every node that opens a decision (which files, which candidate, keep the
-    VARMA or stay with the univariates, which Cholesky order) should leave one:
-    the decision, and the evidence it rests on. Example: node "N5", decision
-    "stay with the univariates: the VARMA gains in no cell at h >= 6". In the
-    autonomous lane this is where your reasoning is written down.
+    VARMA or stay with the univariates, what to do with a fit on the MA wall,
+    which Cholesky order) should leave one. Example: node "N5", decision "stay
+    with the univariates", reason "the VARMA gains in no cell at h >= 6",
+    evidence "RMSE ratio 1.02-1.11 over 36 origins", alternatives "VARMA(1,0)
+    full: better in sample (LR p 0.01), worse out of sample". In the
+    AUTONOMOUS lane this is where your reasoning is written down, with
+    decided_by="LLM"; a decision without its reason is not documented.
     """
     s = _sess.get(name)
-    e = s.guion.add(node, "record_decision", {}, "", decision)
+    args = {"decided_by": decided_by}
+    if alternatives:
+        args["alternatives"] = alternatives
+    e = s.guion.add(node, "record_decision", args, evidence,
+                    decision + (f" -- because {reason}" if reason else ""))
     return f"Recorded as step {e.n}."
 
 

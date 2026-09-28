@@ -2,6 +2,15 @@
 
 ## 0.1.0 — unreleased
 
+### The autonomous lane, in writing
+
+- **The instructions spell it out, as art's do:** the nodes one at a time,
+  what to decide at each, "never decide nodes in batch", and what to hand
+  over at the end.
+- **`record_decision` keeps the whole decision:** `reason`, `evidence`,
+  `alternatives` and `decided_by`. A decision without its reason is not
+  documented.
+
 ### Studying an ill-defined estimation — `study_estimation` (N4b)
 
 - **When.** drvarma reports a fit that stops on the MA invertibility wall as

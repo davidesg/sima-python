@@ -15,7 +15,7 @@
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
-| [`record_decision`](#record-decision) | Record a decision and its reason in the guion. |
+| [`record_decision`](#record-decision) | Record a decision, WHY, on WHAT evidence, and what was set aside. |
 | [`run_gate`](#run-gate) | N1 — The diagonal gate: does the joint cast reproduce the univariate models? |
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
@@ -176,14 +176,21 @@ N0 — Start a session from the univariate models: one fue file per series.
 | `name` | string | yes | — |
 | `node` | string | yes | — |
 | `decision` | string | yes | — |
+| `reason` | string | no | `` |
+| `evidence` | string | no | `` |
+| `alternatives` | string | no | `` |
+| `decided_by` | string | no | `analyst` |
 
-Record a decision and its reason in the guion.
+Record a decision, WHY, on WHAT evidence, and what was set aside.
 
     Every node that opens a decision (which files, which candidate, keep the
-    VARMA or stay with the univariates, which Cholesky order) should leave one:
-    the decision, and the evidence it rests on. Example: node "N5", decision
-    "stay with the univariates: the VARMA gains in no cell at h >= 6". In the
-    autonomous lane this is where your reasoning is written down.
+    VARMA or stay with the univariates, what to do with a fit on the MA wall,
+    which Cholesky order) should leave one. Example: node "N5", decision "stay
+    with the univariates", reason "the VARMA gains in no cell at h >= 6",
+    evidence "RMSE ratio 1.02-1.11 over 36 origins", alternatives "VARMA(1,0)
+    full: better in sample (LR p 0.01), worse out of sample". In the
+    AUTONOMOUS lane this is where your reasoning is written down, with
+    decided_by="LLM"; a decision without its reason is not documented.
 
 ---
 

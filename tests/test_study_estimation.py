@@ -56,3 +56,17 @@ def test_roots_and_near_common_pairs():
 def test_wall_frequencies():
     fit = type("F", (), {"theta": np.array([[[1.00003, 0.0], [0.0, -0.3]]])})()
     assert evidence.wall_frequencies(fit, 4) == [0.0]
+
+
+def test_record_decision_keeps_reason_evidence_and_alternatives():
+    _session("w3")
+    out = _fn(M.record_decision)("w3", "N5", "stay with the univariates",
+                                 reason="the VARMA gains in no cell",
+                                 evidence="RMSE ratio 1.02-1.11",
+                                 alternatives="VARMA(1,1) diag: on the MA wall",
+                                 decided_by="LLM")
+    assert out.startswith("Recorded")
+    g = _fn(M.export_guion)("w3", save=False)
+    for part in ("because the VARMA gains in no cell", "RMSE ratio 1.02-1.11",
+                 "LLM", "on the MA wall"):
+        assert part in g, part

@@ -32,3 +32,9 @@ def test_the_instructions_carry_the_protocol_and_its_rules():
     assert "NEVER RAW DATA" in ins             # no entry below the rung
     assert "Cholesky" in ins
     assert "GUIDED" in ins and "AUTONOMOUS" in ins
+    # the autonomous lane is written, as art's (BUG-0180 there: without it the
+    # autonomous lane collapsed into one call)
+    assert "THE AUTONOMOUS LANE" in ins
+    assert "NEVER DECIDE NODES IN BATCH" in ins
+    assert 'decided_by="LLM"' in ins
+    assert "WHAT YOU HAND OVER" in ins

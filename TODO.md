@@ -29,7 +29,7 @@ missing, in order:
         - a restart from a given point, which `estimate_w` does not accept
           today.
 
-- [ ] **Autonomous lane in writing** (as art's `CARRIL AUTÓNOMO`): the order of
+- [x] **Autonomous lane in writing** (2026-09-28) (as art's `CARRIL AUTÓNOMO`): the order of
       the nodes, what to decide at each, and the report handed over at the end.
 - [ ] **Figures**: residual CCF panels (the old sima's `_draw_ccf_panel` moves
       here, as presentation), forecast fans, IRFs.
