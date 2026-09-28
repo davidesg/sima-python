@@ -2,6 +2,13 @@
 
 ## 0.1.0 — unreleased
 
+### IRF and FEVD with bands
+
+`impulse_response` and `variance_decomposition` show 95% Monte-Carlo bands by
+default. The bands come from drvarma's `Ladder.irf_fevd_bands`, and each
+output says how many draws were rejected. A response whose band covers zero is
+not a finding. `bands=False` gives the point estimates only.
+
 ### The autonomous lane, in writing
 
 - **The instructions spell it out, as art's do:** the nodes one at a time,

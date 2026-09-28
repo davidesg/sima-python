@@ -136,12 +136,17 @@ N2 — What the univariate models do NOT carry: residual cross-correlations.
 |---|---|---|---|
 | `name` | string | yes | — |
 | `horizon` | integer | no | `12` |
+| `bands` | boolean | no | `True` |
+| `ndraws` | integer | no | `800` |
 
 N6 — Orthogonalised impulse responses of the last estimated model.
 
     Cholesky in the ORDER OF THE FILES: an identifying assumption, stated in the
     output. With a strong contemporaneous correlation, reload the files in
     another order and compare before reading a response as a finding.
+    With `bands` (default): 95% Monte-Carlo bands from the covariance of the
+    estimates, redrawing the whole model through the ladder's cast; a response
+    whose band covers zero is not a finding.
 
 ---
 
@@ -272,6 +277,8 @@ N4b — Study the current fit when the estimation may be ill-defined.
 |---|---|---|---|
 | `name` | string | yes | — |
 | `horizon` | integer | no | `12` |
+| `bands` | boolean | no | `True` |
+| `ndraws` | integer | no | `800` |
 
 N6 — Forecast-error variance decomposition of the last estimated model.
 
@@ -280,5 +287,6 @@ N6 — Forecast-error variance decomposition of the last estimated model.
     one series is really the other's surprise. Same Cholesky order as
     impulse_response, and the same caveat: with correlated innovations the
     shares of the first series in the order are inflated by construction.
+    With `bands` (default): 95% Monte-Carlo bands at the last horizon.
 
 ---

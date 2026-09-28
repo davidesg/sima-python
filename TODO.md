@@ -33,7 +33,7 @@ missing, in order:
       the nodes, what to decide at each, and the report handed over at the end.
 - [ ] **Figures**: residual CCF panels (the old sima's `_draw_ccf_panel` moves
       here, as presentation), forecast fans, IRFs.
-- [ ] **IRF/FEVD bands** for the ladder model. drvarma's `irf_fevd_bands` still
+- [x] **IRF/FEVD bands** for the ladder model (2026-09-28, `Ladder.irf_fevd_bands`). drvarma's `irf_fevd_bands` still
       needs the result of the multivariate-`.inp` path; the ladder needs its own
       (Monte Carlo on the ladder parameters, or the delta method).
 - [ ] **Restricted cross terms**: estimate only the pairs the evidence points at

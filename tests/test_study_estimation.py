@@ -70,3 +70,17 @@ def test_record_decision_keeps_reason_evidence_and_alternatives():
     for part in ("because the VARMA gains in no cell", "RMSE ratio 1.02-1.11",
                  "LLM", "on the MA wall"):
         assert part in g, part
+
+
+def test_irf_and_fevd_come_with_bands():
+    pair = [os.path.join(os.path.dirname(__file__), "data", n)
+            for n in ("IPC_ES_m10.pre", "IPC_FR_msar.pre")]
+    _fn(M.load_pre)("b1", json.dumps(pair))
+    _fn(M.run_gate)("b1")
+    _fn(M.estimate)("b1", 1, 0, False)
+    irf = _fn(M.impulse_response)("b1", 4, ndraws=200)
+    assert "95% Monte-Carlo bands" in irf and "[" in irf.split("shock to")[1]
+    fv = _fn(M.variance_decomposition)("b1", 12, ndraws=200)
+    assert "the row marked *" in fv and "12*" in fv
+    plain = _fn(M.impulse_response)("b1", 4, bands=False)
+    assert "Point estimates only" in plain

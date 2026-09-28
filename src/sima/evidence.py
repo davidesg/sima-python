@@ -253,7 +253,16 @@ def forecast_text(fcs):
     return "\n".join(out)
 
 
-def irf_text(phi, theta, sigma, names, horizon):
+def _band_note(bands, why=None):
+    if bands is None:
+        return [f"No bands: {why}." if why else "Point estimates only (bands=False)."]
+    a = bands["alpha"]
+    return [f"{100 * (1 - a):.0f}% Monte-Carlo bands [lo, hi]: {bands['ndraws_used']} draws "
+            f"from N(estimate, covariance), {bands['ndraws_rejected']} rejected as "
+            "non-stationary / non-invertible (a large share says the fit sits near a boundary)."]
+
+
+def irf_text(phi, theta, sigma, names, horizon, bands=None, why=None):
     from drvarma.irf import oirf
     O = oirf(phi, theta, sigma, horizon)
     out = ["IMPULSE RESPONSES (orthogonalised, Cholesky in the ORDER OF THE FILES:",
@@ -261,22 +270,36 @@ def irf_text(phi, theta, sigma, names, horizon):
            "series is not moved within the period by the others' innovations. With a",
            "strong contemporaneous correlation the answer depends on it; reorder the",
            "files and compare before reading a response as a finding.",
-           "Responses on the stationary (transformed, differenced) scale."]
+           "Responses on the stationary (transformed, differenced) scale."] + _band_note(bands, why)
+    w = 30 if bands is not None else 12
     for j, sj in enumerate(names):
-        out += ["", f"shock to {sj}:", "  h  " + "".join(f"{s:>12}" for s in names)]
+        out += ["", f"shock to {sj}:", "  h  " + "".join(f"{s:>{w}}" for s in names)]
         for h in range(horizon + 1):
-            out.append(f"  {h:<3}" + "".join(f"{O[h, i, j]:>12.5f}" for i in range(len(names))))
+            if bands is None:
+                cells = [f"{O[h, i, j]:>12.5f}" for i in range(len(names))]
+            else:
+                lo, hi = bands["oirf_lo"][h, :, j], bands["oirf_hi"][h, :, j]
+                cells = [f"{f'{O[h, i, j]:.5f} [{lo[i]:.5f}, {hi[i]:.5f}]':>{w}}"
+                         for i in range(len(names))]
+            out.append(f"  {h:<3}" + "".join(cells))
     return "\n".join(out)
 
 
-def fevd_text(phi, theta, sigma, names, horizon):
+def fevd_text(phi, theta, sigma, names, horizon, bands=None, why=None):
     from drvarma.irf import fevd
     F = fevd(phi, theta, sigma, horizon)
     out = ["FORECAST-ERROR VARIANCE DECOMPOSITION (%, same Cholesky order as the IRF)"]
+    out += _band_note(bands, why)
+    if bands is not None:
+        out += [f"The bands are for the last horizon (h = {horizon}), the row marked *."]
     for i, si in enumerate(names):
         out += ["", f"{si}:", "  h  " + "".join(f"{s:>10}" for s in names)]
         for h in sorted({1, max(1, horizon // 4), max(1, horizon // 2), horizon}):
             out.append(f"  {h:<3}" + "".join(f"{F[h - 1, i, j]:>10.1f}" for j in range(len(names))))
+        if bands is not None:
+            lo, hi = bands["fevd_lo"][i], bands["fevd_hi"][i]
+            out.append(f"  {str(horizon) + '*':<3}" + "".join(
+                f"{f'[{lo[j]:.1f}, {hi[j]:.1f}]':>14}" for j in range(len(names))))
     return "\n".join(out)
 
 

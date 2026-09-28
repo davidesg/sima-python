@@ -158,6 +158,16 @@ def _ladder(files, p, q, diagcov, estwin=None):
     return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin)
 
 
+def _bands(s, horizon, want, ndraws):
+    """(bands, None) or (None, why): the ladder's Monte-Carlo IRF/FEVD bands."""
+    if not want:
+        return None, None
+    try:
+        return _current(s).irf_fevd_bands(horizon, ndraws=int(ndraws)), None
+    except Exception as e:                                   # noqa: BLE001
+        return None, str(e)
+
+
 def _names(s):
     return [x.name for x in s.series]
 
@@ -473,24 +483,31 @@ def forecast(name: str, horizon: int = 12) -> str:
 
 
 @mcp.tool()
-def impulse_response(name: str, horizon: int = 12) -> str:
+def impulse_response(name: str, horizon: int = 12, bands: bool = True,
+                     ndraws: int = 800) -> str:
     """N6 — Orthogonalised impulse responses of the last estimated model.
 
     Cholesky in the ORDER OF THE FILES: an identifying assumption, stated in the
     output. With a strong contemporaneous correlation, reload the files in
     another order and compare before reading a response as a finding.
+    With `bands` (default): 95% Monte-Carlo bands from the covariance of the
+    estimates, redrawing the whole model through the ladder's cast; a response
+    whose band covers zero is not a finding.
     """
     s = _sess.get(name)
     try:
         r = _current(s).result
     except Exception as e:
         return f"{e}"
-    s.guion.add("N6", "impulse_response", {"horizon": horizon}, "Cholesky, files order")
-    return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon))
+    b, why = _bands(s, int(horizon), bands, ndraws)
+    s.guion.add("N6", "impulse_response", {"horizon": horizon, "bands": b is not None},
+                "Cholesky, files order")
+    return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
 
 
 @mcp.tool()
-def variance_decomposition(name: str, horizon: int = 12) -> str:
+def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
+                           ndraws: int = 800) -> str:
     """N6 — Forecast-error variance decomposition of the last estimated model.
 
     For each series and horizon, the share of its forecast-error variance that
@@ -498,14 +515,17 @@ def variance_decomposition(name: str, horizon: int = 12) -> str:
     one series is really the other's surprise. Same Cholesky order as
     impulse_response, and the same caveat: with correlated innovations the
     shares of the first series in the order are inflated by construction.
+    With `bands` (default): 95% Monte-Carlo bands at the last horizon.
     """
     s = _sess.get(name)
     try:
         r = _current(s).result
     except Exception as e:
         return f"{e}"
-    s.guion.add("N6", "variance_decomposition", {"horizon": horizon}, "Cholesky, files order")
-    return evidence.fevd_text(r.phi, r.theta, r.sigma, _names(s), int(horizon))
+    b, why = _bands(s, int(horizon), bands, ndraws)
+    s.guion.add("N6", "variance_decomposition", {"horizon": horizon, "bands": b is not None},
+                "Cholesky, files order")
+    return evidence.fevd_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
 
 
 # --------------------------------------------------------------------------- #
