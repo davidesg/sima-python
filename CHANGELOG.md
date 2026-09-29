@@ -2,6 +2,16 @@
 
 ## 0.1.0 — unreleased
 
+### Restricted cross terms: `links`
+
+- `identify_cross` lists the directed pairs that showed a lead at a short lag
+  and offers them as option (d), with the exact `links` string. On m6: 5 of 30
+  pairs.
+- `estimate` and `evaluate` take `links` ("A<-B, C<-A": B enters the equation
+  of A); the report lists them and the LR counts only them. The session keys a
+  fit by (p, q, diagcov, links). Engine: drvarma's `Ladder(links=)`, the same
+  as the C's `-links`.
+
 ### The covariance parameters carry no t-ratio (drvarma BUG-0008)
 
 - `estimate` lists the innovation covariance parameters (`log(Q[b]/Q[a])`,

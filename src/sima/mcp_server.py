@@ -70,7 +70,8 @@ N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       what the univariate models do NOT carry. It proposes
                       cross orders and whether the innovations correlate.
 N3  estimate          a candidate: cross orders p, q; full or diagonal
-                      covariance.
+                      covariance; optionally `links`, the cross dynamics only
+                      on the pairs identify_cross found (its option (d)).
 N4  (in estimate)     LR against the univariates, residuals, convergence.
 N4b study_estimation  when estimate says the fit STOPPED ON THE MA
                       INVERTIBILITY WALL: the estimation is ill-defined there.
@@ -98,7 +99,9 @@ writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
   N2 identify_cross   read the CCFs of the diagonal system: which pairs, at
                       which lags, and whether the innovations correlate
                       (full or diagonal covariance). Choose the candidates to
-                      estimate FROM THIS EVIDENCE, not from a grid.
+                      estimate FROM THIS EVIDENCE, not from a grid. When only
+                      some pairs showed anything, the restricted candidate
+                      (`links`) is one of them, and the full one tests it.
   N3/N4 estimate      one candidate at a time. A tie (LR p near 0.05, or two
                       candidates that read the same) is resolved by ESTIMATING
                       BOTH and comparing, not by choosing on paper.
@@ -154,9 +157,17 @@ mcp = FastMCP("sima — simultaneous VARMA on the ATSW ladder (drvarma)",
               instructions=_INSTRUCTIONS)
 
 
-def _ladder(files, p, q, diagcov, estwin=None):
+def _ladder(files, p, q, diagcov, estwin=None, links=None):
     from drvarma.ladder import Ladder
-    return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin)
+    return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
+                  links=links or None)
+
+
+def _links(links):
+    """The canonical text of `links`: "" for every pair (no restriction)."""
+    if not links or not links.strip():
+        return ""
+    return ", ".join(t.strip() for t in links.split(",") if t.strip())
 
 
 def _bands(s, horizon, want, ndraws):
@@ -288,7 +299,7 @@ def identify_cross(name: str, nlags: int = 0) -> str:
 
 @mcp.tool()
 def estimate(name: str, p: int, q: int, diagcov: bool = False,
-             reason: str = "") -> str:
+             reason: str = "", links: str = "") -> str:
     """N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
     Each series keeps its univariate model on the diagonal (its ARMA factors are
@@ -297,16 +308,22 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     not sufficient), the innovation correlations, the residual portmanteau and
     how the optimiser stopped. `reason` is recorded in the guion: say why this
     candidate.
+
+    `links` restricts the cross dynamics to the pairs the evidence points at:
+    "A<-B, C<-A" (B enters the equation of A, AR and MA, every lag up to p and
+    q; names as in identify_cross). Empty (default): every pair. identify_cross
+    proposes it as option (d) when only some pairs showed anything.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
-    key = (int(p), int(q), bool(diagcov))
+    lk = _links(links)
+    key = (int(p), int(q), bool(diagcov), lk)
     try:
-        L = _ladder(s.files, *key)
+        L = _ladder(s.files, int(p), int(q), bool(diagcov), links=lk)
         L.fit()
     except Exception as e:
-        s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov},
+        s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk},
                     f"failed: {e}", reason)
         return f"Estimation failed: {e}"
     s.fits[key] = L
@@ -314,7 +331,7 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     freq = s.series[0].freq
     txt = evidence.estimation_text(L, max(8, 2 * freq))
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
-    s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov},
+    s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
     nxt = "Next: evaluate — the candidate against the univariates."
     if getattr(L.result, "ma_boundary", 0):
@@ -345,19 +362,19 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
     s = _sess.get(name)
     if s.current is None or s.current not in s.fits:
         return "Estimate a model first (estimate)."
-    p, q, diagcov = s.current
+    p, q, diagcov, lk = s.current
     L = s.fits[s.current]
     r = L.result
     freq = s.series[0].freq
     out = [f"STUDY of the fit p = {p}, q = {q}, "
-           f"{'diagonal' if diagcov else 'full'} covariance",
+           f"{'diagonal' if diagcov else 'full'} covariance" + (f", links {lk}" if lk else ""),
            f"  as estimated: logL {r.logL:.6f}, {r.nit} iterations, "
            + (f"STOPPED ON THE MA WALL ({r.ma_boundary} of {r.ma_nroots} roots)"
               if getattr(r, "ma_boundary", 0) else "not on the MA wall"), "",
            evidence.roots_text(r, freq), ""]
     # 2. the second path
     try:
-        Ls = Ladder(list(s.files), p, q, diagcov=diagcov, lik="shea")
+        Ls = Ladder(list(s.files), p, q, diagcov=diagcov, lik="shea", links=lk or None)
         rs = Ls.fit()
         out += ["SECOND PATH (Shea's likelihood, AS 242):",
                 f"  logL {rs.logL:.6f}  ({rs.nit} iterations; "
@@ -418,7 +435,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
 
 @mcp.tool()
 def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
-             diagcov: bool = False) -> str:
+             diagcov: bool = False, links: str = "") -> str:
     """N5 — The yardstick: does the candidate forecast better than the univariates?
 
     Estimates the candidate AND the diagonal system (the univariate models) on
@@ -428,14 +445,16 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     gain here has no reason to exist, whatever its in-sample significance.
 
     `estwin` counts observations of the FIRST series; leave enough data after it
-    (at least a few dozen origins) or the comparison says little.
+    (at least a few dozen origins) or the comparison says little. `links`: as in
+    estimate, the same restricted candidate.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
     H = int(horizon)
     try:
-        Lc = _ladder(s.files, p, q, diagcov, estwin=estwin)
+        lk = _links(links)
+        Lc = _ladder(s.files, p, q, diagcov, estwin=estwin, links=lk)
         Lc.fit()
         _rows, cand = Lc.recursive(H)
         Ld = _ladder(s.files, 0, 0, True, estwin=estwin)
@@ -445,10 +464,11 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
         return f"The evaluation failed: {e}"
     freq = s.series[0].freq
     hs = sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H]
-    label = f"VARMA p={p} q={q} ({'diagonal' if diagcov else 'full'} cov)"
+    label = (f"VARMA p={p} q={q} ({'diagonal' if diagcov else 'full'} cov)"
+             + (f", links {lk}" if lk else ""))
     txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s))
-    s.evaluations[(p, q, diagcov, estwin, H)] = (cand, diag)
-    s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov,
+    s.evaluations[(p, q, diagcov, lk, estwin, H)] = (cand, diag)
+    s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "estwin": estwin, "horizon": H},
                 f"lower RMSE in {facts['wins']} of {facts['cells']} cells")
     return txt

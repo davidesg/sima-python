@@ -35,6 +35,7 @@
 | `q` | integer | yes | — |
 | `diagcov` | boolean | no | `False` |
 | `reason` | string | no | `` |
+| `links` | string | no | `` |
 
 N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
@@ -44,6 +45,11 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     not sufficient), the innovation correlations, the residual portmanteau and
     how the optimiser stopped. `reason` is recorded in the guion: say why this
     candidate.
+
+    `links` restricts the cross dynamics to the pairs the evidence points at:
+    "A<-B, C<-A" (B enters the equation of A, AR and MA, every lag up to p and
+    q; names as in identify_cross). Empty (default): every pair. identify_cross
+    proposes it as option (d) when only some pairs showed anything.
 
 ---
 
@@ -59,6 +65,7 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 | `estwin` | integer | yes | — |
 | `horizon` | integer | no | `12` |
 | `diagcov` | boolean | no | `False` |
+| `links` | string | no | `` |
 
 N5 — The yardstick: does the candidate forecast better than the univariates?
 
@@ -69,7 +76,8 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     gain here has no reason to exist, whatever its in-sample significance.
 
     `estwin` counts observations of the FIRST series; leave enough data after it
-    (at least a few dozen origins) or the comparison says little.
+    (at least a few dozen origins) or the comparison says little. `links`: as in
+    estimate, the same restricted candidate.
 
 ---
 

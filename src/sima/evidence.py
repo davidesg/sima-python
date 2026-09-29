@@ -90,7 +90,7 @@ def cross_identification(res, names, nlags, freq):
     res = np.asarray(res, float)
     n, m = res.shape
     band = 2.0 / math.sqrt(n)
-    lags_found, contemp = [], []
+    lags_found, contemp, directed = [], [], []
     out = ["CROSS IDENTIFICATION — residual CCFs of the diagonal system",
            f"n = {n}, band 2/sqrt(n) = {band:.3f}. At lag k > 0 in the pair (A, B),",
            "B leads A by k periods; at k < 0, A leads B; k = 0 is contemporaneous.",
@@ -112,6 +112,11 @@ def cross_identification(res, names, nlags, freq):
                                 f" {rho[k + nlags]:+.3f})" for k in leads)
                 out.append(f"      significant lags: {txt}")
                 lags_found += [abs(k) for k in leads]
+                for k in leads:
+                    if abs(k) <= 3:                       # SHORT, below
+                        link = f"{A}<-{B}" if k > 0 else f"{B}<-{A}"
+                        if link not in directed:
+                            directed.append(link)
             if abs(r0) > band:
                 contemp.append((A, B, r0))
     SHORT = 3
@@ -141,6 +146,14 @@ def cross_identification(res, names, nlags, freq):
                     "      whether or not that pair showed anything;",
                     "  (c) p = 1, q = 1 — for: a decaying cross pattern is cheaper as MA",
                     "      than as several AR lags; against: harder to identify."]
+            if directed and len(directed) < m * (m - 1):
+                out += [f"  (d) the same orders on the pairs that showed something only:",
+                        f"      links = \"{', '.join(directed)}\" — for: "
+                        f"{len(directed)} of {m * (m - 1)} pairs, so",
+                        "      fewer parameters, each one argued by a bar; against: a pair",
+                        "      whose link sits under the band is excluded by construction.",
+                        "      Estimating (b) as well tells them apart: the LR of the full",
+                        "      model against this one is the test of the pairs left out."]
         if longer:
             out += [f"  Isolated correlations at longer lags {longer}: with this many lags",
                     "  some are chance, and a VAR does not reach them without many lags.",
@@ -153,6 +166,7 @@ def cross_identification(res, names, nlags, freq):
         out += ["  In every case the decision is tested at N5: a VARMA that does not",
                 "  beat the univariates out of sample has no reason to exist."]
     facts = {"maxlag": maxlag, "longer": longer, "contemporaneous": len(contemp) > 0,
+             "links": directed,
              "any": bool(lags_found or contemp), "band": band}
     return "\n".join(out), facts
 
@@ -178,8 +192,13 @@ def estimation_text(L, nlags):
     from drvarma.diagnostics import hosking_q
     r = L.result
     names = [s.name for s in L.series]
+    links = getattr(L, "links", None)
     out = [f"ESTIMATED: cross orders p = {L.p}, q = {L.q}, "
            f"{'diagonal' if L.diagcov else 'full'} innovation covariance",
+           *([f"cross links: " + ", ".join(
+               f"{names[i]}<-{names[j]}" for i in range(len(names))
+               for j in range(len(names)) if i != j and links[i, j])
+              + " (the other pairs carry no cross dynamics)"] if links is not None else []),
            f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations)"
            + (f"\n  STOPPED AT THE MA INVERTIBILITY BOUNDARY: "
               f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots within 5e-5 of the unit circle"

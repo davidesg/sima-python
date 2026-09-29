@@ -36,9 +36,9 @@ missing, in order:
 - [x] **IRF/FEVD bands** for the ladder model (2026-09-28, `Ladder.irf_fevd_bands`). drvarma's `irf_fevd_bands` still
       needs the result of the multivariate-`.inp` path; the ladder needs its own
       (Monte Carlo on the ladder parameters, or the delta method).
-- [ ] **Restricted cross terms**: estimate only the pairs the evidence points at
-      (today p, q apply to every pair). Needs an engine option in
-      `drvarma.ladder` (a mask on the cross coefficients).
+- [x] **Restricted cross terms** (2026-09-29): `identify_cross` proposes the
+      directed pairs with short leads as option (d); `estimate`/`evaluate`
+      take `links`. Engine: `Ladder(links=)`, and drvarma C's `-links`.
 - [x] **Reorder** tool (2026-09-28): permutes the fitted model, no re-estimation.
 - [ ] **HTML guion** (as art's `export_guion_html`).
 - [ ] **Resources**: `sima://defects` from `bugs/` (with `fue.bugs`, no copy),

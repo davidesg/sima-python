@@ -14,7 +14,7 @@ class Session:
     guion: Guion
     gate: dict = None                  # the result of the diagonal gate
     diagonal: object = None            # Ladder fitted with p = q = 0, diagcov
-    fits: dict = field(default_factory=dict)       # (p, q, diagcov) -> fitted Ladder
+    fits: dict = field(default_factory=dict)       # (p, q, diagcov, links) -> fitted Ladder
     current: tuple = None              # the key of the last estimated model
     evaluations: dict = field(default_factory=dict)  # (p, q, diagcov, estwin, H) -> summary
 
