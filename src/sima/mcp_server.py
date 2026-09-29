@@ -701,10 +701,20 @@ def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
 
 
 @mcp.tool()
-def plot_forecast(name: str, horizon: int = 12, path: str = "") -> list:
-    """FIGURE — The forecasts of every series in its level with the last
-    estimated model: recent history, the forecasts and the 95 % band dashed
-    (asymmetric under a log model). The numbers are forecast's."""
+def plot_forecast(name: str, horizon: int = 24, series: str = "", path: str = "") -> list:
+    """FIGURE — The forecasts of the last estimated model in the format of FUF
+    and art: on top the annual rate of change (%) of the last `horizon`
+    observations and the `horizon` forecasts, +-1 sigma dashed (the LEVEL with
+    +-2 sigma when the series is not in logs); below, ERR, the residuals of
+    those observations with +-2 sigma. The numbers are forecast's.
+
+    One figure PER SERIES, as FUF draws one page per series, so that the
+    forecast report can go series by series: `series` empty (default) returns
+    one figure for each; a series' name, only that one; "all", every series
+    in a single grid. `path` (optional) is a directory, or with one series a
+    file.
+    """
+    import tempfile
     from . import figures
     s = _sess.get(name)
     try:
@@ -712,8 +722,22 @@ def plot_forecast(name: str, horizon: int = 12, path: str = "") -> list:
         fcs = L.forecast(int(horizon))
     except Exception as e:                                   # noqa: BLE001
         return [f"Cannot forecast: {e}"]
-    return _figure(s, figures.forecast_figure(L, fcs), "forecast", path,
-                   f"Forecasts, {horizon} steps")
+    names = _names(s)
+    if series == "all":
+        return _figure(s, figures.forecast_figure(L, fcs), "forecast", path,
+                       f"Forecasts, {horizon} steps, every series")
+    wanted = [series] if series else names
+    if series and series not in names:
+        return [f"No series named {series!r}; the session has {', '.join(names)}."]
+    out = []
+    for nm in wanted:
+        if path and len(wanted) == 1 and not os.path.isdir(path):
+            p = path
+        else:
+            p = os.path.join(path or tempfile.gettempdir(), f"sima_{s.name}_forecast_{nm}.png")
+        out += _figure(s, figures.forecast_figure(L, fcs, only=nm), f"forecast_{nm}", p,
+                       f"Forecasts of {nm}, {horizon} steps")
+    return out
 
 
 @mcp.tool()

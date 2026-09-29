@@ -15,7 +15,7 @@
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
-| [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of every series in its level with the last |
+| [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of the last estimated model in the format of FUF |
 | [`plot_impulse_response`](#plot-impulse-response) | FIGURE — The orthogonalised impulse responses of the last estimated model. |
 | [`plot_residual_ccf`](#plot-residual-ccf) | FIGURE — The residual cross-correlations of the last estimated model, |
 | [`plot_variance_decomposition`](#plot-variance-decomposition) | FIGURE — The forecast-error variance decomposition, in the IRF's layout. |
@@ -192,12 +192,21 @@ N0 — Start a session from the univariate models: one fue file per series.
 | name | type | required | default |
 |---|---|---|---|
 | `name` | string | yes | — |
-| `horizon` | integer | no | `12` |
+| `horizon` | integer | no | `24` |
+| `series` | string | no | `` |
 | `path` | string | no | `` |
 
-FIGURE — The forecasts of every series in its level with the last
-    estimated model: recent history, the forecasts and the 95 % band dashed
-    (asymmetric under a log model). The numbers are forecast's.
+FIGURE — The forecasts of the last estimated model in the format of FUF
+    and art: on top the annual rate of change (%) of the last `horizon`
+    observations and the `horizon` forecasts, +-1 sigma dashed (the LEVEL with
+    +-2 sigma when the series is not in logs); below, ERR, the residuals of
+    those observations with +-2 sigma. The numbers are forecast's.
+
+    One figure PER SERIES, as FUF draws one page per series, so that the
+    forecast report can go series by series: `series` empty (default) returns
+    one figure for each; a series' name, only that one; "all", every series
+    in a single grid. `path` (optional) is a directory, or with one series a
+    file.
 
 ---
 

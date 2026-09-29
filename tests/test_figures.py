@@ -36,7 +36,8 @@ def _check(out, tmp_path, name):
     ("plot_impulse_response", {"horizon": 12, "ndraws": 100}, "irf.png"),
     ("plot_variance_decomposition", {"horizon": 12, "ndraws": 100}, "fevd.png"),
     ("plot_residual_ccf", {}, "ccf.png"),
-    ("plot_forecast", {"horizon": 6}, "fc.png")])
+    ("plot_forecast", {"horizon": 6, "series": "all"}, "fc.png"),
+    ("plot_forecast", {"horizon": 6, "series": "EP"}, "fc_ep.png")])
 def test_each_figure_comes_back_as_an_image(session, tmp_path, tool, kw, fname):
     out = _fn(getattr(M, tool))(session, path=str(tmp_path / fname), **kw)
     _check(out, tmp_path, fname)
@@ -59,3 +60,18 @@ def test_fevd_bands_at_every_horizon():
     assert b["fevd_lo_h"].shape == F.shape
     np.testing.assert_allclose(b["fevd_lo_h"][-1], b["fevd_lo"])
     assert np.all((F >= b["fevd_lo_h"] - 1e-9) & (F <= b["fevd_hi_h"] + 1e-9))
+
+
+def test_forecast_one_figure_per_series_by_default(session, tmp_path):
+    out = _fn(M.plot_forecast)(session, horizon=6, path=str(tmp_path))
+    assert [getattr(c, "type", None) for c in out] == ["text", "image"] * 2
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "sima_fig_forecast_EI.png", "sima_fig_forecast_EP.png"]
+
+
+def test_forecast_unknown_series():
+    _fn(M.load_pre)("figx", json.dumps(PAIR))
+    _fn(M.run_gate)("figx")
+    _fn(M.estimate)("figx", 0, 0, True)
+    out = _fn(M.plot_forecast)("figx", series="XX")
+    assert "No series named 'XX'" in str(out[0])

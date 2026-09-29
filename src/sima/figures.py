@@ -9,11 +9,15 @@ design is the one the suite already reads:
   the left axis (fue's `_draw_acf_panel`). Its band is dashed, as the ACF's,
   but it follows h, since here it is a Monte-Carlo band per horizon.
 * the VARIANCE DECOMPOSITION uses the same grid of panels and the same
-  impulses, on a fixed 0-100 % axis: the row of a series reads the same in
-  both figures.
+  impulses, on a fixed 0-100 % axis with the horizontal axis at 0: the row of
+  a series reads the same in both figures. Its band is shaded as well as
+  dashed (approved 2026-09-29): a share lives in 0-100, and the shaded area
+  shows at a glance how much of that range the estimate leaves open.
 * the residual CCFs are drvus' panels, reused from drvarma
   (`plots._draw_ccf_panel`), not redrawn.
-* the forecast is each series in its level, with its 95 % band dashed.
+* the forecast follows FUF and art (fufplot.c, fue.report_forecast): per
+  series, the annual rate of change (or the level) with its band, and the
+  ERR panel of the last residuals under their dates.
 
 Matplotlib is imported inside each function.
 """
@@ -62,10 +66,13 @@ def _seasonal_grid(ax, H, freq, x0):
     return grid
 
 
-def _impulse_panel(ax, h, vals, lo, hi, ylim, yticks, freq, title, zero=True):
+def _impulse_panel(ax, h, vals, lo, hi, ylim, yticks, freq, title, zero=True,
+                   shade=False):
     ax.vlines(h, 0.0, vals, colors="k", lw=3.0 if len(h) <= 30 else 2.2, zorder=3)
     if zero:
         ax.axhline(0.0, color="k", lw=1.4, zorder=2)
+    if shade and lo is not None and hi is not None:
+        ax.fill_between(h, lo, hi, color="0.85", lw=0, zorder=1)
     if lo is not None and hi is not None:
         ax.plot(h, lo, color="k", lw=1.0, ls="--", zorder=2)
         ax.plot(h, hi, color="k", lw=1.0, ls="--", zorder=2)
@@ -126,8 +133,8 @@ def fevd_figure(L, horizon, bands=None, freq=12):
             hi = bands["fevd_hi_h"][:, i, j] if bands else None
             _impulse_panel(axes[i, j], h, F[:, i, j], lo, hi, (0.0, 100.0),
                            [0, 25, 50, 75, 100], freq, f"{names[i]} <- {names[j]}  (%)",
-                           zero=False)
-    sub = ("dashed: %d %% Monte-Carlo band, %d draws" % (round(100 * (1 - bands["alpha"])),
+                           zero=True, shade=True)
+    sub = ("shaded, between the dashed lines: %d %% Monte-Carlo band, %d draws" % (round(100 * (1 - bands["alpha"])),
                                                          bands["ndraws_used"])
            if bands else "no band")
     fig.suptitle("Forecast-error variance decomposition, % by shock "
@@ -161,38 +168,108 @@ def residual_ccf_figure(L, nlags, freq=12):
     return fig
 
 
-def forecast_figure(L, fc, history=None):
-    """Each series in its level: the recent history, the forecasts and the
-    95 % band (dashed; asymmetric under a log model, so drawn as two lines)."""
+def forecast_figure(L, fc, only=None):
+    """The forecasts in the format of FUF (atsw-gui fuf/src/fufplot.c) and art
+    (fue.report_forecast), one cell per series, each with its two panels:
+
+    * top: with a log (lambda = 0), the ANNUAL RATE OF CHANGE (%),
+      100 (ln y_t - ln y_t-s), of the last L observations and the L forecasts,
+      one line with dots (larger where observed) and the +-1 sigma band dashed
+      ("LRC anual (%)"); with another lambda, the LEVEL with a +-2 sigma band;
+    * bottom, ERR: the residuals of those L observations as impulses (x100),
+      under their dates, with the zero line and +-2 sigma dashed; the panel
+      ends at the forecast origin.
+
+    The numbers are the ladder's: ystar and sd_annual from Ladder.forecast,
+    the residuals and each series' sigma from the fit. `only`: the name of one
+    series, for a figure of its own (as FUF draws one page per series).
+    """
+    from matplotlib.gridspec import GridSpecFromSubplotSpec
+    from fue.plots import _tj_spines
+    from fue.report_forecast import _prevcmax, _year_ticks
     plt = _plt()
-    k = len(fc)
-    fig, axes = plt.subplots(k, 1, figsize=(8.5, 2.4 * k + 0.4), squeeze=False)
-    for c, (d, s) in enumerate(zip(fc, [L.series[i] for i in L._act])):
-        ax = axes[c, 0]
-        n, f = s.nobs, s.freq
-        hist = history or max(3 * f, 24)
-        y = np.asarray(s.ts.data, float)[:n]
-        t0 = max(0, n - hist)
-        x_h = np.arange(t0 + 1, n + 1)
-        H = len(d["level"])
-        x_f = np.arange(n + 1, n + H + 1)
-        ax.plot(x_h, y[t0:], color="k", lw=1.4)
-        ax.plot(np.r_[n, x_f], np.r_[y[n - 1], d["level"]], color="k", lw=1.4, ls="-",
-                marker="o", ms=3, markevery=list(range(1, H + 1)))
-        ax.plot(x_f, d["low95"], color="k", lw=1.0, ls="--")
-        ax.plot(x_f, d["high95"], color="k", lw=1.0, ls="--")
-        ax.axvline(n + 0.5, color="0.5", lw=0.8)
-        ticks = [x for x in np.r_[x_h, x_f] if (x - 1) % f == 0] if f > 1 else list(x_h[::5])
-        ax.set_xticks(ticks)
-        ax.set_xticklabels(["%d.%02d" % s.date_of(int(x)) if f > 1 else "%d" % s.date_of(int(x))[0]
-                            for x in ticks], fontsize=8)
-        ax.tick_params(axis="y", direction="out", labelsize=8)
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(False)
+    r = L.result
+    series = [L.series[i] for i in L._act]
+    cols = list(range(len(fc)))
+    if only is not None:
+        cols = [c for c, d in enumerate(fc) if d["series"] == only]
+        if not cols:
+            raise ValueError(f"no series named {only!r}")
+    k = len(cols)
+    ncol = min(3, k)
+    nrow = math.ceil(k / ncol)
+    fig = plt.figure(figsize=(4.8 * ncol, 5.6 * nrow))
+    outer = fig.add_gridspec(nrow, ncol, wspace=0.28, hspace=0.30)
+    a_all = np.asarray(r.residuals, float)
+    for cell, c in enumerate(cols):
+        d, s = fc[c], series[c]
+        g = GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[cell // ncol, cell % ncol],
+                                    height_ratios=[2.2, 1], hspace=0.22)
+        ax_top, ax_bot = fig.add_subplot(g[0]), fig.add_subplot(g[1])
+        n, f, H = s.nobs, s.freq, len(d["level"])
+        lam, ref = s.model.boxlam, s.model.refactor
+        sc = (100.0 if lam == 0.0 else 1.0) / ref
+        ys = np.asarray(d["ystar"], float)
+        if lam == 0.0:
+            hist = np.array([sc * (ys[n - H + i] - ys[n - H + i - f]) for i in range(H)])
+            fore = np.array([sc * (ys[n + i] - ys[n + i - f]) for i in range(H)])
+            band = sc * np.asarray(d["sd_annual"], float)
+            up, lo = fore + band, fore - band
+            title = "LRC anual (%)"
+        else:
+            hist = np.asarray(s.ts.data, float)[n - H:n]
+            fore = np.asarray(d["level"], float)
+            sd = np.asarray(d["sd"], float)
+            up = np.array([L._inv(s, ys[n + i] + 2.0 * sd[i]) for i in range(H)])
+            lo = np.array([L._inv(s, ys[n + i] - 2.0 * sd[i]) for i in range(H)])
+            title = "LEVEL"
+        xt, xl = _year_ticks(s.ts, n, H, f)
+        xlim = (-0.5, 2 * H - 0.5)
+
+        _tj_spines(ax_top, ("left", "bottom"))
+        x_all = np.arange(2 * H)
+        ax_top.plot(x_all, np.r_[hist, fore], color="k", lw=1.2, marker="o", ms=3.5, zorder=3)
+        ax_top.plot(np.arange(H), hist, "ko", ms=5.5, zorder=4)
+        ax_top.plot(np.arange(H, 2 * H), up, "k--", lw=1.2, zorder=2)
+        ax_top.plot(np.arange(H, 2 * H), lo, "k--", lw=1.2, zorder=2)
+        ax_top.axvline(H - 0.5, color="0.55", lw=0.9, zorder=1)
+        if lam == 0.0:
+            ax_top.axhline(0, color="k", lw=0.7, zorder=1)
+        ax_top.set_xlim(*xlim)
+        ax_top.set_xticks(xt)
+        ax_top.set_xticklabels(xl, fontsize=8)
+        ax_top.tick_params(direction="out", labelsize=8)
+        ax_top.set_axisbelow(True)
+        ax_top.grid(axis="x", color="0.75", lw=0.5, zorder=0)
         oy, op = d["origin"]
-        ax.set_title(f"{d['series']}: forecasts from {oy}.{op:02d}, 95 % band dashed",
-                     loc="left", fontsize=9)
-    fig.tight_layout()
+        ax_top.set_title(f"{d['series']}   {title}   (origin {oy}.{op:02d})",
+                         loc="left", fontsize=9, fontweight="bold", pad=4)
+
+        a = a_all[:, c]
+        m_err = min(H, len(a))
+        err = sc * a[-m_err:]
+        sig = sc * math.sqrt(float(r.sigma[c, c]))
+        cmax = _prevcmax(err, sig)
+        x_end = m_err - 0.5
+        _tj_spines(ax_bot, ("left", "bottom"))
+        ax_bot.vlines(np.arange(m_err), 0, err, colors="k", lw=1.6, zorder=3)
+        ax_bot.hlines(2 * sig, -0.5, x_end, colors="k", lw=1.0, ls="--", zorder=2)
+        ax_bot.hlines(-2 * sig, -0.5, x_end, colors="k", lw=1.0, ls="--", zorder=2)
+        ax_bot.hlines(0, -0.5, x_end, colors="k", lw=1.2, zorder=2)
+        ax_bot.set_ylim(-(cmax + 0.1 * sig), cmax + 0.1 * sig)
+        yt = np.arange(0, cmax + 0.05 * sig, 2 * sig)
+        ax_bot.set_yticks(np.concatenate([-yt[1:][::-1], yt]))
+        from matplotlib.ticker import FormatStrFormatter
+        ax_bot.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+        ax_bot.set_xlim(*xlim)
+        ht = [p for p in xt if p < m_err]
+        ax_bot.set_xticks(ht)
+        ax_bot.set_xticklabels(xl[:len(ht)], fontsize=8)
+        ax_bot.tick_params(direction="out", labelsize=8)
+        ax_bot.set_axisbelow(True)
+        ax_bot.grid(axis="x", color="0.75", lw=0.5, zorder=0)
+        ax_bot.spines["bottom"].set_bounds(-0.5, x_end)
+        ax_bot.set_title("ERR", loc="left", fontsize=9, fontweight="bold", pad=4)
     return fig
 
 

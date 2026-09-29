@@ -9,12 +9,19 @@
   impulses at h = 0..H, the seasonal grid, only the left axis, and the 95 %
   Monte-Carlo band dashed, following h.
 - `plot_variance_decomposition`: the same layout and impulses on a fixed
-  0-100 % axis, with its band per horizon; a row reads as in the IRF.
+  0-100 % axis with the horizontal axis at 0, its band per horizon shaded
+  between the dashed lines; a row reads as in the IRF.
 - `plot_residual_ccf`: drvus' two-sided CCF of every residual pair, reusing
   drvarma's panel (the suite's reference), with the Hosking Q.
-- `plot_forecast`: every series in its level, the band dashed.
+- `plot_forecast`: the format of FUF (atsw-gui `fufplot.c`) and art
+  (`fue.report_forecast`): the annual rate of change (%) of the last H
+  observations and the H forecasts with +-1 sigma (the LEVEL with +-2 sigma
+  when the series is not in logs), and the ERR panel of the residuals under
+  their dates. One figure PER SERIES by default, so the forecast report can go
+  series by series; `series` picks one, "all" gives the grid.
 - As art and mtram, the image comes inside the answer and is also written as
-  a PNG. The numbers are those of the matching text tools.
+  a PNG. The numbers are those of the matching text tools. Each figure was
+  approved one by one (2026-09-29).
 
 ### Restricted cross terms: `links`
 
