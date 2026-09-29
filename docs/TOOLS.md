@@ -93,12 +93,17 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
 |---|---|---|---|
 | `name` | string | yes | — |
 | `save` | boolean | no | `True` |
+| `html` | boolean | no | `True` |
 
 The path of the analysis, node by node, with its evidence and decisions.
 
     This is what makes the analysis reviewable and repeatable: every tool call
     and every recorded decision, in order. Saved next to the first file as
-    <first>.sima.json when `save`, so that the record travels with the data.
+    <first>.sima.json when `save`, so that the record travels with the data;
+    with `html` (default) also <first>.sima.html, a self-contained page in
+    art's style: the steps in a table, a section per node with the evidence,
+    the decisions highlighted (who decided, what was set aside) and the
+    figures drawn at each step (they are saved in figs/ next to the files).
 
 ---
 

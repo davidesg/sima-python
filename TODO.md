@@ -42,7 +42,9 @@ missing, in order:
       directed pairs with short leads as option (d); `estimate`/`evaluate`
       take `links`. Engine: `Ladder(links=)`, and drvarma C's `-links`.
 - [x] **Reorder** tool (2026-09-28): permutes the fitted model, no re-estimation.
-- [ ] **HTML guion** (as art's `export_guion_html`).
+- [x] **HTML guion** (2026-09-29): `export_guion` also writes
+      `<first>.sima.html` in art's style; the figures go to `figs/` next to
+      the files and appear at their node.
 - [ ] **Resources**: `sima://defects` from `bugs/` (with `fue.bugs`, no copy),
       `sima://protocol`.
 

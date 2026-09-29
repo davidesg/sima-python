@@ -621,13 +621,28 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
 #  Figures (presentation of the same numbers; sima.figures)                    #
 # --------------------------------------------------------------------------- #
 
+def kind_tool(kind):
+    return {"irf": "plot_impulse_response", "fevd": "plot_variance_decomposition",
+            "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
+
+
 def _figure(s, fig, kind, path, note):
     """The figure INSIDE the answer (as art and mtram), and a PNG on disk."""
     import base64
     import tempfile
     from . import figures
-    p = path or os.path.join(tempfile.gettempdir(), f"sima_{s.name}_{kind}.png")
+    if not path:
+        d = s.guion.figures_dir()
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError:
+            d = tempfile.gettempdir()
+        path = os.path.join(d, f"sima_{s.name}_{kind}.png")
+    p = path
     figures.save(fig, p)
+    # the node the figure belongs to: the residual CCFs are in-sample evidence
+    # (N4); the IRF, the FEVD and the forecasts are the use of the model (N6)
+    s.guion.add("N4" if kind == "ccf" else "N6", kind_tool(kind), {"png": [p]}, note)
     text = f"{note}\nPNG: {p}"
     try:
         from mcp.types import ImageContent, TextContent
@@ -733,8 +748,10 @@ def plot_forecast(name: str, horizon: int = 24, series: str = "", path: str = ""
     for nm in wanted:
         if path and len(wanted) == 1 and not os.path.isdir(path):
             p = path
+        elif path:
+            p = os.path.join(path, f"sima_{s.name}_forecast_{nm}.png")
         else:
-            p = os.path.join(path or tempfile.gettempdir(), f"sima_{s.name}_forecast_{nm}.png")
+            p = ""
         out += _figure(s, figures.forecast_figure(L, fcs, only=nm), f"forecast_{nm}", p,
                        f"Forecasts of {nm}, {horizon} steps")
     return out
@@ -765,18 +782,24 @@ def record_decision(name: str, node: str, decision: str, reason: str = "",
 
 
 @mcp.tool()
-def export_guion(name: str, save: bool = True) -> str:
+def export_guion(name: str, save: bool = True, html: bool = True) -> str:
     """The path of the analysis, node by node, with its evidence and decisions.
 
     This is what makes the analysis reviewable and repeatable: every tool call
     and every recorded decision, in order. Saved next to the first file as
-    <first>.sima.json when `save`, so that the record travels with the data.
+    <first>.sima.json when `save`, so that the record travels with the data;
+    with `html` (default) also <first>.sima.html, a self-contained page in
+    art's style: the steps in a table, a section per node with the evidence,
+    the decisions highlighted (who decided, what was set aside) and the
+    figures drawn at each step (they are saved in figs/ next to the files).
     """
     s = _sess.get(name)
     txt = s.guion.render()
     if save:
         try:
             txt += f"\n\nSaved to {s.guion.save()}"
+            if html:
+                txt += f"\nHTML: {s.guion.save_html()}"
         except OSError as e:
             txt += f"\n\n(not saved: {e})"
     return txt

@@ -2,6 +2,17 @@
 
 ## 0.1.0 — unreleased
 
+### The guion as HTML
+
+- `export_guion` writes, besides `<first>.sima.json`, `<first>.sima.html`: a
+  self-contained page in art's style — the steps in a table, one section per
+  node with the evidence, the decisions highlighted (who decided, what was set
+  aside) and the figures at their node (the residual CCFs in N4; the IRF, the
+  FEVD and the forecasts in N6). `html=False` skips it.
+- The figures are saved in `figs/` next to the first file (no longer in the
+  temporary directory) and recorded in the guion, so the page, its figures
+  and the JSON travel with the data.
+
 ### Figures, in the school's design
 
 - `plot_impulse_response`: the orthogonalised IRF drawn as what it is, a
