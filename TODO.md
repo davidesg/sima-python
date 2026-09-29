@@ -55,7 +55,7 @@ missing, in order:
 - [ ] **Jenkins and Alavi (1981), phase 1** (`docs/DESIGN-jenkins-alavi.md`),
       Python first, order A → B → E → D → C → F: [x] A statistics
       (drvarma `identification_mv`), [x] B `identify_matrices`, [x] E their
-      checking, [ ] D preliminary estimates, [ ] C the residual-model form,
+      checking, [x] D preliminary estimates, [ ] C the residual-model form,
       [ ] F V(l) against the univariates; validation on muskrat–mink.
 - [ ] **Echelon VARMA** (Kronecker indices) as a specification form: see
       drvarma's `docs/ECHELON_SEEDED_DESIGN.md`. The specification should be a

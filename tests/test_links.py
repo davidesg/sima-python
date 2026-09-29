@@ -46,3 +46,12 @@ def test_bad_links_are_refused_in_words():
     _fn(M.load_pre)("L4", json.dumps(PAIR))
     _fn(M.run_gate)("L4")
     assert "does not name two different series" in _fn(M.estimate)("L4", 1, 0, False, "", "EP<-XX")
+
+
+def test_estimate_with_the_preliminary_start():
+    _fn(M.load_pre)("L5", json.dumps(PAIR))
+    _fn(M.run_gate)("L5")
+    txt = _fn(M.estimate)("L5", 1, 0, False, "", "", "preliminary")
+    assert "cross terms started at preliminary" in txt
+    assert "'start': 'preliminary'" in _fn(M.export_guion)("L5", save=False) or \
+           "start=preliminary" in _fn(M.export_guion)("L5", save=False)

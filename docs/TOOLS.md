@@ -64,6 +64,7 @@ N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do.
 | `diagcov` | boolean | no | `False` |
 | `reason` | string | no | `` |
 | `links` | string | no | `` |
+| `start` | string | no | `zero` |
 
 N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
@@ -78,6 +79,12 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     "A<-B, C<-A" (B enters the equation of A, AR and MA, every lag up to p and
     q; names as in identify_cross). Empty (default): every pair. identify_cross
     proposes it as option (d) when only some pairs showed anything.
+
+    `start`: where the cross terms start — "zero" (default) or "preliminary",
+    Jenkins and Alavi's preliminary estimates (the cross MA from the
+    univariate residuals' cross covariances, the cross AR from Yule-Walker).
+    Usually the same optimum in fewer iterations; on an ill-defined estimation
+    (the MA wall) a second path worth comparing.
 
 ---
 

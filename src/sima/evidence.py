@@ -421,7 +421,9 @@ def estimation_text(L, nlags):
                f"{names[i]}<-{names[j]}" for i in range(len(names))
                for j in range(len(names)) if i != j and links[i, j])
               + " (the other pairs carry no cross dynamics)"] if links is not None else []),
-           f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations)"
+           f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations"
+           + (f"; cross terms started at {L.start_used}" if getattr(L, "start_used", None)
+              and L.start_used != "zero" else "") + ")"
            + (f"\n  STOPPED AT THE MA INVERTIBILITY BOUNDARY: "
               f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots within 5e-5 of the unit circle"
               if getattr(r, "ma_boundary", 0) else ""),

@@ -2,6 +2,13 @@
 
 ## 0.1.0 — unreleased
 
+### `estimate(start="preliminary")`
+
+- The cross terms can start at Jenkins and Alavi's preliminary estimates
+  (drvarma's `Ladder(start=)`): usually the same optimum in fewer iterations,
+  and a second path to compare on an ill-defined estimation. The report and
+  the guion say which start was used.
+
 ### Jenkins and Alavi's checking (`check_residuals`)
 
 - [§5.2] The large residuals judged on the UNCORRELATED transformed residuals

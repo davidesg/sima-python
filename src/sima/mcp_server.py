@@ -220,10 +220,10 @@ def _r_doc(name: str) -> str:
     return doc(name)
 
 
-def _ladder(files, p, q, diagcov, estwin=None, links=None):
+def _ladder(files, p, q, diagcov, estwin=None, links=None, start="zero"):
     from drvarma.ladder import Ladder
     return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
-                  links=links or None)
+                  links=links or None, start=start)
 
 
 def _links(links):
@@ -394,7 +394,7 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
 
 @mcp.tool()
 def estimate(name: str, p: int, q: int, diagcov: bool = False,
-             reason: str = "", links: str = "") -> str:
+             reason: str = "", links: str = "", start: str = "zero") -> str:
     """N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
     Each series keeps its univariate model on the diagonal (its ARMA factors are
@@ -408,6 +408,12 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     "A<-B, C<-A" (B enters the equation of A, AR and MA, every lag up to p and
     q; names as in identify_cross). Empty (default): every pair. identify_cross
     proposes it as option (d) when only some pairs showed anything.
+
+    `start`: where the cross terms start — "zero" (default) or "preliminary",
+    Jenkins and Alavi's preliminary estimates (the cross MA from the
+    univariate residuals' cross covariances, the cross AR from Yule-Walker).
+    Usually the same optimum in fewer iterations; on an ill-defined estimation
+    (the MA wall) a second path worth comparing.
     """
     s = _sess.get(name)
     if s.gate is None:
@@ -415,7 +421,7 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     lk = _links(links)
     key = (int(p), int(q), bool(diagcov), lk)
     try:
-        L = _ladder(s.files, int(p), int(q), bool(diagcov), links=lk)
+        L = _ladder(s.files, int(p), int(q), bool(diagcov), links=lk, start=start)
         L.fit()
     except Exception as e:
         s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk},
@@ -426,7 +432,8 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     freq = s.series[0].freq
     txt = evidence.estimation_text(L, max(8, 2 * freq))
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
-    s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk},
+    s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
+                                   "start": L.start_used},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
     nxt = "Next: evaluate — the candidate against the univariates."
     if getattr(L.result, "ma_boundary", 0):
