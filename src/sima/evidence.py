@@ -182,6 +182,166 @@ _TERM = {0: "not run (no free parameters, or the starting point failed)",
          4: "stopped: iteration limit", 5: "stopped: five maximal steps"}
 
 
+# --------------------------------------------------------------------------- #
+#  N2 — Jenkins and Alavi (1981): the two identifications, as matrices          #
+# --------------------------------------------------------------------------- #
+
+_SHORT_MV = 4          # the lags read for a cut-off; longer ones are listed apart
+
+
+def _block(sym):
+    """One lag's m x m symbol matrix on one line: rows separated by ' | '."""
+    return " | ".join(" ".join(row) for row in sym)
+
+
+def _cutoff(sym, off_diagonal=False):
+    """The cut-off: the end of the initial run of lags 1, 2, ... that have a
+    significant element (0 if lag 1 has none); and the other significant lags,
+    isolated, listed apart. A single element beyond two standard errors is
+    expected by chance about once in twenty, so an isolated lag does not move
+    the cut-off; it is shown for the analyst to judge."""
+    K, m, _ = sym.shape
+    mask = np.ones((m, m), bool)
+    if off_diagonal:
+        np.fill_diagonal(mask, False)
+    sig = [k + 1 for k in range(K) if np.any((sym[k] != ".") & mask)]
+    cut = 0
+    while cut + 1 in sig and cut + 1 <= _SHORT_MV:
+        cut += 1
+    return cut, [k for k in sig if k > cut]
+
+
+def ja_identification(w, res, names, K, qmax, freq):
+    """Jenkins and Alavi's two identifications [§3.3-3.4], from the ladder.
+
+    Method 2 (prewhitened): the correlation matrices of the residuals of the
+    diagonal system — the univariate models' residuals —, standard error
+    1/sqrt(n). Method 1 (not prewhitened): R_k with Bartlett's standard errors,
+    S_k (multivariate Yule-Walker) and S_k(q) of the stationary series w_t of
+    the same files. Returns (text, facts): the evidence and the menu, which
+    the analyst reads; nothing is chosen here."""
+    from drvarma.identification_mv import (corr_matrices, determinants,
+                                           partial_corr_matrices,
+                                           q_partial_corr_matrices, symbols)
+    w = np.asarray(w, float)
+    res = np.asarray(res, float)
+    n, m = w.shape
+    R2, se2 = corr_matrices(res, K, prewhitened=True)
+    S2 = symbols(R2, se2)
+    R1, se1 = corr_matrices(w, K)
+    Ssym1 = symbols(R1, se1)
+    S, sse = partial_corr_matrices(w, K)
+    Psym = symbols(S, sse)
+    Sq = {q: q_partial_corr_matrices(w, K, q) for q in range(1, qmax + 1)}
+    Qsym = {q: symbols(v[0], v[1]) for q, v in Sq.items()}
+
+    out = ["JENKINS AND ALAVI (1981) — the two identifications, from the ladder",
+           f"series (rows i, columns j): {', '.join(names)}.  Element (i, j) at lag k: "
+           "series j, k periods back, on series i.",
+           "+ / - beyond two standard errors, . inside.", ""]
+
+    # method 2
+    q2, long2 = _cutoff(S2, off_diagonal=True)
+    links = []
+    for k in range(min(K, _SHORT_MV)):
+        for i in range(m):
+            for j in range(m):
+                if i != j and S2[k, i, j] != "." and f"{names[i]}<-{names[j]}" not in links:
+                    links.append(f"{names[i]}<-{names[j]}")
+    diag_left = sorted({k + 1 for k in range(min(K, _SHORT_MV))
+                        for i in range(m) if S2[k, i, i] != "."})
+    r0 = np.corrcoef(res.T)
+    out += [f"METHOD 2, prewhitened — the residuals of the univariate models "
+            f"(n = {res.shape[0]}, s.e. 1/sqrt(n) = {1 / np.sqrt(res.shape[0]):.3f})",
+            "  R_k(a):"]
+    out += [f"    k={k + 1:2d}  {_block(S2[k])}" for k in range(K)]
+    out.append(f"  lag 0: correlations " + ", ".join(
+        f"{names[i]}-{names[j]} {r0[i, j]:+.2f}" for i in range(m) for j in range(i + 1, m)))
+    out.append(f"  reading: the off-diagonal elements cut off after lag {q2}"
+               + (f"; isolated beyond the band at {long2}" if long2 else "")
+               + (f".  Links: {', '.join(links)}." if links else "."))
+    if diag_left:
+        out.append(f"  ! diagonal elements beyond the band at lags {diag_left}: a "
+                   "univariate model leaves autocorrelation — the residual model "
+                   "would be absorbing it; look at art first.")
+
+    # method 1
+    # The whole matrices are Jenkins and Alavi's reading (they identify the
+    # whole model); the ladder already has its diagonal, fixed by the
+    # univariate models, and adds the CROSS terms, which the off-diagonal
+    # elements read. Both are given; the menu uses the cross reading.
+    q1w, long1 = _cutoff(Ssym1)
+    p1w, longp = _cutoff(Psym)
+    q1, _ = _cutoff(Ssym1, off_diagonal=True)
+    p1, _ = _cutoff(Psym, off_diagonal=True)
+    pqw = {q: _cutoff(v)[0] for q, v in Qsym.items()}
+    pq = {q: _cutoff(v, off_diagonal=True)[0] for q, v in Qsym.items()}
+    out += ["", f"METHOD 1, not prewhitened — the stationary series w_t of the same "
+            f"files (s.e.: R_k Bartlett's; S_k and S_k(q) 1/sqrt(n) = {sse:.3f})"]
+    out += ["  R_k(w):"] + [f"    k={k + 1:2d}  {_block(Ssym1[k])}" for k in range(K)]
+    out += ["  S_k (multivariate Yule-Walker):"] + [f"    k={k + 1:2d}  {_block(Psym[k])}" for k in range(K)]
+    for q in range(1, qmax + 1):
+        out += [f"  S_k({q}):"] + [f"    k={k + 1:2d}  {_block(Qsym[q][k])}" for k in range(K)]
+    if m >= 3:
+        out += ["  determinants (the same cut-offs, for many series):",
+                "    |R_k| " + " ".join(f"{v:+.3f}" for v in determinants(R1)),
+                "    |S_k| " + " ".join(f"{v:+.3f}" for v in determinants(S))]
+    out.append(f"  reading, whole matrices (theirs: the whole model): R_k cuts off after "
+               f"{q1w}, S_k after {p1w}"
+               + "".join(f", S_k({q}) after {v}" for q, v in pqw.items())
+               + (f"; isolated beyond the band at {sorted(set(long1 + longp))}" if (long1 or longp) else "")
+               + ".")
+    out.append(f"  reading, off-diagonal (the cross terms the ladder adds; its diagonal is "
+               f"the univariate models'): R_k after {q1}, S_k after {p1}"
+               + "".join(f", S_k({q}) after {v}" for q, v in pq.items()) + ".")
+    out.append("  S_k(q) is unstable in samples of this size (they warn of large values at "
+               "higher k, §4.1): read its cut-off as a hint.")
+    seas = [k for k in sorted(set(long1 + longp + long2)) if freq > 1 and k % freq == 0]
+    if seas:
+        out.append(f"  seasonal lags {seas}: a cross effect there usually means a seasonal "
+                   "pattern a univariate model misses (Jenkins and Alavi's 'leakage', "
+                   "§4.2) — look at art before modelling it.")
+
+    # the menu
+    out += ["", "What this says, and the decisions it opens (Jenkins and Alavi: use both; "
+            "if they agree, estimate with more confidence; if not, choose by what each "
+            "explains of the system and by parsimony):"]
+    if q2 == 0 and q1 == 0 and p1 == 0:
+        out.append("  Neither method shows cross structure: the univariate models carry "
+                   "it; the system is the diagonal one (N5 is still the test).")
+    if q2:
+        out.append(f"  (a) from method 2: an MA({q2}) residual model, the univariate "
+                   f"models on the diagonal — estimate(p=0, q={q2}"
+                   + (f', links="{", ".join(links)}"' if links else "")
+                   + "). Jenkins and Alavi's form multiplies the cross MA by the "
+                   "univariate MA of each series (3.22); the ladder adds it — the "
+                   "same when the univariate models have no MA factors.")
+    links1 = []
+    for k in range(p1):
+        for i in range(m):
+            for j in range(m):
+                if i != j and Psym[k, i, j] != "." and f"{names[i]}<-{names[j]}" not in links1:
+                    links1.append(f"{names[i]}<-{names[j]}")
+    if p1:
+        out.append(f"  (b) from method 1: a cross AR of order {p1} (S_k) — "
+                   f"estimate(p={p1}, q=0"
+                   + (f', links="{", ".join(links1)}"' if links1 else "") + ").")
+    for q, p in pq.items():
+        if p and (p < p1 or not p1):
+            out.append(f"  (c) from method 1: an ARMA({p},{q}) (S_k({q}) cuts off after "
+                       f"{p}) — estimate(p={p}, q={q}).")
+    if p1 and q2:
+        out.append("  Their warning (3.26): after prewhitening a cross AR structure reads "
+                   "as an MA of higher order, and leads to a mis-specified AR and to "
+                   "over-parameterisation. With both readings present, estimate (a) and "
+                   "(b), compare them, and let N5 decide.")
+    facts = {"method2_q": q2, "links": links, "method1_links": links1,
+             "method1_q": q1, "method1_p": p1,
+             "method1_pq": pq, "method1_whole": {"q": q1w, "p": p1w, "pq": pqw},
+             "diagonal_left": diag_left}
+    return "\n".join(out), facts
+
+
 def _is_covariance(name):
     """The ladder's names for the innovation covariance parameters:
     `log(Q[b]/Q[a])` and `Q[b,a]` (drvarma.ladder)."""

@@ -69,6 +69,11 @@ N1  run_gate          the univariate base, certified. If it FAILS, stop: the
 N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       what the univariate models do NOT carry. It proposes
                       cross orders and whether the innovations correlate.
+    identify_matrices Jenkins and Alavi's (1981) two identifications as
+                      matrices: method 2 on the univariate residuals
+                      (prewhitened: an MA residual model and its links), method
+                      1 on the stationary series (S_k, S_k(q): the AR/ARMA
+                      orders), and the comparison. Use both, as they did.
 N3  estimate          a candidate: cross orders p, q; full or diagonal
                       covariance; optionally `links`, the cross dynamics only
                       on the pairs identify_cross found (its option (d)).
@@ -344,6 +349,38 @@ def identify_cross(name: str, nlags: int = 0) -> str:
     s.guion.add("N2", "identify_cross", {"nlags": K},
                 f"short leads up to {facts['maxlag']}, longer {facts['longer']}, contemporaneous "
                 f"{'yes' if facts['contemporaneous'] else 'no'}")
+    return txt
+
+
+@mcp.tool()
+def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
+    """N2 — Jenkins and Alavi's (1981) two identifications, as matrices.
+
+    Method 2, prewhitened: the correlation matrices R_k of the residuals of the
+    diagonal system (the univariate models' residuals), which suggest an MA
+    residual model and its links. Method 1, not prewhitened: R_k, the partial
+    correlation matrices S_k (multivariate Yule-Walker) and Alavi's
+    q-conditioned S_k(q) of the stationary series of the same files, which
+    suggest the AR (and ARMA) orders; determinants with three or more series.
+    Then the comparison as a menu, with their warning when a cross AR shows:
+    prewhitening can mis-specify it. `nlags` defaults to max(6, frequency);
+    `qmax` the largest q-conditioning. Complements identify_cross (the
+    pairwise CCFs).
+    """
+    s = _sess.get(name)
+    try:
+        L = _diagonal(s)
+    except Exception as e:                                   # noqa: BLE001
+        return f"Run the gate first ({e})."
+    freq = s.series[0].freq
+    K = int(nlags) or max(6, freq)
+    _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
+    txt, facts = evidence.ja_identification(W, L.result.residuals, _names(s), K,
+                                            int(qmax), freq)
+    s.guion.add("N2", "identify_matrices", {"nlags": K, "qmax": qmax},
+                f"method 2: MA({facts['method2_q']}) residual model"
+                + (f", links {', '.join(facts['links'])}" if facts["links"] else "")
+                + f"; method 1: R_k cut {facts['method1_q']}, S_k cut {facts['method1_p']}")
     return txt
 
 

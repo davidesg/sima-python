@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**17 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**18 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -13,6 +13,7 @@
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
 | [`forecast`](#forecast) | N6 — Forecast every series in its level with the last estimated model. |
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
+| [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
 | [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of the last estimated model in the format of FUF |
@@ -143,6 +144,31 @@ N2 — What the univariate models do NOT carry: residual cross-correlations.
     and the menu of candidates, each with its argument. It does not choose.
 
     `nlags` defaults to twice the frequency (24 for monthly data).
+
+---
+
+## `identify_matrices`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `nlags` | integer | no | `0` |
+| `qmax` | integer | no | `2` |
+
+N2 — Jenkins and Alavi's (1981) two identifications, as matrices.
+
+    Method 2, prewhitened: the correlation matrices R_k of the residuals of the
+    diagonal system (the univariate models' residuals), which suggest an MA
+    residual model and its links. Method 1, not prewhitened: R_k, the partial
+    correlation matrices S_k (multivariate Yule-Walker) and Alavi's
+    q-conditioned S_k(q) of the stationary series of the same files, which
+    suggest the AR (and ARMA) orders; determinants with three or more series.
+    Then the comparison as a menu, with their warning when a cross AR shows:
+    prewhitening can mis-specify it. `nlags` defaults to max(6, frequency);
+    `qmax` the largest q-conditioning. Complements identify_cross (the
+    pairwise CCFs).
 
 ---
 

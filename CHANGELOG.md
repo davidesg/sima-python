@@ -2,6 +2,21 @@
 
 ## 0.1.0 — unreleased
 
+### Jenkins and Alavi's identification (`identify_matrices`)
+
+- Their two methods [§3.3–3.4], from the ladder: method 2 on the residuals of
+  the diagonal system (the univariate models' residuals, prewhitened): the
+  correlation matrices R_k, which suggest an MA residual model and its links;
+  method 1 on the stationary series of the same files: R_k with Bartlett's
+  standard errors, S_k (multivariate Yule-Walker) and Alavi's S_k(q), with the
+  determinants for three or more series. The whole-matrix reading (theirs)
+  and the off-diagonal one (the cross terms the ladder adds). Then the
+  comparison as a menu, with their warning (3.26) when a cross AR shows.
+- A cut-off is the end of the initial run of significant lags; isolated lags
+  beyond the band are listed apart (one in twenty is chance).
+- Phase 1 (B) of `docs/DESIGN-jenkins-alavi.md`; engine:
+  `drvarma.identification_mv`.
+
 ### MCP resources: what the model can ask for
 
 - `sima://protocol`, the instructions, to reread them mid-analysis.
