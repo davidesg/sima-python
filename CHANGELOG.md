@@ -2,6 +2,20 @@
 
 ## 0.1.0 — unreleased
 
+### Figures, in the school's design
+
+- `plot_impulse_response`: the orthogonalised IRF drawn as what it is, a
+  function of the lag like an ACF — one panel per (response, shock), thick
+  impulses at h = 0..H, the seasonal grid, only the left axis, and the 95 %
+  Monte-Carlo band dashed, following h.
+- `plot_variance_decomposition`: the same layout and impulses on a fixed
+  0-100 % axis, with its band per horizon; a row reads as in the IRF.
+- `plot_residual_ccf`: drvus' two-sided CCF of every residual pair, reusing
+  drvarma's panel (the suite's reference), with the Hosking Q.
+- `plot_forecast`: every series in its level, the band dashed.
+- As art and mtram, the image comes inside the answer and is also written as
+  a PNG. The numbers are those of the matching text tools.
+
 ### Restricted cross terms: `links`
 
 - `identify_cross` lists the directed pairs that showed a lead at a short lag

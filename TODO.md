@@ -31,8 +31,10 @@ missing, in order:
 
 - [x] **Autonomous lane in writing** (2026-09-28) (as art's `CARRIL AUTÓNOMO`): the order of
       the nodes, what to decide at each, and the report handed over at the end.
-- [ ] **Figures**: residual CCF panels (the old sima's `_draw_ccf_panel` moves
-      here, as presentation), forecast fans, IRFs.
+- [x] **Figures** (2026-09-29, `sima.figures`): the IRF as an ACF-like panel per
+      (response, shock) with the band dashed; the FEVD in the same layout on
+      0-100 %; drvus' residual CCFs (drvarma's `_draw_ccf_panel`, reused); the
+      forecasts in levels. Tools `plot_*`, the image inside the answer.
 - [x] **IRF/FEVD bands** for the ladder model (2026-09-28, `Ladder.irf_fevd_bands`). drvarma's `irf_fevd_bands` still
       needs the result of the multivariate-`.inp` path; the ladder needs its own
       (Monte Carlo on the ladder parameters, or the delta method).

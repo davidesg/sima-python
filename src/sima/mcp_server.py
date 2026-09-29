@@ -81,6 +81,9 @@ N4b study_estimation  when estimate says the fit STOPPED ON THE MA
 N5  evaluate          THE YARDSTICK: fixed-parameter forecasts from every origin,
                       the candidate against the univariates, same window.
 N6  forecast, impulse_response, variance_decomposition — with the chosen model.
+    Their figures: plot_forecast, plot_impulse_response (an ACF-like panel per
+    response and shock), plot_variance_decomposition (the same layout, 0-100 %),
+    and plot_residual_ccf for what the model leaves.
 Record every decision with its reason: export_guion shows the path.
 
 ══════════════════════════════════════════════════════
@@ -613,6 +616,105 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
 # --------------------------------------------------------------------------- #
 #  The record, and the way out of the old format                               #
 # --------------------------------------------------------------------------- #
+
+# --------------------------------------------------------------------------- #
+#  Figures (presentation of the same numbers; sima.figures)                    #
+# --------------------------------------------------------------------------- #
+
+def _figure(s, fig, kind, path, note):
+    """The figure INSIDE the answer (as art and mtram), and a PNG on disk."""
+    import base64
+    import tempfile
+    from . import figures
+    p = path or os.path.join(tempfile.gettempdir(), f"sima_{s.name}_{kind}.png")
+    figures.save(fig, p)
+    text = f"{note}\nPNG: {p}"
+    try:
+        from mcp.types import ImageContent, TextContent
+        with open(p, "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode()
+        return [TextContent(type="text", text=text),
+                ImageContent(type="image", data=b64, mimeType="image/png")]
+    except Exception:                                        # noqa: BLE001
+        return [text]
+
+
+@mcp.tool()
+def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
+                          ndraws: int = 500, path: str = "") -> list:
+    """FIGURE — The orthogonalised impulse responses of the last estimated model.
+
+    Drawn as what an impulse response is, a function of the lag like an ACF:
+    one panel per (response, shock), thick impulses at h = 0..H, the seasonal
+    grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
+    order of the files, as impulse_response. The numbers are impulse_response's.
+    """
+    from . import figures
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+    except KeyError as e:
+        return [str(e)]
+    b, why = _bands(s, int(horizon), bands, ndraws)
+    fig = figures.irf_figure(L, int(horizon), b, s.series[0].freq)
+    note = "Orthogonalised impulse responses" + (f" (no band: {why})" if why else "")
+    return _figure(s, fig, "irf", path, note)
+
+
+@mcp.tool()
+def plot_variance_decomposition(name: str, horizon: int = 24, bands: bool = True,
+                                ndraws: int = 500, path: str = "") -> list:
+    """FIGURE — The forecast-error variance decomposition, in the IRF's layout.
+
+    Panel (i, j): the % of the h-step forecast-error variance of i due to the
+    shock of j, h = 1..H, as impulses on a 0-100 axis with the 95 % band
+    dashed. A row reads the same as in plot_impulse_response.
+    """
+    from . import figures
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+    except KeyError as e:
+        return [str(e)]
+    b, why = _bands(s, int(horizon), bands, ndraws)
+    fig = figures.fevd_figure(L, int(horizon), b, s.series[0].freq)
+    note = "Variance decomposition" + (f" (no band: {why})" if why else "")
+    return _figure(s, fig, "fevd", path, note)
+
+
+@mcp.tool()
+def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
+    """FIGURE — The residual cross-correlations of the last estimated model,
+    pair by pair: drvus' two-sided CCF (the suite's reference), with the
+    Hosking Q. What is left beyond the band is what the model does not carry.
+    `nlags` defaults to twice the frequency."""
+    from . import figures
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+    except KeyError as e:
+        return [str(e)]
+    freq = s.series[0].freq
+    K = int(nlags) or max(8, 2 * freq)
+    return _figure(s, figures.residual_ccf_figure(L, K, freq), "ccf", path,
+                   f"Residual CCFs, {K} lags each side")
+
+
+@mcp.tool()
+def plot_forecast(name: str, horizon: int = 12, path: str = "") -> list:
+    """FIGURE — The forecasts of every series in its level with the last
+    estimated model: recent history, the forecasts and the 95 % band dashed
+    (asymmetric under a log model). The numbers are forecast's."""
+    from . import figures
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+        fcs = L.forecast(int(horizon))
+    except Exception as e:                                   # noqa: BLE001
+        return [f"Cannot forecast: {e}"]
+    return _figure(s, figures.forecast_figure(L, fcs), "forecast", path,
+                   f"Forecasts, {horizon} steps")
+
 
 @mcp.tool()
 def record_decision(name: str, node: str, decision: str, reason: str = "",

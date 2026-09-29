@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**13 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**17 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -15,6 +15,10 @@
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
+| [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of every series in its level with the last |
+| [`plot_impulse_response`](#plot-impulse-response) | FIGURE — The orthogonalised impulse responses of the last estimated model. |
+| [`plot_residual_ccf`](#plot-residual-ccf) | FIGURE — The residual cross-correlations of the last estimated model, |
+| [`plot_variance_decomposition`](#plot-variance-decomposition) | FIGURE — The forecast-error variance decomposition, in the IRF's layout. |
 | [`record_decision`](#record-decision) | Record a decision, WHY, on WHAT evidence, and what was set aside. |
 | [`reorder`](#reorder) | N6 — The impulse responses under ANOTHER Cholesky order, against the files'. |
 | [`run_gate`](#run-gate) | N1 — The diagonal gate: does the joint cast reproduce the univariate models? |
@@ -178,6 +182,80 @@ N0 — Start a session from the univariate models: one fue file per series.
     The files are read by fue's own parser and recognised by their content. The
     series must share their frequency and their LAST date (BUG-2): different
     start dates are aligned at the end; different ends are refused.
+
+---
+
+## `plot_forecast`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `horizon` | integer | no | `12` |
+| `path` | string | no | `` |
+
+FIGURE — The forecasts of every series in its level with the last
+    estimated model: recent history, the forecasts and the 95 % band dashed
+    (asymmetric under a log model). The numbers are forecast's.
+
+---
+
+## `plot_impulse_response`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `horizon` | integer | no | `24` |
+| `bands` | boolean | no | `True` |
+| `ndraws` | integer | no | `500` |
+| `path` | string | no | `` |
+
+FIGURE — The orthogonalised impulse responses of the last estimated model.
+
+    Drawn as what an impulse response is, a function of the lag like an ACF:
+    one panel per (response, shock), thick impulses at h = 0..H, the seasonal
+    grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
+    order of the files, as impulse_response. The numbers are impulse_response's.
+
+---
+
+## `plot_residual_ccf`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `nlags` | integer | no | `0` |
+| `path` | string | no | `` |
+
+FIGURE — The residual cross-correlations of the last estimated model,
+    pair by pair: drvus' two-sided CCF (the suite's reference), with the
+    Hosking Q. What is left beyond the band is what the model does not carry.
+    `nlags` defaults to twice the frequency.
+
+---
+
+## `plot_variance_decomposition`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `horizon` | integer | no | `24` |
+| `bands` | boolean | no | `True` |
+| `ndraws` | integer | no | `500` |
+| `path` | string | no | `` |
+
+FIGURE — The forecast-error variance decomposition, in the IRF's layout.
+
+    Panel (i, j): the % of the h-step forecast-error variance of i due to the
+    shock of j, h = 1..H, as impulses on a 0-100 axis with the 95 % band
+    dashed. A row reads the same as in plot_impulse_response.
 
 ---
 
