@@ -342,6 +342,68 @@ def ja_identification(w, res, names, K, qmax, freq):
     return "\n".join(out), facts
 
 
+def ja_checking(res, sigma, names, K, freq, date_of):
+    """Jenkins and Alavi's checking of a fitted model [§5.2].
+
+    (1) the large residuals, on the UNCORRELATED transformed residuals
+    a*_t = Q' a_t (Q the eigenvectors of Sigma, limits +-2 sqrt(lambda)),
+    since the a_it correlate at lag 0 and cannot be judged one by one; with
+    the original residual that moves most in each large a*; (2) the residual
+    correlation matrices R_k(a); (3) the portmanteau matrix
+    Q_ij = n SUM_k r_ij(k)^2 — which, they warn, deserves less attention than
+    the individual matrices, "the only ones that give clues how the model can
+    be changed for the better". `date_of(t)` dates residual t (0-based)."""
+    from scipy.stats import chi2
+    from drvarma.identification_mv import corr_matrices, symbols
+    a = np.asarray(res, float)
+    n, m = a.shape
+    Sig = np.asarray(sigma, float)
+    lam, Q = np.linalg.eigh(Sig)
+    order = np.argsort(lam)[::-1]
+    lam, Q = lam[order], Q[:, order]
+    astar = (a - a.mean(0)) @ Q
+    out = ["CHECKING, as Jenkins and Alavi (1981, §5.2)", "",
+           "(1) Large residuals, on the uncorrelated transformed residuals a* = Q'a "
+           "(Q: eigenvectors of Sigma; limits +-2 sqrt(lambda)):"]
+    big = []
+    for c in range(m):
+        z = astar[:, c] / np.sqrt(lam[c])
+        load = ", ".join(f"{names[i]} {Q[i, c]:+.2f}" for i in np.argsort(-np.abs(Q[:, c])))
+        idx = [t for t in np.argsort(-np.abs(z)) if abs(z[t]) > 2.0][:6]
+        out.append(f"  a*_{c + 1} (lambda {lam[c]:.4g}; loads {load}): "
+                   + (", ".join(f"{'%d.%02d' % date_of(t) if freq > 1 else date_of(t)[0]} "
+                                f"({z[t]:+.1f})" for t in sorted(idx)) if idx else "none beyond 2"))
+        big += [(abs(z[t]), t) for t in idx]
+    if big:
+        worst = max(big)[1]
+        out.append("  the largest: " + ("%d.%02d" % date_of(worst) if freq > 1 else str(date_of(worst)[0]))
+                   + " — " + ", ".join(f"{names[i]} {a[worst, i] / np.sqrt(Sig[i, i]):+.1f} s.d."
+                                       for i in range(m))
+                   + ". A known cause is treated by intervention (in art, on the "
+                     "series' own model) before reading anything else: large "
+                     "residuals distort the structure, the estimates, the "
+                     "correlations and the forecasts.")
+    R, se = corr_matrices(a, K, prewhitened=True)
+    sym = symbols(R, se)
+    out += ["", f"(2) Residual correlation matrices R_k(a) (s.e. 1/sqrt(n) = {1 / np.sqrt(n):.3f}):"]
+    out += [f"    k={k + 1:2d}  {_block(sym[k])}" for k in range(K)]
+    beyond = [(k + 1, i, j) for k in range(K) for i in range(m) for j in range(m)
+              if sym[k, i, j] != "."]
+    out.append("  beyond the band: " + (", ".join(f"({names[i]}, {names[j]}) at {k}"
+                                                  for k, i, j in beyond) if beyond else "none")
+               + f"  (about {0.05 * K * m * m:.1f} expected by chance)")
+    Qij = n * (R ** 2).sum(0)
+    p = chi2.sf(Qij, K)
+    out += ["", f"(3) Portmanteau matrix Q_ij = n SUM r_ij(k)^2, k <= {K} "
+                "(a summary; the individual matrices above are what give clues):"]
+    for i in range(m):
+        out.append(f"  {names[i]:<12}" + "".join(f"{Qij[i, j]:9.1f}{'*' if p[i, j] < 0.05 else ' '}"
+                                                  for j in range(m)))
+    out.append("  * p < 0.05 against chi-square(K), no parameters discounted.")
+    facts = {"n_beyond": len(beyond), "beyond": beyond, "large": len(big)}
+    return "\n".join(out), facts
+
+
 def _is_covariance(name):
     """The ladder's names for the innovation covariance parameters:
     `log(Q[b]/Q[a])` and `Q[b,a]` (drvarma.ladder)."""

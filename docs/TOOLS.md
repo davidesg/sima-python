@@ -2,12 +2,13 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**18 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**19 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
 | tool | what it answers |
 |---|---|
+| [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do. |
 | [`estimate`](#estimate) | N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance. |
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
@@ -26,6 +27,28 @@
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
+
+---
+
+## `check_residuals`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `nlags` | integer | no | `0` |
+
+N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do.
+
+    (1) The large residuals, judged on the UNCORRELATED transformed residuals
+    (the a_it correlate at lag 0, so one by one they cannot be judged), with
+    their dates — a known cause goes to intervention analysis, in art, before
+    anything else is read. (2) The residual correlation matrices R_k(a), with
+    what is beyond the band. (3) The portmanteau matrix Q_ij, as a summary.
+    If the matrices show structure, a model for the residuals is entertained
+    and combined with the fitted one, as at identification. `nlags` defaults
+    to max(6, frequency).
 
 ---
 

@@ -78,6 +78,10 @@ N3  estimate          a candidate: cross orders p, q; full or diagonal
                       covariance; optionally `links`, the cross dynamics only
                       on the pairs identify_cross found (its option (d)).
 N4  (in estimate)     LR against the univariates, residuals, convergence.
+    check_residuals   Jenkins and Alavi's checking: large residuals on the
+                      uncorrelated transformed residuals (with dates, the entry
+                      to interventions), the residual correlation matrices,
+                      the portmanteau matrix.
 N4b study_estimation  when estimate says the fit STOPPED ON THE MA
                       INVERTIBILITY WALL: the estimation is ill-defined there.
                       Show the roots, the second path (Shea) and the restarts,
@@ -429,6 +433,37 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
         nxt = ("The fit stopped on the MA invertibility wall: study it before "
                "reading its numbers (study_estimation).")
     return txt + "\n\n" + nxt
+
+
+@mcp.tool()
+def check_residuals(name: str, nlags: int = 0) -> str:
+    """N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do.
+
+    (1) The large residuals, judged on the UNCORRELATED transformed residuals
+    (the a_it correlate at lag 0, so one by one they cannot be judged), with
+    their dates — a known cause goes to intervention analysis, in art, before
+    anything else is read. (2) The residual correlation matrices R_k(a), with
+    what is beyond the band. (3) The portmanteau matrix Q_ij, as a summary.
+    If the matrices show structure, a model for the residuals is entertained
+    and combined with the fitted one, as at identification. `nlags` defaults
+    to max(6, frequency).
+    """
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+    except KeyError as e:
+        return str(e)
+    r = L.result
+    freq = s.series[0].freq
+    K = int(nlags) or max(6, freq)
+    s0 = L.series[L._act[0]]
+    n = r.residuals.shape[0]
+    txt, facts = evidence.ja_checking(r.residuals, r.sigma, _names(s), K, freq,
+                                      lambda t: s0.date_of(s0.nobs - n + t + 1))
+    s.guion.add("N4", "check_residuals", {"nlags": K, "model": str(s.current)},
+                f"{facts['n_beyond']} residual correlations beyond the band; "
+                f"{facts['large']} large transformed residuals")
+    return txt
 
 
 @mcp.tool()

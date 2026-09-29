@@ -2,6 +2,15 @@
 
 ## 0.1.0 — unreleased
 
+### Jenkins and Alavi's checking (`check_residuals`)
+
+- [§5.2] The large residuals judged on the UNCORRELATED transformed residuals
+  a* = Q'a (the a_it correlate at lag 0, so one by one they cannot be judged),
+  with their dates, the entry to interventions; the residual correlation
+  matrices R_k(a); the portmanteau matrix Q_ij, as a summary. A shock of
+  opposite sign in two correlated series, ordinary in each, stands out (their
+  butter price and purchases).
+
 ### Jenkins and Alavi's identification (`identify_matrices`)
 
 - Their two methods [§3.3–3.4], from the ladder: method 2 on the residuals of
