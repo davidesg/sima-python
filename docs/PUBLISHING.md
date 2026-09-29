@@ -20,6 +20,8 @@ only runs on a `sima-v*` tag.
 **Before tagging.**
 1. `python -m pytest -q`.
 2. `python3 tools/gen_tools_md.py sima.mcp_server sima docs/TOOLS.md`.
+   Then `python3 tools/sync_material.py` (the CI runs it too): the packaged
+   copy of `bugs/` and `docs/` that the MCP resources serve.
 3. The CHANGELOG entry has its date.
 4. PyPI: a trusted publisher for `davidesg/sima`, workflow `publish-sima.yml`,
    environment `pypi`.

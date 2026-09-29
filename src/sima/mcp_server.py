@@ -154,10 +154,61 @@ RULES THAT ARE NOT NEGOTIATED
 6. Do not prune a link or drop a series to make a number look better. That is
    the analyst's judgement, stated as such.
 7. Present the tables as the tools return them. Do not rebuild them.
+8. Resources to ASK for when needed: sima://protocol (this text),
+   sima://defects (sima's and the engine's defect registers; one report with
+   sima://engine-defects/BUG-XXXX), sima://docs.
 """
 
 mcp = FastMCP("sima — simultaneous VARMA on the ATSW ladder (drvarma)",
               instructions=_INSTRUCTIONS)
+
+
+# --------------------------------------------------------------------------- #
+#  Resources: what the model can ASK for (sima.resources)                      #
+# --------------------------------------------------------------------------- #
+
+@mcp.resource("sima://protocol")
+def _r_protocol() -> str:
+    """The whole protocol and its doctrine: the server's instructions, to
+    reread them in the middle of an analysis."""
+    return _INSTRUCTIONS
+
+
+@mcp.resource("sima://defects")
+def _r_defects() -> str:
+    """The defect registers: sima's and the engine's (drvarma), with what is
+    still open. Read before proposing a simplification that looks obvious."""
+    from .resources import defects_index
+    return defects_index()
+
+
+@mcp.resource("sima://defects/{bug_id}")
+def _r_defect(bug_id: str) -> str:
+    """One report of sima's register, whole (`BUG-0001` or `0001`)."""
+    from .resources import defect
+    return defect("sima", bug_id)
+
+
+@mcp.resource("sima://engine-defects/{bug_id}")
+def _r_engine_defect(bug_id: str) -> str:
+    """One report of the engine's register (drvarma), whole: the ladder, the
+    estimation, the MA wall (`BUG-0010` or `0010`)."""
+    from .resources import defect
+    return defect("drvarma", bug_id)
+
+
+@mcp.resource("sima://docs")
+def _r_docs() -> str:
+    """The index of sima's documents (design, tool reference)."""
+    from .resources import docs_index
+    return docs_index()
+
+
+@mcp.resource("sima://doc/{name}")
+def _r_doc(name: str) -> str:
+    """One of sima's documents, whole, by name without the extension."""
+    from .resources import doc
+    return doc(name)
 
 
 def _ladder(files, p, q, diagcov, estwin=None, links=None):

@@ -16,6 +16,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # bugs/ and docs/ ship inside the package (src/sima/material/, not in
+      # git): the MCP resources serve them. Without this step the wheel
+      # carries none and sima://defects answers with nothing (art BUG-0125).
+      - name: Sync the material the MCP resources serve
+        run: |
+          python3 tools/sync_material.py
+          test -d src/sima/material/bugs
       - name: Build sdist + wheel
         run: |
           pip install build

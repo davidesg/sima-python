@@ -2,6 +2,17 @@
 
 ## 0.1.0 — unreleased
 
+### MCP resources: what the model can ask for
+
+- `sima://protocol`, the instructions, to reread them mid-analysis.
+- `sima://defects`: sima's register and the ENGINE's (drvarma), where the
+  defects of the ladder live; one report whole with `sima://defects/{id}` or
+  `sima://engine-defects/{id}` (the registers number independently).
+- `sima://docs`, `sima://doc/{name}`.
+- Read with `fue.bugs`. The material ships inside the package
+  (`tools/sync_material.py`, run by the CI before building), so an
+  installation serves it; checked on a built wheel.
+
 ### The guion as HTML
 
 - `export_guion` writes, besides `<first>.sima.json`, `<first>.sima.html`: a

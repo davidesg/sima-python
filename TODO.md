@@ -45,8 +45,10 @@ missing, in order:
 - [x] **HTML guion** (2026-09-29): `export_guion` also writes
       `<first>.sima.html` in art's style; the figures go to `figs/` next to
       the files and appear at their node.
-- [ ] **Resources**: `sima://defects` from `bugs/` (with `fue.bugs`, no copy),
-      `sima://protocol`.
+- [x] **Resources** (2026-09-29): `sima://protocol`, `sima://defects` (sima's
+      and the engine's registers, read with `fue.bugs`), one report by
+      `sima://defects/{id}` or `sima://engine-defects/{id}`, `sima://docs`.
+      Packaged by `tools/sync_material.py` here and in drvarma.
 
 ## Later
 
