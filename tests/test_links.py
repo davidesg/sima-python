@@ -55,3 +55,13 @@ def test_estimate_with_the_preliminary_start():
     assert "cross terms started at preliminary" in txt
     assert "'start': 'preliminary'" in _fn(M.export_guion)("L5", save=False) or \
            "start=preliminary" in _fn(M.export_guion)("L5", save=False)
+
+
+def test_estimate_in_the_residual_model_form():
+    _fn(M.load_pre)("L6", json.dumps(PAIR))
+    _fn(M.run_gate)("L6")
+    txt = _fn(M.estimate)("L6", 0, 1, False, "", "", "zero", "residual")
+    assert "residual-model form (Jenkins-Alavi 3.22)" in txt
+    txt2 = _fn(M.estimate)("L6", 0, 1, False, "", "", "zero", "additive")
+    assert "residual-model form" not in txt2
+    assert len(M._sess.get("L6").fits) == 2                    # two candidates

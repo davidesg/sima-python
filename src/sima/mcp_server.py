@@ -89,6 +89,9 @@ N4b study_estimation  when estimate says the fit STOPPED ON THE MA
                       an optimum.
 N5  evaluate          THE YARDSTICK: fixed-parameter forecasts from every origin,
                       the candidate against the univariates, same window.
+    forecast_uncertainty  Jenkins and Alavi's Table VIII: V(l) of the model
+                      against the univariates, by lead (in sample; evaluate
+                      is the test).
 N6  forecast, impulse_response, variance_decomposition — with the chosen model.
     Their figures: plot_forecast, plot_impulse_response (an ACF-like panel per
     response and shock), plot_variance_decomposition (the same layout, 0-100 %),
@@ -220,10 +223,11 @@ def _r_doc(name: str) -> str:
     return doc(name)
 
 
-def _ladder(files, p, q, diagcov, estwin=None, links=None, start="zero"):
+def _ladder(files, p, q, diagcov, estwin=None, links=None, start="zero",
+            cross="additive"):
     from drvarma.ladder import Ladder
     return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
-                  links=links or None, start=start)
+                  links=links or None, start=start, cross=cross)
 
 
 def _links(links):
@@ -394,7 +398,8 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
 
 @mcp.tool()
 def estimate(name: str, p: int, q: int, diagcov: bool = False,
-             reason: str = "", links: str = "", start: str = "zero") -> str:
+             reason: str = "", links: str = "", start: str = "zero",
+             cross: str = "additive") -> str:
     """N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
     Each series keeps its univariate model on the diagonal (its ARMA factors are
@@ -414,18 +419,27 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     univariate residuals' cross covariances, the cross AR from Yule-Walker).
     Usually the same optimum in fewer iterations; on an ill-defined estimation
     (the MA wall) a second path worth comparing.
+
+    `cross`: how the cross MA enters — "additive" (default: a cross polynomial
+    beside the univariate operators) or "residual", Jenkins and Alavi's form
+    (3.22): a model for the univariate residuals, multiplied by each series'
+    univariate MA. The same when the univariate models have no MA factors;
+    when they have (an airline), the two are different candidates — on m6 the
+    residual form converged inside where the additive one stopped on the MA
+    wall. identify_matrices' method 2 proposes it.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
     lk = _links(links)
-    key = (int(p), int(q), bool(diagcov), lk)
+    key = (int(p), int(q), bool(diagcov), lk, cross)
     try:
-        L = _ladder(s.files, int(p), int(q), bool(diagcov), links=lk, start=start)
+        L = _ladder(s.files, int(p), int(q), bool(diagcov), links=lk, start=start,
+                    cross=cross)
         L.fit()
     except Exception as e:
-        s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk},
-                    f"failed: {e}", reason)
+        s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
+                                       "cross": cross}, f"failed: {e}", reason)
         return f"Estimation failed: {e}"
     s.fits[key] = L
     s.current = key
@@ -433,7 +447,7 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     txt = evidence.estimation_text(L, max(8, 2 * freq))
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
     s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
-                                   "start": L.start_used},
+                                   "start": L.start_used, "cross": cross},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
     nxt = "Next: evaluate — the candidate against the univariates."
     if getattr(L.result, "ma_boundary", 0):
@@ -495,7 +509,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
     s = _sess.get(name)
     if s.current is None or s.current not in s.fits:
         return "Estimate a model first (estimate)."
-    p, q, diagcov, lk = s.current
+    p, q, diagcov, lk, cross = s.current
     L = s.fits[s.current]
     r = L.result
     freq = s.series[0].freq
@@ -507,7 +521,8 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
            evidence.roots_text(r, freq), ""]
     # 2. the second path
     try:
-        Ls = Ladder(list(s.files), p, q, diagcov=diagcov, lik="shea", links=lk or None)
+        Ls = Ladder(list(s.files), p, q, diagcov=diagcov, lik="shea", links=lk or None,
+                    cross=cross)
         rs = Ls.fit()
         out += ["SECOND PATH (Shea's likelihood, AS 242):",
                 f"  logL {rs.logL:.6f}  ({rs.nit} iterations; "
@@ -568,7 +583,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
 
 @mcp.tool()
 def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
-             diagcov: bool = False, links: str = "") -> str:
+             diagcov: bool = False, links: str = "", cross: str = "additive") -> str:
     """N5 — The yardstick: does the candidate forecast better than the univariates?
 
     Estimates the candidate AND the diagonal system (the univariate models) on
@@ -587,7 +602,7 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     H = int(horizon)
     try:
         lk = _links(links)
-        Lc = _ladder(s.files, p, q, diagcov, estwin=estwin, links=lk)
+        Lc = _ladder(s.files, p, q, diagcov, estwin=estwin, links=lk, cross=cross)
         Lc.fit()
         _rows, cand = Lc.recursive(H)
         Ld = _ladder(s.files, 0, 0, True, estwin=estwin)
@@ -598,9 +613,10 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     freq = s.series[0].freq
     hs = sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H]
     label = (f"VARMA p={p} q={q} ({'diagonal' if diagcov else 'full'} cov)"
-             + (f", links {lk}" if lk else ""))
+             + (f", links {lk}" if lk else "")
+             + (", residual-model form" if cross == "residual" else ""))
     txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s))
-    s.evaluations[(p, q, diagcov, lk, estwin, H)] = (cand, diag)
+    s.evaluations[(p, q, diagcov, lk, cross, estwin, H)] = (cand, diag)
     s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "estwin": estwin, "horizon": H},
                 f"lower RMSE in {facts['wins']} of {facts['cells']} cells")
@@ -634,6 +650,31 @@ def forecast(name: str, horizon: int = 12) -> str:
     s.guion.add("N6", "forecast", {"horizon": horizon, "model": str(s.current)},
                 f"{horizon} steps")
     return evidence.forecast_text(fcs)
+
+
+@mcp.tool()
+def forecast_uncertainty(name: str, horizon: int = 0) -> str:
+    """N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their
+    Table VIII): the standard deviation of the forecast errors by lead time,
+    V(l) = SUM psi_j Sigma psi_j', of the last estimated model against the
+    univariate models, per cent for series in logs. In sample, parameters
+    taken as known: a quick reading of where the multivariate model could
+    help; `evaluate` is the test. `horizon` defaults to the frequency (4 for
+    annual data).
+    """
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+        H = int(horizon) or max(s.series[0].freq, 4)
+        fm = L.forecast(H)
+        fd = _diagonal(s).forecast(H)
+    except Exception as e:                                   # noqa: BLE001
+        return f"Cannot compute: {e}"
+    series = [L.series[i] for i in L._act]
+    leads = sorted({1, 2, 3, max(1, H // 2), H} & set(range(1, H + 1)))
+    s.guion.add("N5", "forecast_uncertainty", {"horizon": H, "model": str(s.current)},
+                "V(l) against the univariate models")
+    return evidence.uncertainty_text(fm, fd, series, leads)
 
 
 @mcp.tool()

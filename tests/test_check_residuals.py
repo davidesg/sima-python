@@ -39,3 +39,14 @@ def test_the_tool():
     for part in ("(1) Large residuals", "(2) Residual correlation matrices", "(3) Portmanteau matrix"):
         assert part in txt
     assert "check_residuals" in _fn(M.export_guion)("ck", save=False)
+
+
+def test_forecast_uncertainty_table():
+    _fn(M.load_pre)("fu", json.dumps(PAIR))
+    _fn(M.run_gate)("fu")
+    assert "Cannot compute" in _fn(M.forecast_uncertainty)("fu")      # no model yet
+    _fn(M.estimate)("fu", 1, 0, False)
+    txt = _fn(M.forecast_uncertainty)("fu", 6)
+    assert "Table VIII" in txt and "univariate" in txt
+    rows = [l for l in txt.splitlines() if l.strip()[:1].isdigit()]
+    assert [int(r.split()[0]) for r in rows] == [1, 2, 3, 6]

@@ -313,9 +313,11 @@ def ja_identification(w, res, names, K, qmax, freq):
         out.append(f"  (a) from method 2: an MA({q2}) residual model, the univariate "
                    f"models on the diagonal — estimate(p=0, q={q2}"
                    + (f', links="{", ".join(links)}"' if links else "")
-                   + "). Jenkins and Alavi's form multiplies the cross MA by the "
-                   "univariate MA of each series (3.22); the ladder adds it — the "
-                   "same when the univariate models have no MA factors.")
+                   + ', cross="residual"). That is Jenkins and Alavi\'s form (3.22): '
+                   "the cross MA multiplied by each series' univariate MA; the "
+                   "additive form (the default) is the same when the univariate "
+                   "models have no MA factors, and a different candidate when they "
+                   "have.")
     links1 = []
     for k in range(p1):
         for i in range(m):
@@ -404,6 +406,33 @@ def ja_checking(res, sigma, names, K, freq, date_of):
     return "\n".join(out), facts
 
 
+def uncertainty_text(fc_model, fc_diag, series, leads):
+    """Jenkins and Alavi's Table VIII: the standard deviation of the forecast
+    errors at each lead time, V(l) of the model against the univariate models'
+    (the diagonal system), per cent of the level when the series is in logs
+    (100 x the log metric) [§6.3]. In sample: V(l) takes the parameters as
+    known; the out-of-sample yardstick is `evaluate` — "a large number of
+    forecast origins would be needed", as they say."""
+    out = ["FORECAST UNCERTAINTY — the standard deviation of the forecast errors "
+           "by lead time, V(l) (Jenkins and Alavi's Table VIII)",
+           "per cent for series in logs (100 x the log metric); otherwise in the "
+           "units of the transformed series. Univariate = the diagonal system.", ""]
+    head = "  lead " + "".join(f"{s.name[:10]:>12}{'':>11}" for s in series)
+    sub = "       " + "".join(f"{'univariate':>11} {'model':>9}  " for _ in series)
+    out += [head, sub]
+    for l in leads:
+        row = f"  {l:4d} "
+        for c, s in enumerate(series):
+            sc = (100.0 if s.model.boxlam == 0.0 else 1.0) / s.model.refactor
+            u, v = sc * fc_diag[c]["sd"][l - 1], sc * fc_model[c]["sd"][l - 1]
+            row += f"{u:11.3f} {v:9.3f}{'*' if v < u else ' '} "
+        out.append(row)
+    out += ["  * the model's forecast errors are smaller at that lead.",
+            "  These take the parameters as known and the model as right; whether "
+            "the gain is real is what `evaluate` measures, out of sample."]
+    return "\n".join(out)
+
+
 def _is_covariance(name):
     """The ladder's names for the innovation covariance parameters:
     `log(Q[b]/Q[a])` and `Q[b,a]` (drvarma.ladder)."""
@@ -416,7 +445,9 @@ def estimation_text(L, nlags):
     names = [s.name for s in L.series]
     links = getattr(L, "links", None)
     out = [f"ESTIMATED: cross orders p = {L.p}, q = {L.q}, "
-           f"{'diagonal' if L.diagcov else 'full'} innovation covariance",
+           f"{'diagonal' if L.diagcov else 'full'} innovation covariance"
+           + ("; cross MA in the residual-model form (Jenkins-Alavi 3.22)"
+              if getattr(L, "cross", "additive") == "residual" else ""),
            *([f"cross links: " + ", ".join(
                f"{names[i]}<-{names[j]}" for i in range(len(names))
                for j in range(len(names)) if i != j and links[i, j])

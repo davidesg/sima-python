@@ -2,6 +2,22 @@
 
 ## 0.1.0 — unreleased
 
+### The residual-model form, and Jenkins and Alavi's Table VIII
+
+- `estimate(cross="residual")` (and `evaluate`, `study_estimation`): the
+  cross MA as a model for the univariate residuals (3.22), multiplied by each
+  series' univariate MA; method 2 of `identify_matrices` proposes it. The
+  session keeps the two forms as different candidates.
+- `forecast_uncertainty`: V(l) of the model against the univariate models by
+  lead time, per cent for series in logs (their Table VIII); in sample —
+  `evaluate` is the test.
+- Validated on their own data, muskrat and mink (1850–1911): fue's univariate
+  models reproduce theirs (ARIMA(6,1,1) and AR(4)); the prewhitened r(0) is
+  0.38 (theirs 0.42), the lag-1 cross correlations have their signs (more
+  muskrat, more mink next year; more mink, fewer muskrat), method 2 reads an
+  MA(1) residual model and method 1 a cross AR of order 2, as they found; the
+  fitted cross terms carry the predator–prey signs of their (5.10).
+
 ### `estimate(start="preliminary")`
 
 - The cross terms can start at Jenkins and Alavi's preliminary estimates

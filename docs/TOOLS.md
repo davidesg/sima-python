@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**19 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**20 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -13,6 +13,7 @@
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
 | [`forecast`](#forecast) | N6 — Forecast every series in its level with the last estimated model. |
+| [`forecast_uncertainty`](#forecast-uncertainty) | N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their |
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
@@ -65,6 +66,7 @@ N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do.
 | `reason` | string | no | `` |
 | `links` | string | no | `` |
 | `start` | string | no | `zero` |
+| `cross` | string | no | `additive` |
 
 N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
@@ -86,6 +88,14 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     Usually the same optimum in fewer iterations; on an ill-defined estimation
     (the MA wall) a second path worth comparing.
 
+    `cross`: how the cross MA enters — "additive" (default: a cross polynomial
+    beside the univariate operators) or "residual", Jenkins and Alavi's form
+    (3.22): a model for the univariate residuals, multiplied by each series'
+    univariate MA. The same when the univariate models have no MA factors;
+    when they have (an airline), the two are different candidates — on m6 the
+    residual form converged inside where the additive one stopped on the MA
+    wall. identify_matrices' method 2 proposes it.
+
 ---
 
 ## `evaluate`
@@ -101,6 +111,7 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 | `horizon` | integer | no | `12` |
 | `diagcov` | boolean | no | `False` |
 | `links` | string | no | `` |
+| `cross` | string | no | `additive` |
 
 N5 — The yardstick: does the candidate forecast better than the univariates?
 
@@ -152,6 +163,25 @@ N6 — Forecast every series in its level with the last estimated model.
     Each series goes back to its level with its own univariate model:
     deterministic terms (known in the future), its differencing, its Box-Cox.
     The 95% band is built on the transformed scale and mapped back.
+
+---
+
+## `forecast_uncertainty`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `horizon` | integer | no | `0` |
+
+N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their
+    Table VIII): the standard deviation of the forecast errors by lead time,
+    V(l) = SUM psi_j Sigma psi_j', of the last estimated model against the
+    univariate models, per cent for series in logs. In sample, parameters
+    taken as known: a quick reading of where the multivariate model could
+    help; `evaluate` is the test. `horizon` defaults to the frequency (4 for
+    annual data).
 
 ---
 
