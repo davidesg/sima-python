@@ -943,8 +943,34 @@ def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str =
     K = int(nlags) or max(10, 2 * freq)
     Kp = max(1, min(K, n // (3 * m)))
     fig = figures.identification_figure(x, names, K, method, freq, sel, Kp)
-    return _figure(s, fig, f"ident{method}", path,
-                   f"Jenkins-Alavi method {method}: R_k over S_k by pair, {K} lags each side")
+    # the figure carries only the statistic; what it means is said here
+    from drvarma.identification_mv import haugh
+    lines = [f"Jenkins and Alavi's method {method} "
+             + ("(prewhitened: the residuals of the univariate models)" if method == 2
+                else "(not prewhitened: the stationary series w_t)")
+             + f", n = {n}, {K} lags each side.",
+             "ccf: the correlation matrices R_k; pccf: the partial correlation "
+             "matrices S_k (multivariate Yule-Walker). Each pair \"A - B\": A leads "
+             "at k > 0, the other at k < 0."]
+    if method == 2:
+        lines.append("Bands 2/sqrt(n). Under R_k, Haugh's S* (1976): are the two "
+                     "prewhitened series independent? By side:")
+        for i, j in (sel or [(i, j) for i in range(m) for j in range(i + 1, m)]):
+            h = haugh(x[:, i], x[:, j], K)
+            lines.append(
+                f"  {names[j]} - {names[i]}: S*({h['all'][1]}) = {h['all'][0]:.1f}, "
+                f"p = {h['all'][2]:.3f};  k > 0 ({names[j]} leads) {h['k>0'][0]:.1f}, "
+                f"p = {h['k>0'][2]:.3f};  k < 0 ({names[i]} leads) {h['k<0'][0]:.1f}, "
+                f"p = {h['k<0'][2]:.3f}")
+    else:
+        lines.append("R_k band: Bartlett's (3.13) for unrelated series, lag by lag; "
+                     "no portmanteau (the series are not white). S_k band 2/sqrt(n).")
+    if m > 2:
+        lines.append("S_k comes from the VAR of all the series: each partial panel "
+                     "is given the other series.")
+    if Kp < K:
+        lines.append(f"S_k up to lag {Kp}: the order the sample supports (n / 3m).")
+    return _figure(s, fig, f"ident{method}", path, "\n".join(lines))
 
 
 @mcp.tool()

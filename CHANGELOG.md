@@ -8,6 +8,11 @@
   now GraphMaker's (Treadway's, the one drtran's GUI draws): titled "A - B"
   with A leading at k > 0, Hosking's P (not Q) with its degrees of freedom,
   dotted bands, a dashed vertical at lag 0.
+- Terse, as the originals: `plot_identification` says the method in one line,
+  the pair once above, "ccf" / "pccf" at the left, and between the panels
+  only "S* ( d.f. ) = value" (method 2; nothing under the others). What they
+  mean, the sides of Haugh's test and the conditioning of the partials go in
+  the tool's text.
 
 ### Jenkins and Alavi's identification as a figure (`plot_identification`)
 
