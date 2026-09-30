@@ -491,7 +491,9 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     The figures, as drvus drew the diagnosis and their figure 7: fue's panel
     for each residual series (the residuals with +-2 bands, the acf with its
     Q, the pacf), and the residual ccf of each pair (GraphMaker's, with
-    Hosking's P). `nlags` (the matrices) defaults to max(6, frequency).
+    Hosking's P). `nlags` (the matrices) defaults to max(6, frequency). The
+    portmanteaus keep at least 2 lags beyond the parameters: the legacy lags
+    move up when a long model in annual data would leave none.
     """
     from . import figures
     s = _sess.get(name)
@@ -561,14 +563,16 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     # the figures, as drvus' diagnosis: a panel per series, a ccf per pair
     items = [(fig, f"resid_{nm}") for nm, fig in figures.residual_panels(L)]
     from drvarma.plots import ccf_default_lags
-    Kc = min(ccf_default_lags(freq), n // 4)
-    items.append((figures.residual_ccf_figure(L, Kc, freq), "ccf"))
     npq = figures.residual_npq(L)
+    K0 = min(ccf_default_lags(freq), n // 4)
+    Kc = figures.q_lags(K0, npq, n)
+    items.append((figures.residual_ccf_figure(L, Kc, freq), "ccf"))
     lines.append(f"\nThe residual ccf's P is GraphMaker's: Hosking's portmanteau over {Kc} lags "
-                 f"with 4(K - (p + q)) degrees of freedom, p + q = {npq} (the largest AR "
-                 "plus the largest MA order of the fitted model)"
-                 + (": none left at this K, so it is shown without them."
-                    if Kc <= npq else "."))
+                 f"with 4(K - (p + q)) = {4 * (Kc - npq)} degrees of freedom, p + q = {npq} "
+                 "(the largest AR plus the largest MA order of the fitted model)"
+                 + (f"; K moved up from GraphMaker's {K0} to leave at least "
+                    f"{figures.MIN_DF_LAGS} lags beyond p + q." if Kc > K0 else ".")
+                 + " The acf's Q of each series keeps the same minimum.")
     if not items[:-1]:
         lines.append("\n(pyfug is not installed: the per-series panels are missing.)")
     return _figures(s, items, "\n".join(lines))
@@ -1004,7 +1008,8 @@ def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
     except KeyError as e:
         return [str(e)]
     freq = s.series[0].freq
-    K = int(nlags) or max(8, 2 * freq)
+    n = L.result.residuals.shape[0]
+    K = int(nlags) or figures.q_lags(max(8, 2 * freq), figures.residual_npq(L), n)
     return _figure(s, figures.residual_ccf_figure(L, K, freq), "ccf", path,
                    f"Residual CCFs, {K} lags each side")
 

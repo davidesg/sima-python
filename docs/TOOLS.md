@@ -57,7 +57,9 @@ N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do,
     The figures, as drvus drew the diagnosis and their figure 7: fue's panel
     for each residual series (the residuals with +-2 bands, the acf with its
     Q, the pacf), and the residual ccf of each pair (GraphMaker's, with
-    Hosking's P). `nlags` (the matrices) defaults to max(6, frequency).
+    Hosking's P). `nlags` (the matrices) defaults to max(6, frequency). The
+    portmanteaus keep at least 2 lags beyond the parameters: the legacy lags
+    move up when a long model in annual data would leave none.
 
 ---
 

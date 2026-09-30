@@ -94,3 +94,14 @@ def test_identification_pairs_with_three_series(tmp_path, trio_json):
     assert fig.axes[0].get_xlabel().startswith("S* ( 25 ) = ")    # between the panels
     assert fig.axes[2].get_xlabel() == ""                         # nothing under S_k
     assert "given the other series" in out[0].text                # said in the text
+
+
+def test_portmanteau_lags_leave_degrees_of_freedom():
+    """The legacy lags move up to leave at least 2 beyond the parameters: in
+    annual data a long model (muskrat's AR(6)MA(1): 7) would leave none with
+    GraphMaker's 7 lags, and 2 with fug's 9. Never beyond n - 2."""
+    from sima.figures import MIN_DF_LAGS, q_lags
+    assert MIN_DF_LAGS == 2
+    assert q_lags(7, 7, 61) == 9 and q_lags(7, 8, 61) == 10
+    assert q_lags(9, 7, 61) == 9 and q_lags(24, 3, 200) == 24
+    assert q_lags(7, 20, 15) == 13

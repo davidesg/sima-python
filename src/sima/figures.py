@@ -145,6 +145,18 @@ def fevd_figure(L, horizon, bands=None, freq=12):
     return fig
 
 
+MIN_DF_LAGS = 2    # lags left beyond the parameters, at least
+
+
+def q_lags(K, npar, n):
+    """The lags of a residual portmanteau: the legacy K (fug's acf rule,
+    GraphMaker's ccf lags), moved up when it leaves fewer than MIN_DF_LAGS lags
+    beyond the parameters — in annual data with long models the legacy K
+    leaves none, and a statistic without degrees of freedom has no meaning.
+    Two lags left: Q with 2 d.f., a pair's P with 4 x 2 = 8. Never beyond n - 2."""
+    return int(min(max(K, npar + MIN_DF_LAGS), n - 2))
+
+
 def residual_npq(L):
     """GraphMaker's p + q for the P of a residual pair: the largest AR order
     plus the largest MA order of the fitted model (the expanded operators,
@@ -276,8 +288,9 @@ def residual_panels(L):
         y0, p0 = sr.date_of(sr.nobs - n + 1)
         ser = Tseries(name=f"A.{sr.name}", freq=sr.freq, nobs=n, begyear=int(y0),
                       begtime=int(p0), data=np.ascontiguousarray(a[:, col] / rf))
-        figs.append((sr.name, plot_combined(ser, npar=free_arma_count(sr.model),
-                                            nlags=default_lags(n, sr.freq),
+        npar = free_arma_count(sr.model)
+        figs.append((sr.name, plot_combined(ser, npar=npar,
+                                            nlags=q_lags(default_lags(n, sr.freq), npar, n),
                                             title=ser.name)))
     return figs
 

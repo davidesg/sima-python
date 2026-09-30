@@ -14,6 +14,10 @@
 - The residual ccf's P has GraphMaker's degrees of freedom, 4(K - (p + q)),
   p + q the largest AR plus the largest MA order of the fitted model; when
   none are left the label says so instead of a number.
+- The portmanteaus keep at least 2 lags beyond the parameters
+  (`figures.q_lags`): the legacy lags (fug's for the acf's Q, GraphMaker's for
+  the ccf's P) move up when a long model in annual data would leave none —
+  Q with at least 2 d.f., a pair's P with at least 8.
 
 ### `plot_identification` reports as art does
 
