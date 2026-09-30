@@ -2,6 +2,19 @@
 
 ## 0.1.0 — unreleased
 
+### The manual chapter and the example: Jenkins and Alavi
+
+- `docs/MANUAL-jenkins-alavi.md` (served as `sima://doc/MANUAL-jenkins-alavi`): the method of
+  Jenkins and Alavi (1981), how sima implements it tool by tool, and their
+  muskrat-mink example with the paper's numbers alongside.
+- `examples/jenkins_alavi/`: the two univariate models built in art (`.pre`
+  and `.out`), the data, and `run.py`, the walkthrough node by node with
+  sima's tools, recording the decisions; tested by
+  `tests/test_example_jenkins_alavi.py`.
+- `forecast_uncertainty(estwin=)`: the model and the univariate models
+  refitted on the first observations, as their §6.3 (Table VIII on 48).
+- The guion keeps one line for `plot_identification`, not its whole report.
+
 ### `evaluate`: two defects of the report
 
 - The RMSE columns of series in hundreds of thousands (muskrat skins) ran

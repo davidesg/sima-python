@@ -92,3 +92,17 @@ def test_the_report_is_arts(session, tmp_path):
     assert "   0    +0.38*" in t and "  +1    -0.36*    -0.39*" in t
     assert 'estimate(name="mm", p=0, q=1' in t and 'estimate(name="mm", p=2, q=0' in t
     assert out[1].type == "image"
+
+
+def test_their_table_viii_on_48_observations(session):
+    """§6.3: the models refitted on 48 observations (their 1848-1895, here
+    1850-1897). The univariate V(l) is theirs to within half a point (their
+    25.6 38.6 40.8 and 25.9 31.8 32.9), and the cross AR lowers it."""
+    _fn(M.estimate)(session, 2, 0, False, links="muskrat<-mink, mink<-muskrat",
+                    start="preliminary")
+    t = _fn(M.forecast_uncertainty)(session, horizon=3, estwin=48)
+    assert "Refitted on the first 48 observations (to 1897" in t
+    row = [l.split() for l in t.splitlines() if l.strip().startswith("1 ")][0]
+    uni_m, mod_m, uni_k, mod_k = (float(v.rstrip("*")) for v in row[1:5])
+    assert abs(uni_m - 25.6) < 0.6 and abs(uni_k - 25.9) < 0.6
+    assert mod_m < uni_m and mod_k < uni_k

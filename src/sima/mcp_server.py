@@ -747,7 +747,7 @@ def forecast(name: str, horizon: int = 12) -> str:
 
 
 @mcp.tool()
-def forecast_uncertainty(name: str, horizon: int = 0) -> str:
+def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
     """N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their
     Table VIII): the standard deviation of the forecast errors by lead time,
     V(l) = SUM psi_j Sigma psi_j', of the last estimated model against the
@@ -755,20 +755,44 @@ def forecast_uncertainty(name: str, horizon: int = 0) -> str:
     taken as known: a quick reading of where the multivariate model could
     help; `evaluate` is the test. `horizon` defaults to the frequency (4 for
     annual data).
+
+    `estwin` (optional): re-estimate the model AND the univariate models on
+    the first `estwin` observations of the first series, as Jenkins and Alavi
+    did for their Table VIII (§6.3: the muskrat-mink models refitted on 48
+    observations, the rest withheld). 0 = the last fit, on all the data.
     """
     s = _sess.get(name)
     try:
         L = _current(s)
         H = int(horizon) or max(s.series[0].freq, 4)
+        if estwin:
+            p, q, dc, lk, cr = s.current
+            L = _ladder(s.files, p, q, dc, estwin=int(estwin), links=lk,
+                        start="preliminary", cross=cr)
+            L.fit()
+            Ld = _ladder(s.files, 0, 0, True, estwin=int(estwin))
+            Ld.fit()
+        else:
+            Ld = _diagonal(s)
         fm = L.forecast(H)
-        fd = _diagonal(s).forecast(H)
+        fd = Ld.forecast(H)
     except Exception as e:                                   # noqa: BLE001
         return f"Cannot compute: {e}"
     series = [L.series[i] for i in L._act]
     leads = sorted({1, 2, 3, max(1, H // 2), H} & set(range(1, H + 1)))
-    s.guion.add("N5", "forecast_uncertainty", {"horizon": H, "model": str(s.current)},
-                "V(l) against the univariate models")
-    return evidence.uncertainty_text(fm, fd, series, leads)
+    s.guion.add("N5", "forecast_uncertainty",
+                {"horizon": H, "model": str(s.current), "estwin": int(estwin)},
+                "V(l) against the univariate models"
+                + (f", both refitted on the first {estwin} observations" if estwin else ""))
+    head = ""
+    if estwin:
+        n = L.result.residuals.shape[0]
+        s0 = L.series[L._act[0]]
+        last = s0.date_of(int(estwin))
+        head = (f"Refitted on the first {estwin} observations (to "
+                + (f"{last[0]}" if s0.freq == 1 else f"{last[1]}/{last[0]}")
+                + f"; {n} residuals), the model and the univariate models alike.\n\n")
+    return head + evidence.uncertainty_text(fm, fd, series, leads)
 
 
 @mcp.tool()
@@ -893,8 +917,10 @@ def kind_tool(kind):
             "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
 
 
-def _figure(s, fig, kind, path, note):
-    """The figure INSIDE the answer (as art and mtram), and a PNG on disk."""
+def _figure(s, fig, kind, path, note, report=None):
+    """The figure INSIDE the answer (as art and mtram), and a PNG on disk.
+    `note` is the guion's one line; `report` (default: the note) is what the
+    analyst reads."""
     import base64
     import tempfile
     from . import figures
@@ -912,7 +938,7 @@ def _figure(s, fig, kind, path, note):
     # the use of the model (N6)
     node = "N2" if kind.startswith("ident") else "N4" if kind == "ccf" else "N6"
     s.guion.add(node, kind_tool(kind), {"png": [p]}, note)
-    text = f"{note}\nPNG: {p}"
+    text = f"{report or note}\nPNG: {p}"
     try:
         from mcp.types import ImageContent, TextContent
         with open(p, "rb") as fh:
@@ -1133,7 +1159,10 @@ def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str =
         lines.append("\nBoth readings are present: Jenkins and Alavi estimate both, "
                      "compare them, and N5 (evaluate) decides.")
     lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
-    return _figure(s, fig, f"ident{method}", path, "\n".join(lines))
+    brief = (f"method {method}: " + (
+        f"cross ccf cut-off after {facts['method2_q']} (MA residual model)" if method == 2
+        else f"cross pccf cut-off after {facts['method1_p']} (cross AR)"))
+    return _figure(s, fig, f"ident{method}", path, brief, report="\n".join(lines))
 
 
 @mcp.tool()

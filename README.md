@@ -50,6 +50,13 @@ Two rules shape everything:
 See [`docs/DESIGN.md`](docs/DESIGN.md) and the generated tool reference
 [`docs/TOOLS.md`](docs/TOOLS.md).
 
+## User manual
+
+* [Jenkins and Alavi's method](docs/MANUAL-jenkins-alavi.md): the method of
+  Jenkins and Alavi (1981), how sima implements it tool by tool, and their
+  muskrat-mink example worked through from art's univariate models — runnable
+  in [`examples/jenkins_alavi/`](examples/jenkins_alavi/).
+
 ## Licence
 
 GPL-2.0-or-later. Authors: A.B. Treadway, J.A. Mauricio and D.E. Guerrero

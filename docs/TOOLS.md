@@ -184,6 +184,7 @@ N6 — Forecast every series in its level with the last estimated model.
 |---|---|---|---|
 | `name` | string | yes | — |
 | `horizon` | integer | no | `0` |
+| `estwin` | integer | no | `0` |
 
 N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their
     Table VIII): the standard deviation of the forecast errors by lead time,
@@ -192,6 +193,11 @@ N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their
     taken as known: a quick reading of where the multivariate model could
     help; `evaluate` is the test. `horizon` defaults to the frequency (4 for
     annual data).
+
+    `estwin` (optional): re-estimate the model AND the univariate models on
+    the first `estwin` observations of the first series, as Jenkins and Alavi
+    did for their Table VIII (§6.3: the muskrat-mink models refitted on 48
+    observations, the rest withheld). 0 = the last fit, on all the data.
 
 ---
 
