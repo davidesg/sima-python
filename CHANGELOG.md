@@ -2,6 +2,21 @@
 
 ## 0.1.0 — unreleased
 
+### Jenkins and Alavi's identification as a figure (`plot_identification`)
+
+- One row per pair of series, in drvus' CCF panel (the one drtran reads): the
+  correlation function R_k above the partial S_k, both two-sided, on the same
+  lag axis and scale — the CCF over its partial as art's ACF over PACF, which
+  scales with m where the m x m grid does not. `method=2`: the univariate residuals,
+  band 2/sqrt(n), and between the panels Haugh's S* (1976) — the
+  independence test of two prewhitened series, in total and by side — where
+  fue puts its Q. `method=1`: the stationary series, with
+  Bartlett's band (3.13) lag by lag — at 2/sqrt(n) the common ten-year cycle
+  of muskrat and mink would read as cross terms. With three or more series
+  the partial of a pair is given the others (the VAR of all), and `pairs`
+  draws only those chosen; the partial stops at the order the sample
+  supports. Recorded at N2.
+
 ### The residual-model form, and Jenkins and Alavi's Table VIII
 
 - `estimate(cross="residual")` (and `evaluate`, `study_estimation`): the

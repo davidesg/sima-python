@@ -74,6 +74,8 @@ N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       (prewhitened: an MA residual model and its links), method
                       1 on the stationary series (S_k, S_k(q): the AR/ARMA
                       orders), and the comparison. Use both, as they did.
+    plot_identification  their figure, pair by pair: R_k over S_k, two-sided, in
+                      drvus' CCF panel, method=2 (prewhitened) or 1 (not).
 N3  estimate          a candidate: cross orders p, q; full or diagonal
                       covariance; optionally `links`, the cross dynamics only
                       on the pairs identify_cross found (its option (d)).
@@ -793,6 +795,8 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
 # --------------------------------------------------------------------------- #
 
 def kind_tool(kind):
+    if kind.startswith("ident"):
+        return "plot_identification"
     return {"irf": "plot_impulse_response", "fevd": "plot_variance_decomposition",
             "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
 
@@ -811,9 +815,11 @@ def _figure(s, fig, kind, path, note):
         path = os.path.join(d, f"sima_{s.name}_{kind}.png")
     p = path
     figures.save(fig, p)
-    # the node the figure belongs to: the residual CCFs are in-sample evidence
-    # (N4); the IRF, the FEVD and the forecasts are the use of the model (N6)
-    s.guion.add("N4" if kind == "ccf" else "N6", kind_tool(kind), {"png": [p]}, note)
+    # the node the figure belongs to: the identification is N2; the residual
+    # CCFs are in-sample evidence (N4); the IRF, the FEVD and the forecasts are
+    # the use of the model (N6)
+    node = "N2" if kind.startswith("ident") else "N4" if kind == "ccf" else "N6"
+    s.guion.add(node, kind_tool(kind), {"png": [p]}, note)
     text = f"{note}\nPNG: {p}"
     try:
         from mcp.types import ImageContent, TextContent
@@ -884,6 +890,58 @@ def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
     K = int(nlags) or max(8, 2 * freq)
     return _figure(s, figures.residual_ccf_figure(L, K, freq), "ccf", path,
                    f"Residual CCFs, {K} lags each side")
+
+
+@mcp.tool()
+def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str = "",
+                        path: str = "") -> list:
+    """FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the
+    figure of identify_matrices. One row per pair of series, in drvus' CCF
+    panel (the one drtran reads), the correlation function R_k above the partial
+    S_k, both two-sided, same lag axis and scale — as art's ACF over PACF.
+
+    method=2 (default): the residuals of the univariate models (prewhitened,
+    each series by ITS OWN model — Haugh's CCF, not a transfer function's).
+    Band 2/sqrt(n); between the panels Haugh's S* (1976), the test that the
+    two are independent, in total and by side (k > 0, k < 0: who leads).
+    The CCF's cut-off after q suggests an MA(q) residual model.
+    method=1: the stationary series w_t, not prewhitened. The CCF band is
+    Bartlett's (3.13) for unrelated series, lag by lag: the series are not
+    white, and a 2/sqrt(n) band would show their common cycles as cross terms.
+    Here the partial is the decisive one: a cut-off after p suggests an AR(p).
+    Lag k > 0: the second series leads; k < 0: the first. With three or more
+    series the partial of a pair comes from the VAR of all of them — given the
+    others — and `pairs` ("A-B, A-C") draws only those; read identify_matrices'
+    determinants and + - . table first to choose them.
+    `nlags` defaults to max(10, 2 x frequency); the partial stops at the order
+    the sample supports (n / (3m)), marked on the panel."""
+    import numpy as np
+    from . import figures
+    s = _sess.get(name)
+    try:
+        L = _diagonal(s)
+    except Exception as e:                                   # noqa: BLE001
+        return [f"Run the gate first ({e})."]
+    if method not in (1, 2):
+        return ["method is 1 (not prewhitened) or 2 (prewhitened)."]
+    names = _names(s)
+    sel = None
+    if pairs.strip():
+        sel = []
+        for tok in pairs.split(","):
+            a, _, b = tok.strip().partition("-")
+            if a.strip() not in names or b.strip() not in names or a.strip() == b.strip():
+                return [f"Unknown pair '{tok.strip()}': the series are {', '.join(names)}."]
+            sel.append((names.index(a.strip()), names.index(b.strip())))
+    freq = s.series[0].freq
+    _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
+    x = np.asarray(L.result.residuals if method == 2 else W, float)
+    n, m = x.shape
+    K = int(nlags) or max(10, 2 * freq)
+    Kp = max(1, min(K, n // (3 * m)))
+    fig = figures.identification_figure(x, names, K, method, freq, sel, Kp)
+    return _figure(s, fig, f"ident{method}", path,
+                   f"Jenkins-Alavi method {method}: R_k over S_k by pair, {K} lags each side")
 
 
 @mcp.tool()

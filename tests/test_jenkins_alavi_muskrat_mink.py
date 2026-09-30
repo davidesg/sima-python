@@ -53,3 +53,14 @@ def test_the_fitted_cross_terms_tell_their_story(session):
     y = dict(zip(ma.names, ma.x))
     assert y["MA1[muskrat<-mink]"] > 0 > y["MA1[mink<-muskrat]"]        # I - Theta B convention
     assert r.ma_boundary == 0 and ma.ma_boundary == 0
+
+
+@pytest.mark.parametrize("method", [1, 2])
+def test_their_identification_figure(session, tmp_path, method):
+    """plot_identification: R_k | S_k by pair, as an image, recorded at N2."""
+    p = tmp_path / f"ident{method}.png"
+    out = _fn(M.plot_identification)(session, method=method, path=str(p))
+    assert [getattr(c, "type", None) for c in out] == ["text", "image"]
+    assert p.exists() and p.stat().st_size > 5000
+    last = M._sess.get(session).guion.entries[-1]
+    assert (last.node, last.tool) == ("N2", "plot_identification")

@@ -75,3 +75,21 @@ def test_forecast_unknown_series():
     _fn(M.estimate)("figx", 0, 0, True)
     out = _fn(M.plot_forecast)("figx", series="XX")
     assert "No series named 'XX'" in str(out[0])
+
+
+def test_identification_pairs_with_three_series(tmp_path, trio_json):
+    """Three series: all three pairs by default, `pairs` draws only those asked,
+    and an unknown pair is refused with the names."""
+    from sima import figures
+    _fn(M.load_pre)("fig3", trio_json)
+    _fn(M.run_gate)("fig3")
+    out = _fn(M.plot_identification)("fig3", method=2, pairs="IPC_ES-IPC_FR",
+                                     path=str(tmp_path / "one.png"))
+    _check(out, tmp_path, "one.png")
+    assert "Unknown pair" in str(_fn(M.plot_identification)("fig3", pairs="IPC_ES-XX")[0])
+    s = M._sess.get("fig3")
+    L = M._diagonal(s)
+    fig = figures.identification_figure(L.result.residuals, M._names(s), 12, 2, 12)
+    assert sum(a.get_visible() for a in fig.axes) == 6                      # 3 pairs x (R_k over S_k), 2 per row: 8, 2 hidden
+    assert "given the other series" in fig.axes[2].get_xlabel()   # row-major: pair 1, below
+    assert "Haugh S*" in fig.axes[0].get_xlabel()                   # between the two panels

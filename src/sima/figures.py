@@ -14,7 +14,9 @@ design is the one the suite already reads:
   dashed (approved 2026-09-29): a share lives in 0-100, and the shaded area
   shows at a glance how much of that range the estimate leaves open.
 * the residual CCFs are drvus' panels, reused from drvarma
-  (`plots._draw_ccf_panel`), not redrawn.
+  (`plots._draw_ccf_panel`), not redrawn; so is Jenkins and Alavi's
+  identification, per pair R_k over S_k, both two-sided: the CCF over its
+  partial, as fue's ACF over PACF.
 * the forecast follows FUF and art (fufplot.c, fue.report_forecast): per
   series, the annual rate of change (or the level) with its band, and the
   ERR panel of the last residuals under their dates.
@@ -164,6 +166,71 @@ def residual_ccf_figure(L, nlags, freq=12):
         axes[k // ncol, k % ncol].set_visible(False)
     fig.suptitle("Residual cross-correlations of the fitted model "
                  "(lag k > 0: the second series leads)", fontsize=10)
+    fig.tight_layout()
+    return fig
+
+
+def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
+    """Jenkins and Alavi's (1981) identification, pair by pair, in drvus' CCF
+    panel (the one drtran reads): for each pair of series the correlation
+    function R_k (two-sided, lag 0 included) ABOVE the partial one (the cross
+    elements of S_k, two-sided; no lag 0) — fue's ACF over PACF: the same lag
+    axis and the same scale, so a lag is read down the column. The pairs go
+    side by side, two per row.
+
+    method 2: x are the univariate residuals (prewhitened), band 2/sqrt(n) on
+    both panels and, between them (where fue puts its Q), Haugh's S*: the
+    independence test of two prewhitened series, in total and by side. method 1: x are the stationary
+    series w_t, not white, so the CCF band is Bartlett's (3.13) for unrelated
+    series, lag by lag (the dashed line follows it); the partial keeps
+    2/sqrt(n); no portmanteau there (the series are not white).
+    With more than two series S_k comes from the VAR of ALL of them:
+    the partial panel of a pair is conditional on the other series too.
+    `Kp` caps the partial's order (the VAR behind S_K has m^2 K coefficients)."""
+    from drvarma import identification_mv as im
+    from drvarma.plots import _draw_ccf_panel, _snap_cmax
+    plt = _plt()
+    x = np.asarray(x, float)
+    n, m = x.shape
+    Kp = min(K, Kp or K)
+    pairs = pairs or [(i, j) for i in range(m) for j in range(i + 1, m)]
+    R, seR = im.corr_matrices(x, K, prewhitened=(method == 2))
+    S, seS = im.partial_corr_matrices(x, Kp)
+    r0 = np.corrcoef(x.T)
+    band_p = np.full(2 * K + 1, 2.0 * seS)
+    ncol = min(2, len(pairs))
+    nblk = math.ceil(len(pairs) / ncol)
+    fig, axes = plt.subplots(2 * nblk, ncol, figsize=(8.5 * ncol, 6.2 * nblk), squeeze=False)
+    cond = "" if m == 2 else ", given the other series"
+    for k, (i, j) in enumerate(pairs):
+        top, bot = axes[2 * (k // ncol), k % ncol], axes[2 * (k // ncol) + 1, k % ncol]
+        rho = im.two_sided(R, i, j, r0[i, j])
+        band = 2.0 * im.two_sided(seR, i, j, 1.0 / np.sqrt(n))
+        s = np.zeros(2 * K + 1)
+        s[K - Kp:K + Kp + 1] = im.two_sided(S, i, j, 0.0)
+        c = _snap_cmax(max(np.abs(rho).max(), np.abs(s).max(), band.max(), band_p.max()))
+        if method == 2:                 # between the panels, as fue's Q
+            h = im.haugh(x[:, i], x[:, j], K)
+            lab = ("Haugh S* ( \u00b1%d ) = %.1f  (%d d.f., p = %.3f)\n"
+                   "k > 0: %.1f  (p = %.3f)     k < 0: %.1f  (p = %.3f)"
+                   % (K, h["all"][0], h["all"][1], h["all"][2],
+                      h["k>0"][0], h["k>0"][2], h["k<0"][0], h["k<0"][2]))
+        else:
+            lab = "dashed: \u00b12\u03c3 Bartlett (3.13), series unrelated"
+        _draw_ccf_panel(top, rho, K, n, freq, f"R_k:  {names[i]} , {names[j]}",
+                        lab, band=band, cmax=c)
+        _draw_ccf_panel(bot, s, K, n, freq, f"S_k:  {names[i]} , {names[j]}",
+                        "dashed: \u00b12/\u221an; lag 0 not defined" + cond
+                        + ("" if Kp == K else f"; up to lag {Kp}"), band=band_p, cmax=c)
+    for k in range(len(pairs), nblk * ncol):
+        axes[2 * (k // ncol), k % ncol].set_visible(False)
+        axes[2 * (k // ncol) + 1, k % ncol].set_visible(False)
+    head = ("Method 2, prewhitened: the residuals of the univariate models"
+            if method == 2 else
+            "Method 1, not prewhitened: the stationary series of the univariate models")
+    fig.suptitle(f"{head} (n = {n})\nabove: correlations R_k; below: partial "
+                 "correlations S_k (Yule-Walker)\nLag k > 0: the second series "
+                 "leads; k < 0: the first leads", fontsize=10)
     fig.tight_layout()
     return fig
 

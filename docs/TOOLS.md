@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**20 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**21 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -19,6 +19,7 @@
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
 | [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of the last estimated model in the format of FUF |
+| [`plot_identification`](#plot-identification) | FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the |
 | [`plot_impulse_response`](#plot-impulse-response) | FIGURE — The orthogonalised impulse responses of the last estimated model. |
 | [`plot_residual_ccf`](#plot-residual-ccf) | FIGURE — The residual cross-correlations of the last estimated model, |
 | [`plot_variance_decomposition`](#plot-variance-decomposition) | FIGURE — The forecast-error variance decomposition, in the IRF's layout. |
@@ -298,6 +299,41 @@ FIGURE — The forecasts of the last estimated model in the format of FUF
     one figure for each; a series' name, only that one; "all", every series
     in a single grid. `path` (optional) is a directory, or with one series a
     file.
+
+---
+
+## `plot_identification`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `method` | integer | no | `2` |
+| `nlags` | integer | no | `0` |
+| `pairs` | string | no | `` |
+| `path` | string | no | `` |
+
+FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the
+    figure of identify_matrices. One row per pair of series, in drvus' CCF
+    panel (the one drtran reads), the correlation function R_k above the partial
+    S_k, both two-sided, same lag axis and scale — as art's ACF over PACF.
+
+    method=2 (default): the residuals of the univariate models (prewhitened,
+    each series by ITS OWN model — Haugh's CCF, not a transfer function's).
+    Band 2/sqrt(n); between the panels Haugh's S* (1976), the test that the
+    two are independent, in total and by side (k > 0, k < 0: who leads).
+    The CCF's cut-off after q suggests an MA(q) residual model.
+    method=1: the stationary series w_t, not prewhitened. The CCF band is
+    Bartlett's (3.13) for unrelated series, lag by lag: the series are not
+    white, and a 2/sqrt(n) band would show their common cycles as cross terms.
+    Here the partial is the decisive one: a cut-off after p suggests an AR(p).
+    Lag k > 0: the second series leads; k < 0: the first. With three or more
+    series the partial of a pair comes from the VAR of all of them — given the
+    others — and `pairs` ("A-B, A-C") draws only those; read identify_matrices'
+    determinants and + - . table first to choose them.
+    `nlags` defaults to max(10, 2 x frequency); the partial stops at the order
+    the sample supports (n / (3m)), marked on the panel.
 
 ---
 
