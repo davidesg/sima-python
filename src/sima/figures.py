@@ -13,8 +13,8 @@ design is the one the suite already reads:
   a series reads the same in both figures. Its band is shaded as well as
   dashed (approved 2026-09-29): a share lives in 0-100, and the shaded area
   shows at a glance how much of that range the estimate leaves open.
-* the residual CCFs are drvus' panels, reused from drvarma
-  (`plots._draw_ccf_panel`), not redrawn; so is Jenkins and Alavi's
+* the CCFs are GraphMaker's panel (Treadway's; the same as drvus' ccf and
+  drtran's), reused from drvarma (`plots._draw_ccf_panel`), not redrawn; so is Jenkins and Alavi's
   identification, per pair R_k over S_k, both two-sided: the CCF over its
   partial, as fue's ACF over PACF.
 * the forecast follows FUF and art (fufplot.c, fue.report_forecast): per
@@ -146,7 +146,9 @@ def fevd_figure(L, horizon, bands=None, freq=12):
 
 
 def residual_ccf_figure(L, nlags, freq=12):
-    """drvus' two-sided CCF of every pair of residuals of the fitted model."""
+    """The two-sided CCF of every pair of residuals of the fitted model, in
+    GraphMaker's panel: titled "A - B" with A leading at k > 0, Hosking's P
+    below."""
     from drvarma.diagnostics import ccf, qccf
     from drvarma.plots import _draw_ccf_panel
     plt = _plt()
@@ -158,21 +160,21 @@ def residual_ccf_figure(L, nlags, freq=12):
     nrow = math.ceil(len(pairs) / ncol)
     fig, axes = plt.subplots(nrow, ncol, figsize=(7.5 * ncol, 3.2 * nrow), squeeze=False)
     for k, (i, j) in enumerate(pairs):
-        rho = ccf(a[:, i], a[:, j], nlags)
-        Q, _df, _p = qccf(a[:, i], a[:, j], nlags)
+        rho = ccf(a[:, i], a[:, j], nlags)          # k > 0: series j leads
+        Q, df, _p = qccf(a[:, i], a[:, j], nlags)
         _draw_ccf_panel(axes[k // ncol, k % ncol], rho, nlags, n, freq,
-                        f"{names[i]} , {names[j]}", "Q ( %d ) = %.1f" % (nlags, Q))
+                        f"{names[j]} - {names[i]}", "P ( %d ) = %.1f" % (df, Q))
     for k in range(len(pairs), nrow * ncol):
         axes[k // ncol, k % ncol].set_visible(False)
     fig.suptitle("Residual cross-correlations of the fitted model "
-                 "(lag k > 0: the second series leads)", fontsize=10)
+                 "(lag k > 0: the first-named series leads)", fontsize=10)
     fig.tight_layout()
     return fig
 
 
 def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
-    """Jenkins and Alavi's (1981) identification, pair by pair, in drvus' CCF
-    panel (the one drtran reads): for each pair of series the correlation
+    """Jenkins and Alavi's (1981) identification, pair by pair, in GraphMaker's
+    CCF panel (the one drtran reads): for each pair of series the correlation
     function R_k (two-sided, lag 0 included) ABOVE the partial one (the cross
     elements of S_k, two-sided; no lag 0) — fue's ACF over PACF: the same lag
     axis and the same scale, so a lag is read down the column. The pairs go
@@ -182,13 +184,13 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
     both panels and, between them (where fue puts its Q), Haugh's S*: the
     independence test of two prewhitened series, in total and by side. method 1: x are the stationary
     series w_t, not white, so the CCF band is Bartlett's (3.13) for unrelated
-    series, lag by lag (the dashed line follows it); the partial keeps
+    series, lag by lag (the dotted line follows it); the partial keeps
     2/sqrt(n); no portmanteau there (the series are not white).
     With more than two series S_k comes from the VAR of ALL of them:
     the partial panel of a pair is conditional on the other series too.
     `Kp` caps the partial's order (the VAR behind S_K has m^2 K coefficients)."""
     from drvarma import identification_mv as im
-    from drvarma.plots import _draw_ccf_panel, _snap_cmax
+    from drvarma.plots import _ccf_scale, _draw_ccf_panel
     plt = _plt()
     x = np.asarray(x, float)
     n, m = x.shape
@@ -208,7 +210,7 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
         band = 2.0 * im.two_sided(seR, i, j, 1.0 / np.sqrt(n))
         s = np.zeros(2 * K + 1)
         s[K - Kp:K + Kp + 1] = im.two_sided(S, i, j, 0.0)
-        c = _snap_cmax(max(np.abs(rho).max(), np.abs(s).max(), band.max(), band_p.max()))
+        c = _ccf_scale(max(np.abs(rho).max(), np.abs(s).max(), band.max(), band_p.max()))
         if method == 2:                 # between the panels, as fue's Q
             h = im.haugh(x[:, i], x[:, j], K)
             lab = ("Haugh S* ( \u00b1%d ) = %.1f  (%d d.f., p = %.3f)\n"
@@ -216,11 +218,11 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
                    % (K, h["all"][0], h["all"][1], h["all"][2],
                       h["k>0"][0], h["k>0"][2], h["k<0"][0], h["k<0"][2]))
         else:
-            lab = "dashed: \u00b12\u03c3 Bartlett (3.13), series unrelated"
-        _draw_ccf_panel(top, rho, K, n, freq, f"R_k:  {names[i]} , {names[j]}",
+            lab = "dotted: \u00b12\u03c3 Bartlett (3.13), series unrelated"
+        _draw_ccf_panel(top, rho, K, n, freq, f"R_k:  {names[j]} - {names[i]}",
                         lab, band=band, cmax=c)
-        _draw_ccf_panel(bot, s, K, n, freq, f"S_k:  {names[i]} , {names[j]}",
-                        "dashed: \u00b12/\u221an; lag 0 not defined" + cond
+        _draw_ccf_panel(bot, s, K, n, freq, f"S_k:  {names[j]} - {names[i]}",
+                        "dotted: \u00b12/\u221an; lag 0 not defined" + cond
                         + ("" if Kp == K else f"; up to lag {Kp}"), band=band_p, cmax=c)
     for k in range(len(pairs), nblk * ncol):
         axes[2 * (k // ncol), k % ncol].set_visible(False)
@@ -229,8 +231,8 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
             if method == 2 else
             "Method 1, not prewhitened: the stationary series of the univariate models")
     fig.suptitle(f"{head} (n = {n})\nabove: correlations R_k; below: partial "
-                 "correlations S_k (Yule-Walker)\nLag k > 0: the second series "
-                 "leads; k < 0: the first leads", fontsize=10)
+                 "correlations S_k (Yule-Walker)\nLag k > 0: the first-named series "
+                 "leads; k < 0: the other", fontsize=10)
     fig.tight_layout()
     return fig
 

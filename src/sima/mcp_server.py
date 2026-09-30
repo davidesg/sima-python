@@ -75,7 +75,7 @@ N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       1 on the stationary series (S_k, S_k(q): the AR/ARMA
                       orders), and the comparison. Use both, as they did.
     plot_identification  their figure, pair by pair: R_k over S_k, two-sided, in
-                      drvus' CCF panel, method=2 (prewhitened) or 1 (not).
+                      GraphMaker's CCF panel, method=2 (prewhitened) or 1 (not).
 N3  estimate          a candidate: cross orders p, q; full or diagonal
                       covariance; optionally `links`, the cross dynamics only
                       on the pairs identify_cross found (its option (d)).
@@ -877,8 +877,10 @@ def plot_variance_decomposition(name: str, horizon: int = 24, bands: bool = True
 @mcp.tool()
 def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
     """FIGURE — The residual cross-correlations of the last estimated model,
-    pair by pair: drvus' two-sided CCF (the suite's reference), with the
-    Hosking Q. What is left beyond the band is what the model does not carry.
+    pair by pair: GraphMaker's two-sided CCF (Treadway's, the suite's
+    reference), titled "A - B" with A leading at k > 0, and Hosking's
+    portmanteau below as GraphMaker labels it, P (not Ljung-Box's Q). What is
+    left beyond the band is what the model does not carry.
     `nlags` defaults to twice the frequency."""
     from . import figures
     s = _sess.get(name)
@@ -896,9 +898,10 @@ def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
 def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str = "",
                         path: str = "") -> list:
     """FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the
-    figure of identify_matrices. One row per pair of series, in drvus' CCF
-    panel (the one drtran reads), the correlation function R_k above the partial
-    S_k, both two-sided, same lag axis and scale — as art's ACF over PACF.
+    figure of identify_matrices. For each pair of series, in GraphMaker's
+    CCF panel (Treadway's, the one drtran reads), the correlation function R_k
+    above the partial S_k, both two-sided, same lag axis and scale — as art's
+    ACF over PACF.
 
     method=2 (default): the residuals of the univariate models (prewhitened,
     each series by ITS OWN model — Haugh's CCF, not a transfer function's).
@@ -909,7 +912,7 @@ def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str =
     Bartlett's (3.13) for unrelated series, lag by lag: the series are not
     white, and a 2/sqrt(n) band would show their common cycles as cross terms.
     Here the partial is the decisive one: a cut-off after p suggests an AR(p).
-    Lag k > 0: the second series leads; k < 0: the first. With three or more
+    Each panel is titled "A - B", GraphMaker's order: A leads at k > 0. With three or more
     series the partial of a pair comes from the VAR of all of them — given the
     others — and `pairs` ("A-B, A-C") draws only those; read identify_matrices'
     determinants and + - . table first to choose them.

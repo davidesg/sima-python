@@ -2,6 +2,13 @@
 
 ## 0.1.0 — unreleased
 
+### The CCFs are GraphMaker's
+
+- `plot_residual_ccf` and `plot_identification` draw drvarma's CCF panel,
+  now GraphMaker's (Treadway's, the one drtran's GUI draws): titled "A - B"
+  with A leading at k > 0, Hosking's P (not Q) with its degrees of freedom,
+  dotted bands, a dashed vertical at lag 0.
+
 ### Jenkins and Alavi's identification as a figure (`plot_identification`)
 
 - One row per pair of series, in drvus' CCF panel (the one drtran reads): the
