@@ -65,3 +65,16 @@ def test_specifications_are_named_with_both_readings():
             "sum": 2.0, "joint": 2.0, "difference": 0.0, "passed": True}
     txt = evidence.gate_text(gate)
     assert "SPECIFICATIONS" in txt and "ANOTHER sample" in txt and "go back to art" in txt
+
+
+def test_evaluation_columns_hold_large_levels():
+    """RMSEs of series in hundreds of thousands (muskrat skins) do not run
+    into each other: the row splits into its columns."""
+    from sima.evidence import evaluation_text
+    cand = {("MUSKRAT", 1): {"n": 21, "RMSE": 249170.166, "MAPE": 29.3},
+            ("MINK", 1): {"n": 21, "RMSE": 11452.2, "MAPE": 22.1}}
+    diag = {("MUSKRAT", 1): {"n": 21, "RMSE": 227388.149, "MAPE": 26.1},
+            ("MINK", 1): {"n": 21, "RMSE": 11074.6, "MAPE": 25.1}}
+    txt, _f = evaluation_text(cand, diag, "x", [1], ["MUSKRAT", "MINK"])
+    row = [l for l in txt.splitlines() if l.strip().startswith("MUSKRAT")][0].split()
+    assert row[3:6] == ["249170", "227388", "1.096"]

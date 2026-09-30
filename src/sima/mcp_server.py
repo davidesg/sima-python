@@ -702,7 +702,10 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     except Exception as e:
         return f"The evaluation failed: {e}"
     freq = s.series[0].freq
-    hs = sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H]
+    # the horizons read: every year up to 5 for annual data; for seasonal data
+    # 1, half a year, a year and two
+    hs = (list(range(1, min(H, 5) + 1)) if freq == 1 else
+          sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H])
     label = (f"VARMA p={p} q={q} ({'diagonal' if diagcov else 'full'} cov)"
              + (f", links {lk}" if lk else "")
              + (", residual-model form" if cross == "residual" else ""))

@@ -2,6 +2,13 @@
 
 ## 0.1.0 — unreleased
 
+### `evaluate`: two defects of the report
+
+- The RMSE columns of series in hundreds of thousands (muskrat skins) ran
+  into each other ("249170.1660227388.1493"); decimals now follow magnitude.
+- Annual data showed only h = 1 and 2 (the seasonal rule of horizons); it now
+  shows every year up to 5.
+
 ### `check_residuals` is art's diagnosis
 
 - The report in art's four sections (the checking table as a block, what it

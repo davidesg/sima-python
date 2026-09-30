@@ -596,11 +596,22 @@ def estimation_text(L, nlags):
 #  N5 — the yardstick                                                          #
 # --------------------------------------------------------------------------- #
 
+def _rmse(v):
+    """An RMSE in the units of the series' level, which run from fractions to
+    hundreds of thousands (muskrat skins): decimals by magnitude, so that the
+    column never overflows into its neighbour."""
+    a = abs(v)
+    if not np.isfinite(v):
+        return "nan"
+    return f"{v:.0f}" if a >= 1e4 else f"{v:.1f}" if a >= 100 else \
+        f"{v:.3f}" if a >= 1 else f"{v:.4g}"
+
+
 def evaluation_text(cand, diag, label, horizons, series):
     """cand/diag: {(series, h): {n, MAE, RMSE, MAPE}}; series: names in order."""
     out = [f"THE YARDSTICK — {label} against the univariates (diagonal system),",
            "same window, parameters estimated once and held fixed, every origin.",
-           f"  {'series':<12}{'h':>4}{'n':>5}{'RMSE var':>11}{'RMSE uni':>11}"
+           f"  {'series':<12}{'h':>4}{'n':>5}{'RMSE var':>12}{'RMSE uni':>12}"
            f"{'ratio':>8}{'MAPE var':>10}{'MAPE uni':>10}"]
     wins = total = 0
     for s in series:
@@ -611,7 +622,7 @@ def evaluation_text(cand, diag, label, horizons, series):
             ratio = c["RMSE"] / u["RMSE"] if u["RMSE"] else float("nan")
             total += 1
             wins += ratio < 1.0
-            out.append(f"  {s:<12}{h:>4}{c['n']:>5}{c['RMSE']:>11.4f}{u['RMSE']:>11.4f}"
+            out.append(f"  {s:<12}{h:>4}{c['n']:>5}{_rmse(c['RMSE']):>12}{_rmse(u['RMSE']):>12}"
                        f"{ratio:>8.3f}{c['MAPE']:>10.3f}{u['MAPE']:>10.3f}")
     out += ["", f"The VARMA has the lower RMSE in {wins} of {total} (series, horizon) cells.",
             "Reading it: a ratio below 1 is a gain over the univariate model; the",
