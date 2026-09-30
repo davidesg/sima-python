@@ -101,6 +101,21 @@ N6  forecast, impulse_response, variance_decomposition — with the chosen model
 Record every decision with its reason: export_guion shows the path.
 
 ══════════════════════════════════════════════════════
+REPORTS: TABLE, INFORMATION, FIGURE — AS art DOES
+══════════════════════════════════════════════════════
+A tool that draws a figure returns art's report around it, and you present it
+in its order: 1 · TABLE (the block, AS IT IS — never rebuild it), 2 · WHAT IT
+SHOWS (read it to the analyst in their words: per pair and side, which bars
+cross the band, who leads, the cut-off, the isolated ones, the statistic and
+its p-value), 3 · CONCLUSIONS, 4 · DECISION — the alternatives with their
+calls; then the figure, which comes inside the answer. The figure is terse,
+as the originals it copies (GraphMaker, drvus, fue); the numbers are in the
+table. Which alternative you would take, and why, is said AS A SUGGESTION,
+with the argument against it too. Guided lane: stop at ⏸, the analyst
+decides. Autonomous: decide and record_decision. Do not describe what the
+report does not say.
+
+══════════════════════════════════════════════════════
 THE AUTONOMOUS LANE — YOU ARE THE ANALYST
 ══════════════════════════════════════════════════════
 You decide every node yourself: there is no human to confirm. That does NOT
@@ -943,33 +958,73 @@ def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str =
     K = int(nlags) or max(10, 2 * freq)
     Kp = max(1, min(K, n // (3 * m)))
     fig = figures.identification_figure(x, names, K, method, freq, sel, Kp)
-    # the figure carries only the statistic; what it means is said here
-    from drvarma.identification_mv import haugh
-    lines = [f"Jenkins and Alavi's method {method} "
-             + ("(prewhitened: the residuals of the univariate models)" if method == 2
-                else "(not prewhitened: the stationary series w_t)")
-             + f", n = {n}, {K} lags each side.",
-             "ccf: the correlation matrices R_k; pccf: the partial correlation "
-             "matrices S_k (multivariate Yule-Walker). Each pair \"A - B\": A leads "
-             "at k > 0, the other at k < 0."]
-    if method == 2:
-        lines.append("Bands 2/sqrt(n). Under R_k, Haugh's S* (1976): are the two "
-                     "prewhitened series independent? By side:")
-        for i, j in (sel or [(i, j) for i in range(m) for j in range(i + 1, m)]):
-            h = haugh(x[:, i], x[:, j], K)
-            lines.append(
-                f"  {names[j]} - {names[i]}: S*({h['all'][1]}) = {h['all'][0]:.1f}, "
-                f"p = {h['all'][2]:.3f};  k > 0 ({names[j]} leads) {h['k>0'][0]:.1f}, "
-                f"p = {h['k>0'][2]:.3f};  k < 0 ({names[i]} leads) {h['k<0'][0]:.1f}, "
-                f"p = {h['k<0'][2]:.3f}")
-    else:
-        lines.append("R_k band: Bartlett's (3.13) for unrelated series, lag by lag; "
-                     "no portmanteau (the series are not white). S_k band 2/sqrt(n).")
+    # the figure is terse, as the originals; the report around it is art's:
+    # the table as a block, what it shows, what it suggests, the decision
+    sel = sel or [(i, j) for i in range(m) for j in range(i + 1, m)]
+    _txt, facts = evidence.ja_identification(W, L.result.residuals, names, K, 2, freq)
+    kind = ("prewhitened: the residuals of the univariate models" if method == 2
+            else "not prewhitened: the stationary series w_t")
+    lines = [f"# Identification — Jenkins and Alavi, method {method}",
+             f"*({kind}; n = {n}, {K} lags each side)*", "",
+             "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "",
+             "```", evidence.ja_pair_table(x, names, sel, K, Kp, method), "```", "",
+             "## 2 · WHAT IT SHOWS", "",
+             "ccf: the correlation matrices R_k; pccf: the partial correlation matrices "
+             "S_k (multivariate Yule-Walker). " + (
+                 "S* is Haugh's (1976) test that the two prewhitened series are "
+                 "independent, in total and by side." if method == 2 else
+                 "The ccf band is Bartlett's (3.13) for unrelated series, lag by lag; "
+                 "there is no portmanteau (the series are not white)."), "", "```"]
+    lines += evidence.ja_pair_facts(x, names, sel, K, Kp, method)
+    lines.append("```")
     if m > 2:
-        lines.append("S_k comes from the VAR of all the series: each partial panel "
-                     "is given the other series.")
+        lines.append("The pccf comes from the VAR of all the series: each partial "
+                     "panel is given the other series.")
     if Kp < K:
-        lines.append(f"S_k up to lag {Kp}: the order the sample supports (n / 3m).")
+        lines.append(f"The pccf goes up to lag {Kp}: the order the sample supports (n / 3m).")
+    lines += ["", "## 3 · CONCLUSIONS", ""]
+    if method == 2:
+        q2, lk = facts["method2_q"], facts["links"]
+        lines.append(
+            f"The cross ccf cuts off after lag {q2}: an MA({q2}) model for the "
+            f"residuals, the univariate models on the diagonal (Jenkins and Alavi's "
+            f"(3.22))" + (f", on the links {', '.join(lk)}." if lk else ".")
+            if q2 else "No cross cut-off in the residuals: the univariate models "
+            "may carry the system (method 1 and N5 decide).")
+        lines.append("The pccf cutting off at the same lag does not tell an AR from an "
+                     "MA here: after prewhitening the residual model is an MA (3.26).")
+    else:
+        p1, lk = facts["method1_p"], facts["method1_links"]
+        lines.append(
+            f"The cross pccf cuts off after lag {p1}: a cross AR({p1})"
+            + (f" on the links {', '.join(lk)}." if lk else ".")
+            if p1 else "No cross cut-off in the pccf.")
+        lines.append("The ccf of series that are not white decays or waves (their own "
+                     "cycles leak into it); the pccf is the one to read here.")
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = []
+    if facts["method2_q"]:
+        lk = facts["links"]
+        opts.append(("the MA residual model (method 2)",
+                     f'estimate(name="{name}", p=0, q={facts["method2_q"]}'
+                     + (f', links="{", ".join(lk)}"' if lk else "") + ', cross="residual")'))
+    if facts["method1_p"]:
+        lk = facts["method1_links"]
+        opts.append(("the cross AR (method 1)",
+                     f'estimate(name="{name}", p={facts["method1_p"]}, q=0'
+                     + (f', links="{", ".join(lk)}"' if lk else "") + ")"))
+    other = 1 if method == 2 else 2
+    opts.append((f"see method {other} before deciding (Jenkins and Alavi use both)",
+                 f'plot_identification(name="{name}", method={other})'))
+    opts.append(("the whole matrices: S_k(q), determinants, the + - . table",
+                 f'identify_matrices(name="{name}")'))
+    for t, (what, call) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{call}`")
+    if facts["method2_q"] and facts["method1_p"]:
+        lines.append("\nBoth readings are present: Jenkins and Alavi estimate both, "
+                     "compare them, and N5 (evaluate) decides.")
+    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
     return _figure(s, fig, f"ident{method}", path, "\n".join(lines))
 
 

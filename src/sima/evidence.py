@@ -211,6 +211,95 @@ def _cutoff(sym, off_diagonal=False):
     return cut, [k for k in sig if k > cut]
 
 
+def _side(vals, band):
+    """One side of a two-sided panel (lags 1..K): the bars beyond the band,
+    the cut-off (end of the initial run, as `_cutoff`) and the isolated ones."""
+    sig = [(k + 1, float(v)) for k, (v, b) in enumerate(zip(vals, band)) if abs(v) > b]
+    lags = [k for k, _v in sig]
+    cut = 0
+    while cut + 1 in lags and cut + 1 <= _SHORT_MV:
+        cut += 1
+    return sig, cut, [k for k in lags if k > cut]
+
+
+def ja_pair_facts(x, names, pairs, K, Kp, method):
+    """The facts behind `plot_identification`, pair by pair, in the figure's
+    layout: for "A - B" (A leads at k > 0), in the ccf (R_k) and the pccf
+    (S_k), each side's bars beyond the band, its cut-off and its isolated
+    lags; r(0); for method 2 Haugh's S* in total and by side. Facts only:
+    which order to entertain is identify_matrices' menu and the analyst's."""
+    from drvarma import identification_mv as im
+    x = np.asarray(x, float)
+    n, m = x.shape
+    R, seR = im.corr_matrices(x, K, prewhitened=(method == 2))
+    S, seS = im.partial_corr_matrices(x, Kp)
+    r0 = np.corrcoef(x.T)
+    out = []
+    for i, j in pairs:
+        a, b = names[j], names[i]                  # "a - b": a leads at k > 0
+        out.append(f"{a} - {b}")
+        z0 = 2.0 / np.sqrt(n)
+        out.append(f"  ccf:  r(0) = {r0[i, j]:+.2f}"
+                   + (" (outside)" if abs(r0[i, j]) > z0 else " (inside)"))
+        for lab, pan in (("ccf", (R, seR, K)), ("pccf", (S, np.full(S.shape, seS), Kp))):
+            M, se, KK = pan
+            for side, who, vals, bnd in (
+                    ("k > 0", a, M[:, i, j], 2 * se[:, i, j]),
+                    ("k < 0", b, M[:, j, i], 2 * se[:, j, i])):
+                sig, cut, iso = _side(vals, bnd)
+                bars = ", ".join(f"{'+' if side == 'k > 0' else '-'}{k} {v:+.2f}"
+                                 for k, v in sig) or "none"
+                tail = f"cut-off after {cut}" + (f"; isolated: {', '.join(map(str, iso))}"
+                                                 if iso else "")
+                head = "  pccf:" if (lab == "pccf" and side == "k > 0") else "       "
+                out.append(f"{head} {side} ({who} leads): {bars}  —  {tail}")
+        if method == 2:
+            h = im.haugh(x[:, i], x[:, j], K)
+            out.append(f"  S*({h['all'][1]}) = {h['all'][0]:.1f}, p = {h['all'][2]:.3f};  "
+                       f"k > 0 {h['k>0'][0]:.1f}, p = {h['k>0'][2]:.3f};  "
+                       f"k < 0 {h['k<0'][0]:.1f}, p = {h['k<0'][2]:.3f}")
+    out.append(f"With {K} lags a side, about {0.05 * K:.1f} bars per side cross the band "
+               "by chance: an isolated one is weak evidence.")
+    return out
+
+
+def ja_pair_table(x, names, pairs, K, Kp, method):
+    """The TABLE of plot_identification, as art's blocks: per pair, lag by
+    lag, the ccf (R_k) and the pccf (S_k) with * beyond the band (and the
+    band itself when it follows the lag, method 1), and the statistic."""
+    from drvarma import identification_mv as im
+    x = np.asarray(x, float)
+    n, m = x.shape
+    R, seR = im.corr_matrices(x, K, prewhitened=(method == 2))
+    S, seS = im.partial_corr_matrices(x, Kp)
+    r0 = np.corrcoef(x.T)
+    zp = 2.0 * seS
+    out = []
+    for i, j in pairs:
+        a, b = names[j], names[i]
+        rho = im.two_sided(R, i, j, r0[i, j])
+        band = 2.0 * im.two_sided(seR, i, j, 1.0 / np.sqrt(n))
+        part = np.full(2 * K + 1, np.nan)
+        part[K - Kp:K + Kp + 1] = im.two_sided(S, i, j, np.nan)
+        head = f"{a} - {b}   (n = {n}; k > 0: {a} leads)"
+        if method == 2:
+            out += [head, f"band \u00b1{zp:.3f}", "", "     k      ccf     pccf"]
+        else:
+            out += [head, f"ccf band lag by lag (Bartlett); pccf band \u00b1{zp:.3f}", "",
+                    "     k      ccf    band     pccf"]
+        for t, k in enumerate(range(-K, K + 1)):
+            c = f"{rho[t]:+7.2f}{'*' if abs(rho[t]) > band[t] else ' '}"
+            pc = ("      \u00b7 " if np.isnan(part[t]) else
+                  f"{part[t]:+7.2f}{'*' if abs(part[t]) > zp else ' '}")
+            mid = "" if method == 2 else f"  {band[t]:5.2f}"
+            out.append(f"  {k:+4d}  {c}{mid}  {pc}".replace("  +0 ", "   0 "))
+        if method == 2:
+            S_, df_, p_ = im.haugh(x[:, i], x[:, j], K)["all"]
+            out += ["", f"S* ( {df_} ) = {S_:.1f}   p = {p_:.3f}"]
+        out += ["* beyond the band", ""]
+    return "\n".join(out).rstrip()
+
+
 def ja_identification(w, res, names, K, qmax, freq):
     """Jenkins and Alavi's two identifications [§3.3-3.4], from the ladder.
 

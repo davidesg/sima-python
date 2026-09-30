@@ -2,6 +2,17 @@
 
 ## 0.1.0 — unreleased
 
+### `plot_identification` reports as art does
+
+- The answer is art's report around the figure: 1 · TABLE (a block to show as
+  it is: per pair, lag by lag, ccf and pccf with * beyond the band, the band
+  itself when it follows the lag, Haugh's S*), 2 · WHAT IT SHOWS (per side:
+  the bars beyond the band, who leads, the cut-off, the isolated ones; S* by
+  side), 3 · CONCLUSIONS (the method's reading), 4 · DECISION (the
+  alternatives with their calls, and the pause); then the figure. The
+  instructions tell the assistant to present it in that order and to give
+  its preference as a suggestion, with the argument against.
+
 ### The CCFs are GraphMaker's
 
 - `plot_residual_ccf` and `plot_identification` draw drvarma's CCF panel,
