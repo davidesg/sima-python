@@ -145,6 +145,22 @@ def fevd_figure(L, horizon, bands=None, freq=12):
     return fig
 
 
+def residual_npq(L):
+    """GraphMaker's p + q for the P of a residual pair: the largest AR order
+    plus the largest MA order of the fitted model (the expanded operators,
+    own and cross)."""
+    r = L.result
+    return int(np.shape(r.phi)[0] if np.size(r.phi) else 0) + \
+        int(np.shape(r.theta)[0] if np.size(r.theta) else 0)
+
+
+def _p_label(Q, K, npq):
+    """GraphMaker's label: P ( 4 (K - (p + q)) ) = value. With K <= p + q no
+    degree of freedom is left, and the label says so instead of a number."""
+    df = 4 * (K - npq)
+    return "P ( %d ) = %.1f" % (df, Q) if df > 0 else "P = %.1f  (K \u2264 p + q)" % Q
+
+
 def residual_ccf_figure(L, nlags, freq=12):
     """The two-sided CCF of every pair of residuals of the fitted model, in
     GraphMaker's panel: titled "A - B" with A leading at k > 0, Hosking's P
@@ -156,18 +172,18 @@ def residual_ccf_figure(L, nlags, freq=12):
     n, m = a.shape
     names = [s.name for s in L.series]
     pairs = [(i, j) for i in range(m) for j in range(i + 1, m)]
+    npq = residual_npq(L)
     ncol = min(2, len(pairs))
     nrow = math.ceil(len(pairs) / ncol)
     fig, axes = plt.subplots(nrow, ncol, figsize=(7.5 * ncol, 3.2 * nrow), squeeze=False)
     for k, (i, j) in enumerate(pairs):
         rho = ccf(a[:, i], a[:, j], nlags)          # k > 0: series j leads
-        Q, df, _p = qccf(a[:, i], a[:, j], nlags)
+        Q, _df, _p = qccf(a[:, i], a[:, j], nlags)
         _draw_ccf_panel(axes[k // ncol, k % ncol], rho, nlags, n, freq,
-                        f"{names[j]} - {names[i]}", "P ( %d ) = %.1f" % (df, Q))
+                        f"{names[j]} - {names[i]}", _p_label(Q, nlags, npq))
     for k in range(len(pairs), nrow * ncol):
         axes[k // ncol, k % ncol].set_visible(False)
-    fig.suptitle("Residual cross-correlations of the fitted model "
-                 "(lag k > 0: the first-named series leads)", fontsize=10)
+    # terse, as GraphMaker: the pair above, P below; the rest is in the text
     fig.tight_layout()
     return fig
 
@@ -235,6 +251,35 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
                  fontsize=11)
     fig.tight_layout()
     return fig
+
+
+def residual_panels(L):
+    """fue's diagnosis panel for every residual series of the fitted model —
+    what drvus drew per series (A1.eps) and art shows in its diagnosis: the
+    standardised residuals with their +-2 bands, the acf with its Q, the pacf
+    under it (pyfug's `plot_combined`, the same call as art's
+    `figura_residuos`). The residuals go in fractions (pyfug labels x100 %),
+    dated from the first residual, with fug C's lags; the Q discounts the
+    series' own ARMA parameters. [] when pyfug is not installed."""
+    try:
+        from fue.diagnostics import default_lags, free_arma_count
+        from pyfug.core import Tseries
+        from pyfug.graphics import plot_combined
+    except ImportError:
+        return []
+    a = np.asarray(L.result.residuals, float)
+    n = a.shape[0]
+    figs = []
+    for col, k in enumerate(L._act):
+        sr = L.series[k]
+        rf = float(getattr(sr.model, "refactor", None) or 1.0)
+        y0, p0 = sr.date_of(sr.nobs - n + 1)
+        ser = Tseries(name=f"A.{sr.name}", freq=sr.freq, nobs=n, begyear=int(y0),
+                      begtime=int(p0), data=np.ascontiguousarray(a[:, col] / rf))
+        figs.append((sr.name, plot_combined(ser, npar=free_arma_count(sr.model),
+                                            nlags=default_lags(n, sr.freq),
+                                            title=ser.name)))
+    return figs
 
 
 def forecast_figure(L, fc, only=None):

@@ -8,7 +8,7 @@
 
 | tool | what it answers |
 |---|---|
-| [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do. |
+| [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
 | [`estimate`](#estimate) | N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance. |
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
@@ -41,16 +41,23 @@
 | `name` | string | yes | — |
 | `nlags` | integer | no | `0` |
 
-N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do.
+N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do,
+    and show it as art's diagnosis: the report, then the figures.
 
-    (1) The large residuals, judged on the UNCORRELATED transformed residuals
-    (the a_it correlate at lag 0, so one by one they cannot be judged), with
-    their dates — a known cause goes to intervention analysis, in art, before
-    anything else is read. (2) The residual correlation matrices R_k(a), with
-    what is beyond the band. (3) The portmanteau matrix Q_ij, as a summary.
-    If the matrices show structure, a model for the residuals is entertained
-    and combined with the fitted one, as at identification. `nlags` defaults
-    to max(6, frequency).
+    The report: 1 · TABLE — (1) the large residuals, judged on the
+    UNCORRELATED transformed residuals (the a_it correlate at lag 0, so one by
+    one they cannot be judged), with their dates — a known cause goes to
+    intervention analysis, in art, before anything else is read; (2) the
+    residual correlation matrices R_k(a), with what is beyond the band; (3)
+    the portmanteau matrix Q_ij, as a summary. 2 · WHAT IT SHOWS,
+    3 · CONCLUSIONS, 4 · DECISION. If the matrices show structure, a model for
+    the residuals is entertained and combined with the fitted one, as at
+    identification.
+
+    The figures, as drvus drew the diagnosis and their figure 7: fue's panel
+    for each residual series (the residuals with +-2 bands, the acf with its
+    Q, the pacf), and the residual ccf of each pair (GraphMaker's, with
+    Hosking's P). `nlags` (the matrices) defaults to max(6, frequency).
 
 ---
 

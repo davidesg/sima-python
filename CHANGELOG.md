@@ -2,6 +2,19 @@
 
 ## 0.1.0 — unreleased
 
+### `check_residuals` is art's diagnosis
+
+- The report in art's four sections (the checking table as a block, what it
+  shows, the conclusions, the alternatives with their calls), then the
+  figures drvus drew in its diagnosis (and Jenkins and Alavi's figure 7):
+  fue's panel for each residual series (pyfug `plot_combined`, the call of
+  art's `figura_residuos`: residuals with +-2 bands, acf with its Q, pacf) and
+  the residual ccf of each pair in GraphMaker's panel. Several images in one
+  answer; the PNGs go to the case's `figs/`.
+- The residual ccf's P has GraphMaker's degrees of freedom, 4(K - (p + q)),
+  p + q the largest AR plus the largest MA order of the fitted model; when
+  none are left the label says so instead of a number.
+
 ### `plot_identification` reports as art does
 
 - The answer is art's report around the figure: 1 · TABLE (a block to show as

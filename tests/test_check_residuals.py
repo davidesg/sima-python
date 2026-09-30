@@ -33,11 +33,15 @@ def test_a_planted_joint_shock_is_found_on_the_transformed_residuals():
 def test_the_tool():
     _fn(M.load_pre)("ck", json.dumps(PAIR))
     _fn(M.run_gate)("ck")
-    assert "estimate" in _fn(M.check_residuals)("ck")          # no model yet
+    assert "estimate" in str(_fn(M.check_residuals)("ck"))     # no model yet
     _fn(M.estimate)("ck", 1, 0, False)
-    txt = _fn(M.check_residuals)("ck")
-    for part in ("(1) Large residuals", "(2) Residual correlation matrices", "(3) Portmanteau matrix"):
+    out = _fn(M.check_residuals)("ck")
+    txt = out[0].text
+    for part in ("(1) Large residuals", "(2) Residual correlation matrices", "(3) Portmanteau matrix",
+                 "## 1 · TABLE", "## 2 · WHAT IT SHOWS", "## 3 · CONCLUSIONS", "## 4 · DECISION", "⏸"):
         assert part in txt
+    # as art's diagnosis: a fue panel per series, then the ccf of the pair
+    assert [c.type for c in out] == ["text", "image", "image", "image"]
     assert "check_residuals" in _fn(M.export_guion)("ck", save=False)
 
 

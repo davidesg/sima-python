@@ -491,7 +491,14 @@ def ja_checking(res, sigma, names, K, freq, date_of):
         out.append(f"  {names[i]:<12}" + "".join(f"{Qij[i, j]:9.1f}{'*' if p[i, j] < 0.05 else ' '}"
                                                   for j in range(m)))
     out.append("  * p < 0.05 against chi-square(K), no parameters discounted.")
-    facts = {"n_beyond": len(beyond), "beyond": beyond, "large": len(big)}
+    lab = (lambda t: "%d.%02d" % date_of(t) if freq > 1 else str(date_of(t)[0]))
+    facts = {"n_beyond": len(beyond), "beyond": beyond, "large": len(big),
+             "expected": 0.05 * K * m * m,
+             "large_dates": sorted({lab(t) for _z, t in big}),
+             "worst": lab(max(big)[1]) if big else None,
+             "worst_z": float(max(big)[0]) if big else 0.0,
+             "significant_Q": [(names[i], names[j]) for i in range(m) for j in range(m)
+                               if p[i, j] < 0.05]}
     return "\n".join(out), facts
 
 

@@ -474,34 +474,104 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
 
 
 @mcp.tool()
-def check_residuals(name: str, nlags: int = 0) -> str:
-    """N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do.
+def check_residuals(name: str, nlags: int = 0) -> list:
+    """N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do,
+    and show it as art's diagnosis: the report, then the figures.
 
-    (1) The large residuals, judged on the UNCORRELATED transformed residuals
-    (the a_it correlate at lag 0, so one by one they cannot be judged), with
-    their dates — a known cause goes to intervention analysis, in art, before
-    anything else is read. (2) The residual correlation matrices R_k(a), with
-    what is beyond the band. (3) The portmanteau matrix Q_ij, as a summary.
-    If the matrices show structure, a model for the residuals is entertained
-    and combined with the fitted one, as at identification. `nlags` defaults
-    to max(6, frequency).
+    The report: 1 · TABLE — (1) the large residuals, judged on the
+    UNCORRELATED transformed residuals (the a_it correlate at lag 0, so one by
+    one they cannot be judged), with their dates — a known cause goes to
+    intervention analysis, in art, before anything else is read; (2) the
+    residual correlation matrices R_k(a), with what is beyond the band; (3)
+    the portmanteau matrix Q_ij, as a summary. 2 · WHAT IT SHOWS,
+    3 · CONCLUSIONS, 4 · DECISION. If the matrices show structure, a model for
+    the residuals is entertained and combined with the fitted one, as at
+    identification.
+
+    The figures, as drvus drew the diagnosis and their figure 7: fue's panel
+    for each residual series (the residuals with +-2 bands, the acf with its
+    Q, the pacf), and the residual ccf of each pair (GraphMaker's, with
+    Hosking's P). `nlags` (the matrices) defaults to max(6, frequency).
     """
+    from . import figures
     s = _sess.get(name)
     try:
         L = _current(s)
     except KeyError as e:
-        return str(e)
+        return [str(e)]
     r = L.result
     freq = s.series[0].freq
     K = int(nlags) or max(6, freq)
     s0 = L.series[L._act[0]]
     n = r.residuals.shape[0]
-    txt, facts = evidence.ja_checking(r.residuals, r.sigma, _names(s), K, freq,
+    names = _names(s)
+    txt, facts = evidence.ja_checking(r.residuals, r.sigma, names, K, freq,
                                       lambda t: s0.date_of(s0.nobs - n + t + 1))
     s.guion.add("N4", "check_residuals", {"nlags": K, "model": str(s.current)},
                 f"{facts['n_beyond']} residual correlations beyond the band; "
                 f"{facts['large']} large transformed residuals")
-    return txt
+    p_, q_, dc_, lk_, cr_ = s.current
+    desc = (f"cross p = {p_}, q = {q_}, {'diagonal' if dc_ else 'full'} covariance"
+            + (f", links {lk_}" if lk_ else "") + (f", cross MA {cr_}" if q_ else ""))
+    lines = ["# Checking — Jenkins and Alavi (1981, §5.2)",
+             f"*({desc}; n = {n})*", "",
+             "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "",
+             "```", txt, "```", "",
+             "## 2 · WHAT IT SHOWS", ""]
+    lines.append(f"- Residual correlations beyond the band: {facts['n_beyond']} "
+                 f"(about {facts['expected']:.1f} expected by chance)"
+                 + (": " + ", ".join(f"({names[i]}, {names[j]}) at {k}"
+                                     for k, i, j in facts["beyond"]) if facts["beyond"] else "")
+                 + ".")
+    lines.append("- Portmanteau matrix: " + (
+        "significant for " + ", ".join(f"({a}, {b})" for a, b in facts["significant_Q"])
+        if facts["significant_Q"] else "nothing significant") + ".")
+    nd = len(facts["large_dates"])
+    lines.append(f"- Large transformed residuals (beyond 2): {nd} date(s)"
+                 + (f" — {', '.join(facts['large_dates'])}; the largest {facts['worst']}, "
+                    f"{facts['worst_z']:.1f} s.d" if nd else "") + ".")
+    lines += ["", "## 3 · CONCLUSIONS", ""]
+    structure = facts["n_beyond"] > facts["expected"] + 1 or facts["significant_Q"]
+    lines.append("The residual matrices show structure the model does not carry: a "
+                 "model for the residuals is entertained (as at identification)."
+                 if structure else
+                 "The residual matrices show no structure beyond chance: the model "
+                 "carries the dynamics.")
+    if facts["worst_z"] > 3.0:
+        lines.append(f"A large residual stands out ({facts['worst']}, "
+                     f"{facts['worst_z']:.1f} s.d.): with a known cause it is treated by "
+                     "intervention in art, on the series' own model, before reading "
+                     "anything else; without one it stays as an open caveat.")
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = [("the yardstick (N5): does it forecast better than the univariates?",
+             f'evaluate(name="{name}", p={p_}, q={q_}, estwin=...'
+             + (f', links="{lk_}"' if lk_ else "") + (f', cross="{cr_}"' if q_ else "") + ")")]
+    if facts["worst_z"] > 3.0:
+        opts.append((f"intervene {facts['worst']} in art, rebuild the .pre and "
+                     "climb the ladder again", "art: suggest_intervention_form(...)"))
+    if structure:
+        opts.append(("a model for the residuals: identify it as at N2",
+                     f'plot_identification(name="{name}", method=2)'))
+    opts.append(("Jenkins and Alavi's V(l) against the univariates (in sample)",
+                 f'forecast_uncertainty(name="{name}")'))
+    for t, (what, call) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{call}`")
+    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    # the figures, as drvus' diagnosis: a panel per series, a ccf per pair
+    items = [(fig, f"resid_{nm}") for nm, fig in figures.residual_panels(L)]
+    from drvarma.plots import ccf_default_lags
+    Kc = min(ccf_default_lags(freq), n // 4)
+    items.append((figures.residual_ccf_figure(L, Kc, freq), "ccf"))
+    npq = figures.residual_npq(L)
+    lines.append(f"\nThe residual ccf's P is GraphMaker's: Hosking's portmanteau over {Kc} lags "
+                 f"with 4(K - (p + q)) degrees of freedom, p + q = {npq} (the largest AR "
+                 "plus the largest MA order of the fitted model)"
+                 + (": none left at this K, so it is shown without them."
+                    if Kc <= npq else "."))
+    if not items[:-1]:
+        lines.append("\n(pyfug is not installed: the per-series panels are missing.)")
+    return _figures(s, items, "\n".join(lines))
 
 
 @mcp.tool()
@@ -842,6 +912,36 @@ def _figure(s, fig, kind, path, note):
             b64 = base64.b64encode(fh.read()).decode()
         return [TextContent(type="text", text=text),
                 ImageContent(type="image", data=b64, mimeType="image/png")]
+    except Exception:                                        # noqa: BLE001
+        return [text]
+
+
+def _figures(s, items, text):
+    """Several figures INSIDE the answer, after the report (as art's
+    diagnosis), each also written as a PNG next to the files; recorded at N4."""
+    import base64
+    import tempfile
+    from . import figures
+    d = s.guion.figures_dir()
+    try:
+        os.makedirs(d, exist_ok=True)
+    except OSError:
+        d = tempfile.gettempdir()
+    paths = []
+    for fig, kind in items:
+        p = os.path.join(d, f"sima_{s.name}_{kind}.png")
+        figures.save(fig, p)
+        paths.append(p)
+    s.guion.add("N4", "check_residuals", {"png": paths}, "diagnosis figures")
+    text = text + "\n" + "\n".join(f"PNG: {p}" for p in paths)
+    try:
+        from mcp.types import ImageContent, TextContent
+        out = [TextContent(type="text", text=text)]
+        for p in paths:
+            with open(p, "rb") as fh:
+                out.append(ImageContent(type="image", data=base64.b64encode(fh.read()).decode(),
+                                        mimeType="image/png"))
+        return out
     except Exception:                                        # noqa: BLE001
         return [text]
 
