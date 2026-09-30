@@ -1,0 +1,17 @@
+{
+  "name": "jenkins_alavi",
+  "title": "Jenkins and Alavi (1981): muskrat and mink",
+  "summary": "The multivariate method of Jenkins and Alavi on their own data: the skins of muskrat (prey) and mink (predator) traded by the Hudson's Bay Company, 62 years, from the two univariate models built in art to the forecasts.",
+  "files": ["art/MUSKRAT_m03.pre", "art/MINK_m02.pre"],
+  "also": ["art/MUSKRAT_m03.out", "art/MINK_m02.out", "data/mink_muskrat.csv", "README.md"],
+  "tutorial": "TUTORIAL.md",
+  "manual": "MANUAL-jenkins-alavi",
+  "plan": [
+    "N1 run_gate — the univariate models, certified",
+    "N2 plot_identification(method=2), then method=1 — Jenkins and Alavi's two identifications",
+    "N3 estimate — the two candidates they found: an MA(1) residual model and a cross AR(2)",
+    "N4 check_residuals — their checking, with the large residual of 1906 (1908 here)",
+    "N5 forecast_uncertainty — their Table VIII, on all the data and on 48 observations (§6.3)",
+    "N5 evaluate — the out-of-sample comparison they could not run"
+  ]
+}

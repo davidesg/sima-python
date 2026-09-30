@@ -10,9 +10,17 @@ built in art to the forecasts.
 | `data/mink_muskrat.csv` | skins traded by the Hudson's Bay Company, 62 years (Jones 1914), dated 1850–1911 as in Reinsel (1997); Jenkins and Alavi date the same values 1848–1909 |
 | `art/MUSKRAT_m03.pre`, `.out` | the muskrat's univariate model, built in art's guided lane: ARIMA(6,1,1) on ln z |
 | `art/MINK_m02.pre`, `.out` | the mink's: AR(4) on ln z, with mean |
-| `run.py` | the walkthrough, node by node, with sima's tools |
+| `run.py` | the walkthrough in one go, with sima's tools |
+| `TUTORIAL.md`, `example.json` | the step-by-step tutorial the assistant follows, and the example's manifest (for `load_example`) |
 
-Run it from the repository (or with sima installed):
+**In real time, in a conversation with sima** (the way to learn it): ask for
+the example, or call `load_example("jenkins_alavi")`. It copies these files to
+`~/sima-examples/jenkins_alavi/`, loads the two models, and the analysis goes
+on node by node with the usual pauses; the assistant follows `TUTORIAL.md`
+(served as `sima://example/jenkins_alavi`) to say, after each report, what
+Jenkins and Alavi found at that step.
+
+**In one go**, from the repository (or with sima installed):
 
     python3 examples/jenkins_alavi/run.py            # the whole walkthrough
     python3 examples/jenkins_alavi/run.py --upto 6   # up to the identification

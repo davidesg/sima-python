@@ -2,6 +2,19 @@
 
 ## 0.1.0 — unreleased
 
+### Worked examples in real time: `examples`, `load_example`
+
+- `load_example("jenkins_alavi")` copies the example's files to
+  `~/sima-examples/<name>/` (keeping any already there) and loads its
+  univariate models; the analysis goes on node by node with the usual pauses.
+  `examples()` lists them. The assistant follows the tutorial,
+  `sima://example/<name>` (`examples/<name>/TUTORIAL.md`): what to look at at
+  each step and what the original analysis found, added after each report.
+  The tools do not change in a tutorial. `sima://examples` is the index; the
+  first question offers an example to a new user.
+- The examples travel with the package (`tools/sync_material.py` copies them to
+  `src/sima/material/examples/`; `pyproject.toml` ships them).
+
 ### The manual chapter and the example: Jenkins and Alavi
 
 - `docs/MANUAL-jenkins-alavi.md` (served as `sima://doc/MANUAL-jenkins-alavi`): the method of

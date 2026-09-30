@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Copy `bugs/` and `docs/` to `src/sima/material/`, which the wheel distributes.
+"""Copy `bugs/`, `docs/` and the worked `examples/` to `src/sima/material/`, which
+the wheel distributes.
 
 The MCP resources (`sima://defects`, `sima://docs`) serve them at run time, and
 a wheel only carries `src/`: without this copy an installation would answer
@@ -34,11 +35,46 @@ def _copy(src, dst, keep):
     return len(names), copied
 
 
+EXAMPLE_KEEP = (".pre", ".out", ".csv", ".md", ".json")
+
+
+def example_files(src):
+    """The files of the worked examples that travel with the package: the
+    manifest, the tutorial, the univariate models and the data — not the
+    walkthrough's outputs (out/, figs/) nor the guion it writes."""
+    out = []
+    for dp, dns, fns in os.walk(src):
+        dns[:] = [d for d in dns if d not in ("out", "figs", "__pycache__")]
+        for f in fns:
+            if f.endswith(EXAMPLE_KEEP) and ".sima." not in f:
+                out.append(os.path.relpath(os.path.join(dp, f), src))
+    return sorted(out)
+
+
+def _copy_tree(src, dst):
+    rels = example_files(src) if os.path.isdir(src) else []
+    copied = 0
+    for r in rels:
+        o, d = os.path.join(src, r), os.path.join(dst, r)
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+        if not (os.path.exists(d) and filecmp.cmp(o, d, shallow=False)):
+            shutil.copy2(o, d)
+            copied += 1
+    if os.path.isdir(dst):                                   # drop what is gone
+        for dp, _dns, fns in os.walk(dst):
+            for f in fns:
+                if os.path.relpath(os.path.join(dp, f), dst) not in rels:
+                    os.remove(os.path.join(dp, f))
+    return len(rels), copied
+
+
 def sync():
     return {"bugs": _copy(os.path.join(ROOT, "bugs"), os.path.join(DEST, "bugs"),
                           lambda f: f.endswith(".md")),
             "docs": _copy(os.path.join(ROOT, "docs"), os.path.join(DEST, "docs"),
-                          lambda f: f.endswith(".md") and f not in DOCS_OUT)}
+                          lambda f: f.endswith(".md") and f not in DOCS_OUT),
+            "examples": _copy_tree(os.path.join(ROOT, "examples"),
+                                   os.path.join(DEST, "examples"))}
 
 
 if __name__ == "__main__":

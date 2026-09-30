@@ -7,7 +7,10 @@ are asked for when needed, whole and addressable. sima serves:
 * two defect registers: sima's own, and the ENGINE's (drvarma), where the
   defects of the ladder live (the estimation, the MA wall, termcode 3...).
   They number independently, so each has its own address;
-* the design documents.
+* the design documents and the user manual;
+* the worked examples: their index, and each one's step-by-step tutorial,
+  which the assistant follows while the analyst runs the example node by node
+  (`load_example`).
 
 The registers are read with `fue.bugs`, the suite's one parser. The material
 comes from the installed package (tools/sync_material.py) or, in the working
@@ -112,3 +115,51 @@ def doc(name):
         return "*(no such document; the index is `sima://docs`.)*"
     with open(os.path.join(d, name), encoding="utf-8", errors="replace") as fh:
         return fh.read()
+
+
+# --------------------------------------------------------------------------- #
+#  the worked examples                                                         #
+# --------------------------------------------------------------------------- #
+
+def _examples():
+    """{name: (directory, manifest)} of the examples this installation carries."""
+    import json
+    d = _dir("examples")
+    out = {}
+    if d is None:
+        return out
+    for name in sorted(os.listdir(d)):
+        m = os.path.join(d, name, "example.json")
+        if os.path.isfile(m):
+            with open(m, encoding="utf-8") as fh:
+                out[name] = (os.path.join(d, name), json.load(fh))
+    return out
+
+
+def examples_index():
+    ex = _examples()
+    if not ex:
+        return MISSING.format(what="the worked examples",
+                              where="github.com/davidesg/sima-python, examples/")
+    out = ["# sima's worked examples", "",
+           "Run one node by node with `load_example(<name>)`; its tutorial, "
+           "`sima://example/<name>`, says what to look at at each step and what "
+           "the original analysis found.", ""]
+    for name, (_d, m) in ex.items():
+        out += [f"## `{name}` — {m['title']}", "", m["summary"], ""]
+        out += [f"- {p}" for p in m.get("plan", [])] + [""]
+    return "\n".join(out)
+
+
+def example_tutorial(name):
+    ex = _examples()
+    if name not in ex:
+        return f"*(no example `{name}`; the index is `sima://examples`.)*"
+    d, m = ex[name]
+    with open(os.path.join(d, m["tutorial"]), encoding="utf-8") as fh:
+        return fh.read()
+
+
+def example_files(name):
+    """(directory, manifest) of one example, or None."""
+    return _examples().get(name)

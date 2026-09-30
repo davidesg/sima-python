@@ -34,3 +34,19 @@ def test_the_walkthrough_script_runs(tmp_path):
                        capture_output=True, text=True, env=env, timeout=900)
     assert r.returncode == 0, r.stderr[-2000:]
     assert " 8. N4 checking of A" in r.stdout
+
+
+def test_load_example_in_real_time(tmp_path):
+    """load_example copies the files to a working folder, loads the univariate
+    models and hands over to the usual protocol, pointing at the tutorial;
+    files already there are kept."""
+    t = _fn(M.load_example)("jenkins_alavi", session="tut", dest=str(tmp_path))
+    assert "sima://example/jenkins_alavi" in t and 'Next: run_gate("tut")' in t
+    assert (tmp_path / "art" / "MUSKRAT_m03.pre").exists()
+    assert (tmp_path / "TUTORIAL.md").exists()
+    assert "GATE: PASSED" in _fn(M.run_gate)("tut")
+    (tmp_path / "art" / "MINK_m02.out").write_text("mine")
+    t2 = _fn(M.load_example)("jenkins_alavi", session="tut2", dest=str(tmp_path))
+    assert "already there, kept" in t2
+    assert (tmp_path / "art" / "MINK_m02.out").read_text() == "mine"
+    assert "No example" in _fn(M.load_example)("nope", dest=str(tmp_path / "x"))

@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**21 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**23 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -11,12 +11,14 @@
 | [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
 | [`estimate`](#estimate) | N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance. |
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
+| [`examples`](#examples) | The worked examples that come with sima, to see how it works in real |
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
 | [`forecast`](#forecast) | N6 — Forecast every series in its level with the last estimated model. |
 | [`forecast_uncertainty`](#forecast-uncertainty) | N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their |
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
+| [`load_example`](#load-example) | N0 for a worked example: copy its files to a working folder (`dest`, |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
 | [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of the last estimated model in the format of FUF |
 | [`plot_identification`](#plot-identification) | FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the |
@@ -134,6 +136,15 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     `estwin` counts observations of the FIRST series; leave enough data after it
     (at least a few dozen origins) or the comparison says little. `links`: as in
     estimate, the same restricted candidate.
+
+---
+
+## `examples`
+
+The worked examples that come with sima, to see how it works in real
+    time: each is a real analysis, from the univariate models built in art,
+    run node by node with the same tools and pauses as any other.
+    load_example(<name>) starts one.
 
 ---
 
@@ -267,6 +278,28 @@ N6 — Orthogonalised impulse responses of the last estimated model.
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
+
+---
+
+## `load_example`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | no | `jenkins_alavi` |
+| `session` | string | no | `` |
+| `dest` | string | no | `` |
+
+N0 for a worked example: copy its files to a working folder (`dest`,
+    default ~/sima-examples/<name>; files already there are kept) and load its
+    univariate models, as load_pre does. From here the analysis is the usual
+    one — run_gate, then node by node, the analyst deciding at every pause.
+
+    Before going on, READ its tutorial, `sima://example/<name>`: at each step
+    it says what to look at and what the original analysis found, which you
+    add after each report ("In the paper: ..."). The tools do not change in a
+    tutorial; the explanation of the method is the manual it names.
 
 ---
 

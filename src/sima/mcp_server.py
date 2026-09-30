@@ -58,6 +58,13 @@ FIRST QUESTION
       hand you the path and the model."
 Both lanes walk the SAME nodes. Only who sits in the analyst's chair changes.
 
+If the user is new to sima, or asks to see how it works, offer a WORKED
+EXAMPLE first: `examples()` lists them, `load_example(<name>)` loads one (the
+univariate models of a real analysis), and its tutorial, sima://example/<name>,
+is your map: run it node by node in the guided lane, and after each report
+add what the original analysis found. Jenkins and Alavi's muskrat and mink
+(`jenkins_alavi`) is the one to start with.
+
 ══════════════════════════════════════════════════════
 THE PROTOCOL
 ══════════════════════════════════════════════════════
@@ -185,7 +192,9 @@ RULES THAT ARE NOT NEGOTIATED
 7. Present the tables as the tools return them. Do not rebuild them.
 8. Resources to ASK for when needed: sima://protocol (this text),
    sima://defects (sima's and the engine's defect registers; one report with
-   sima://engine-defects/BUG-XXXX), sima://docs.
+   sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
+   user manual: sima://doc/MANUAL-jenkins-alavi), sima://examples and
+   sima://example/<name> (a worked example's tutorial).
 """
 
 mcp = FastMCP("sima — simultaneous VARMA on the ATSW ladder (drvarma)",
@@ -231,6 +240,22 @@ def _r_docs() -> str:
     """The index of sima's documents (design, tool reference)."""
     from .resources import docs_index
     return docs_index()
+
+
+@mcp.resource("sima://examples")
+def _r_examples() -> str:
+    """The worked examples this installation carries: what each teaches and
+    its plan. Run one node by node with load_example."""
+    from .resources import examples_index
+    return examples_index()
+
+
+@mcp.resource("sima://example/{name}")
+def _r_example(name: str) -> str:
+    """One example's step-by-step tutorial: what to look at at each node and
+    what the original analysis found, for the assistant leading it."""
+    from .resources import example_tutorial
+    return example_tutorial(name)
 
 
 @mcp.resource("sima://doc/{name}")
@@ -281,6 +306,66 @@ def _diagonal(s):
 # --------------------------------------------------------------------------- #
 #  N0                                                                          #
 # --------------------------------------------------------------------------- #
+
+@mcp.tool()
+def examples() -> str:
+    """The worked examples that come with sima, to see how it works in real
+    time: each is a real analysis, from the univariate models built in art,
+    run node by node with the same tools and pauses as any other.
+    load_example(<name>) starts one."""
+    from .resources import examples_index
+    return examples_index()
+
+
+@mcp.tool()
+def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "") -> str:
+    """N0 for a worked example: copy its files to a working folder (`dest`,
+    default ~/sima-examples/<name>; files already there are kept) and load its
+    univariate models, as load_pre does. From here the analysis is the usual
+    one — run_gate, then node by node, the analyst deciding at every pause.
+
+    Before going on, READ its tutorial, `sima://example/<name>`: at each step
+    it says what to look at and what the original analysis found, which you
+    add after each report ("In the paper: ..."). The tools do not change in a
+    tutorial; the explanation of the method is the manual it names.
+    """
+    import json as _json
+    import shutil
+    from .resources import example_files
+    ex = example_files(name)
+    if ex is None:
+        from .resources import examples_index
+        return f"No example `{name}`.\n\n" + examples_index()
+    src, m = ex
+    dest = os.path.expanduser(dest or os.path.join("~", "sima-examples", name))
+    kept = 0
+    for rel in list(m["files"]) + list(m.get("also", [])) + [m["tutorial"]]:
+        o, d = os.path.join(src, rel), os.path.join(dest, rel)
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+        if os.path.exists(d):
+            kept += 1
+        else:
+            shutil.copy2(o, d)
+    session = session or name
+    files = [os.path.join(dest, r) for r in m["files"]]
+    loaded = _fn_load_pre(session, _json.dumps(files))
+    out = [f"# Worked example — {m['title']}", "", m["summary"], "",
+           f"Files in `{dest}`" + (f" ({kept} already there, kept as they were)" if kept else "")
+           + f"; session `{session}`.", "",
+           "## The plan", ""] + [f"- {p}" for p in m.get("plan", [])] + [
+           "", "## For the assistant", "",
+           f"Read the tutorial now: `sima://example/{name}`. Lead it in the guided "
+           "lane, ONE node at a time: present each report as always, then add what "
+           "the original analysis found at that step, and stop at the pause. The "
+           f"method is explained in `sima://doc/{m['manual']}`.", "",
+           "## The univariate models, loaded", "", loaded, "",
+           f"Next: run_gate(\"{session}\")."]
+    return "\n".join(out)
+
+
+def _fn_load_pre(name, paths_json):
+    return getattr(load_pre, "fn", load_pre)(name, paths_json)
+
 
 @mcp.tool()
 def load_pre(name: str, paths_json: str) -> str:

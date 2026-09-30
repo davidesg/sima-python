@@ -49,3 +49,26 @@ def test_the_packaged_copy_is_in_sync():
         assert sorted(os.listdir(dst)) == names, "run tools/sync_material.py"
         _m, bad, err = filecmp.cmpfiles(src, dst, names, shallow=False)
         assert not bad and not err, "run tools/sync_material.py"
+
+
+def test_the_examples_are_served_and_packaged():
+    uris = {str(r.uri) for r in asyncio.run(M.mcp.list_resources())}
+    assert "sima://examples" in uris
+    tmpl = {t.uriTemplate for t in asyncio.run(M.mcp.list_resource_templates())}
+    assert "sima://example/{name}" in tmpl
+    assert "`jenkins_alavi`" in R.examples_index()
+    tut = "".join(c.content for c in asyncio.run(M.mcp.read_resource("sima://example/jenkins_alavi")))
+    assert "## For the assistant: how to lead it" in tut and "Step 7" in tut
+    assert "no example" in R.example_tutorial("nope")
+    # the packaged copy of the examples is the original
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("sm", os.path.join(ROOT, "tools", "sync_material.py"))
+    sm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sm)
+    src = os.path.join(ROOT, "examples")
+    dst = os.path.join(ROOT, "src", "sima", "material", "examples")
+    if os.path.isdir(dst):
+        rels = sm.example_files(src)
+        assert rels == sm.example_files(dst), "run tools/sync_material.py"
+        _m, bad, err = filecmp.cmpfiles(src, dst, rels, shallow=False)
+        assert not bad and not err, "run tools/sync_material.py"

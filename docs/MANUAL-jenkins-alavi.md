@@ -5,10 +5,9 @@
 This chapter explains the multivariate method of G. M. Jenkins and A. S. Alavi
 (1981), shows how sima implements it tool by tool, and works through their own
 example — the muskrat and mink skins of the Hudson's Bay Company — from the two
-univariate models built in art to the forecasts. The example ships with sima
-(`examples/jenkins_alavi/`) and runs as it is:
-
-    python3 examples/jenkins_alavi/run.py
+univariate models built in art to the forecasts. The example ships with sima: in a
+conversation, `load_example("jenkins_alavi")` runs it node by node in real
+time (3.3); in the repository, `examples/jenkins_alavi/run.py` runs it in one go.
 
 Section numbers in brackets, [§3.4], are the paper's; equation numbers, (3.22),
 too.
@@ -265,12 +264,16 @@ each figure to `out/figs/`:
     python3 examples/jenkins_alavi/run.py            # all of it
     python3 examples/jenkins_alavi/run.py --upto 6   # up to the identification
 
-**In a conversation with sima** (the MCP server), step by step:
+**In a conversation with sima**, in real time — the way to learn it. Ask the
+assistant for the example, or call:
 
-    load_pre("muskrat_mink", '[".../art/MUSKRAT_m03.pre", ".../art/MINK_m02.pre"]')
-    run_gate("muskrat_mink")
-    plot_identification("muskrat_mink", method=2)
-    ...
+    examples()                       # what examples there are
+    load_example("jenkins_alavi")    # the files, copied to ~/sima-examples/, loaded
+
+and go on node by node from `run_gate("jenkins_alavi")`, deciding at every
+pause. The assistant follows the tutorial, `sima://example/jenkins_alavi`:
+after each report it adds what Jenkins and Alavi found at that step and where
+this manual explains it. The tools answer exactly as in any analysis.
 
 ### 3.4 The walkthrough, with the paper's numbers
 
@@ -293,9 +296,11 @@ residual model** on both links — their (4.8). By side, S* = 14.9 (p = 0.14)
 when the mink leads and 22.1 (p = 0.015) when the muskrat leads.
 
 **N2 · Identification, method 1** (the stationary series ∇ln muskrat, ln
-mink). Their Table IV is reproduced: r(0) = −0.33 (theirs −0.33); the lag-1
-cross correlation of the mink on the muskrat −0.63 (theirs −0.64); S_1 of the
-mink on the muskrat −0.63 (−0.60), S_2 +0.32 (+0.30). The ccf of these series
+mink). Their Table IV is reproduced — R_k exactly, S_k within a few hundredths: r(0) = −0.33
+(theirs −0.33); R_1 = [0.22 −0.64; 0.03 0.65] (theirs the same, with the cross
+elements transposed: their r_ij(k) is corr(w_i,t, w_j,t+k)); S_1 = [0.01 −0.64;
+0.28 0.74] (theirs [0.01 −0.60; 0.30 0.74]); S_2 = [−0.21 0.32; −0.01 −0.13]
+(theirs [−0.21 0.30; −0.01 −0.13]). The ccf of these series
 waves with their common ten-year cycle and does not cut off; the **pccf cuts
 off after 2**: a **cross AR(2)** — their (4.10), (5.9). The Yule-Walker
 preliminary estimates of the cross terms: −0.73 and +0.30 of the mink on the

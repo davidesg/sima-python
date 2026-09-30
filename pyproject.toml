@@ -51,10 +51,14 @@ sima = "sima.mcp_server:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# bugs/ and docs/, copied by tools/sync_material.py (generated, not in git):
-# the MCP resources serve them, and a wheel only carries src/ (art BUG-0125).
+# bugs/, docs/ and the worked examples, copied by tools/sync_material.py
+# (generated, not in git): the MCP resources and load_example serve them, and a
+# wheel only carries src/ (art BUG-0125).
 [tool.setuptools.package-data]
-sima = ["material/bugs/*.md", "material/docs/*.md"]
+sima = ["material/bugs/*.md", "material/docs/*.md",
+        "material/examples/*/*.md", "material/examples/*/*.json",
+        "material/examples/*/*/*.pre", "material/examples/*/*/*.out",
+        "material/examples/*/*/*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
