@@ -179,7 +179,7 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
     ("pccf", the cross elements of S_k, two-sided; no lag 0) — fue's ACF over PACF: the same lag
     axis and the same scale, so a lag is read down the column. The pairs go
     side by side, two per row. Terse, as the originals: the pair once above,
-    "ccf" / "pccf" at the left, the statistic between; what they mean goes in
+    "ccf" / "pccf" centred under it, the statistic between; what they mean goes in
     the tool's text.
 
     method 2: x are the univariate residuals (prewhitened), band 2/sqrt(n) on
@@ -220,13 +220,14 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
         if method == 2:
             S_, df_, _p = im.haugh(x[:, i], x[:, j], K)["all"]
             lab = "S* ( %d ) = %.1f" % (df_, S_)
-        # the pair once, above, as GraphMaker; "ccf" / "pccf" at the left, as
-        # drvus labels its "acf" / "pacf"
-        _draw_ccf_panel(top, rho, K, n, freq, f"{names[j]} - {names[i]}",
-                        lab, band=band, cmax=c)
+        # the pair once, centred above, as GraphMaker; "ccf" / "pccf" centred
+        # under it, as drvus titles its "acf" / "pacf"
+        _draw_ccf_panel(top, rho, K, n, freq, "", lab, band=band, cmax=c)
         _draw_ccf_panel(bot, s, K, n, freq, "", "", band=band_p, cmax=c)
-        top.set_title("ccf", loc="left", fontsize=10)
-        bot.set_title("pccf", loc="left", fontsize=10)
+        top.set_title(f"{names[j]} - {names[i]}", fontsize=11, pad=24)
+        top.text(0.5, 1.02, "ccf", transform=top.transAxes, ha="center",
+                 va="bottom", fontsize=13, fontweight="bold")      # bold, as fue's acf
+        bot.set_title("pccf", fontsize=13, fontweight="bold")
     for k in range(len(pairs), nblk * ncol):
         axes[2 * (k // ncol), k % ncol].set_visible(False)
         axes[2 * (k // ncol) + 1, k % ncol].set_visible(False)
