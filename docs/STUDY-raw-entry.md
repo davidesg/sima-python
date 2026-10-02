@@ -267,4 +267,17 @@ against the analysts' models:
   long cycles (10 years) are what the guided analysis found and the light
   builder does not.
 
-Next: route V.
+**Route V done (2026-10-02):** `write_specs`, and route V in `identify_matrices`,
+`estimate` and `evaluate`. The gas furnace from its raw table, in levels:
+- **M(l)** is Tiao and Box's Table 12(b) (1649.7, 665.1, 31.7, 22.5, 5.6, 12.8).
+- **The full VAR(6)** by exact ML in 2 s:
+  - the input's φ₁ = 1.92 and φ₂ = −1.19 (their (5.6): 1.93, −1.20);
+  - CO₂ ← gas at lag 3 with t = −2.4 (the delay b = 3);
+  - every CO₂ → gas coefficient |t| ≤ 1.2: no feedback, as they found. B's
+    formal test will say it.
+- **The yardstick** (univariates from route U's builder, CO₂ an AR(3)):
+  - the VAR(6) gains 17–46 % on CO₂ at h ≥ 2;
+  - it loses 4–16 % on the gas, whose 12 useless cross coefficients cost
+    forecasts.
+
+  That is Tiao and Box's case for simplification: C comes next.

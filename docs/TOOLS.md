@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**27 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**28 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -35,6 +35,7 @@
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
+| [`write_specs`](#write-specs) | N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector |
 
 ---
 
@@ -691,5 +692,33 @@ N6 — Forecast-error variance decomposition of the last estimated model.
     impulse_response, and the same caveat: with correlated innovations the
     shares of the first series in the order are inflated by construction.
     With `bands` (default): 95% Monte-Carlo bands at the last horizon.
+
+---
+
+## `write_specs`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `out_dir` | string | no | `` |
+| `overwrite` | boolean | no | `False` |
+
+N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector
+    first, as Tiao and Box (1981). No univariate models: each series gets a
+    fue .inp with ONLY its characterization — lambda, d, D or harmonics, the
+    mean when d = D = 0 — in `out_dir` (default `<data>_sima/`), and the
+    ladder session opens on them (the guion goes on).
+
+    Then: run_gate (it certifies the cast; the diagonal here is white noise,
+    or a random walk for d = 1, not a yardstick), canonical_analysis and
+    identify_matrices' method 1 (R_k, S_k, Tiao and Box's M(l)) on the
+    vector. estimate(p, q) in this route writes each series' spec with a FREE
+    AR(p)/MA(q) of its own and fits the full VARMA(p, q): the diagonal is
+    estimated with the cross terms. evaluate compares it with univariate
+    models built by route U's builder, for the yardstick only. Route V writes
+    no .pre for the system: its estimates are rows of the system, not
+    univariate optima.
 
 ---

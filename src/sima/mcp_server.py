@@ -49,7 +49,7 @@ You arrive here in one of three ways:
     each series keeps its own). Then a route (docs/STUDY-raw-entry.md):
     (U) build the univariate models first and climb the ladder (Jenkins and
     Alavi) with build_univariate, or (V) the vector first, the univariates
-    only as the yardstick (Tiao and Box; under construction: say so). Route
+    only as the yardstick (Tiao and Box) with write_specs. Route
     U's models are art's autonomous lane in miniature: say it, and offer art
     for any series with a tie or a residual problem. With two or more differenced series, offer
     canonical_analysis on the levels right after characterize.
@@ -77,6 +77,9 @@ THE PROTOCOL
 ══════════════════════════════════════════════════════
 N0r load_data         raw series (no univariate models): the table
 N0c characterize      each series' lambda, d, seasonality, outliers (art's engine)
+N0v write_specs       route V: each series' spec with only its transformation;
+                      estimate(p, q) then fits the full VARMA, the diagonal
+                      free; the yardstick is built for N5 only
 N0u build_univariate  route U: each series' model with art's engine (light, not
                       reviewed in art), then the ladder session on those files
 N0  load_pre          the files, their models, the common window
@@ -322,6 +325,32 @@ def _diagonal(s):
     return s.diagonal
 
 
+def _files_for(s, p, q):
+    """The files a candidate is estimated on. Route U: the session's (the
+    univariate models on the diagonal). Route V: each series' specification
+    with a free AR(p)/MA(q) of its own, written once per order — with cross
+    orders p, q the ladder is the full VARMA(p, q), Tiao and Box's model."""
+    if s.route != "V":
+        return s.files
+    from . import raw
+    r = _sess.get_raw(s.v["raw"])
+    paths = [raw.v_path(s.v["dir"], nm, p, q) for nm in r.names]
+    if not all(os.path.exists(x) for x in paths):
+        raw.write_v(s.v["dir"], r.names, r.data, r.chars, r.freq, r.start, p, q)
+    return paths
+
+
+def _yardstick_files(s):
+    """Route V's yardstick: the univariate models of route U's builder, for N5
+    only (they never enter the system). Built once, next to the specs."""
+    from . import raw
+    r = _sess.get_raw(s.v["raw"])
+    pres = [os.path.join(s.v["dir"], f"{nm}_u.pre") for nm in r.names]
+    if not all(os.path.exists(x) for x in pres):
+        raw.build_univariate(r.names, r.data, r.chars, r.freq, r.start, s.v["dir"])
+    return pres
+
+
 # --------------------------------------------------------------------------- #
 #  N0                                                                          #
 # --------------------------------------------------------------------------- #
@@ -510,6 +539,60 @@ def build_univariate(name: str, out_dir: str = "", overwrite: bool = False) -> s
 
 
 @mcp.tool()
+def write_specs(name: str, out_dir: str = "", overwrite: bool = False) -> str:
+    """N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector
+    first, as Tiao and Box (1981). No univariate models: each series gets a
+    fue .inp with ONLY its characterization — lambda, d, D or harmonics, the
+    mean when d = D = 0 — in `out_dir` (default `<data>_sima/`), and the
+    ladder session opens on them (the guion goes on).
+
+    Then: run_gate (it certifies the cast; the diagonal here is white noise,
+    or a random walk for d = 1, not a yardstick), canonical_analysis and
+    identify_matrices' method 1 (R_k, S_k, Tiao and Box's M(l)) on the
+    vector. estimate(p, q) in this route writes each series' spec with a FREE
+    AR(p)/MA(q) of its own and fits the full VARMA(p, q): the diagonal is
+    estimated with the cross terms. evaluate compares it with univariate
+    models built by route U's builder, for the yardstick only. Route V writes
+    no .pre for the system: its estimates are rows of the system, not
+    univariate optima."""
+    from . import raw
+    try:
+        r = _sess.get_raw(name)
+    except KeyError as e:
+        return str(e)
+    if r.chars is None:
+        return f'Characterize the series first (characterize("{name}")).'
+    d = os.path.expanduser(out_dir) if out_dir else os.path.splitext(r.path)[0] + "_sima"
+    base = [raw.v_path(d, nm) for nm in r.names]
+    there = [x for x in base if os.path.exists(x)]
+    if there and not overwrite:
+        return ("These files exist and are kept: " + ", ".join(there) + ". Rebuild with "
+                "overwrite=True.")
+    if overwrite:                       # order files from an older characterization
+        import glob
+        for nm in r.names:
+            for x in glob.glob(os.path.join(d, f"{nm}_v_p*q*.inp")):
+                os.remove(x)
+    files = raw.write_v(d, r.names, r.data, r.chars, r.freq, r.start, base=True)
+    r.guion.add("N0v", "write_specs", {"out_dir": d},
+                "route V: " + "; ".join(f"{c['name']} lam {c['lam']:.0f} d {c['d']}"
+                                         for c in r.chars))
+    try:
+        s = _sess.open_session(name, files)
+    except Exception as e:                                   # noqa: BLE001
+        return f"Written, but the session could not open: {e}"
+    s.route, s.v = "V", {"dir": d, "raw": name}
+    s.guion.entries = list(r.guion.entries)
+    s.guion.add("N0", "load_pre", {"files": len(files)},
+                f"{len(files)} specifications (route V): {', '.join(_names(s))}")
+    return ("ROUTE V — the vector first (Tiao and Box). Each series' specification "
+            "carries only its transformation:\n  " + "\n  ".join(files) + "\n\n"
+            + evidence.series_table(s.series)
+            + "\n\nNo univariate models enter the system. Next: run_gate (it certifies "
+            "the cast), then canonical_analysis and identify_matrices on the vector.")
+
+
+@mcp.tool()
 def load_pre(name: str, paths_json: str) -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
@@ -587,8 +670,14 @@ def run_gate(name: str) -> str:
            f"{nd} series are differenced, and Box and Tiao's reading of the levels "
            "says whether they need every difference jointly; then identify_cross."
            if nd >= 2 else "Next: identify_cross.")
+    if s.route == "V":
+        prov = ("\n\nRoute V: the files are specifications with no ARMA. The gate "
+                "certifies the cast; the diagonal it checks is white noise (a random "
+                "walk where d = 1), not a model to beat — the yardstick comes at N5.")
+        nxt = ("Next: canonical_analysis (the levels), then identify_matrices — "
+               "method 1 and Tiao and Box's M(l) on the vector.")
     gt = evidence.gate_text(s.gate)
-    if built:
+    if built or s.route == "V":
         gt = gt.replace("the base is the analysts' models", "the base is the models in the files")
     return gt + prov + "\n\n" + nxt
 
@@ -694,7 +783,7 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
     K = int(nlags) or max(6, freq)
     _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
     txt, facts = evidence.ja_identification(W, L.result.residuals, _names(s), K,
-                                            int(qmax), freq)
+                                            int(qmax), freq, route=s.route)
     s.guion.add("N2", "identify_matrices", {"nlags": K, "qmax": qmax},
                 f"method 2: MA({facts['method2_q']}) residual model"
                 + (f", links {', '.join(facts['links'])}" if facts["links"] else "")
@@ -744,8 +833,11 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     lk = _links(links)
     key = (int(p), int(q), bool(diagcov), lk, cross)
     try:
-        L = _ladder(s.files, int(p), int(q), bool(diagcov), links=lk, start=start,
-                    cross=cross)
+        if s.route == "V" and cross == "residual":
+            return ('cross="residual" is Jenkins and Alavi\'s model for UNIVARIATE '
+                    "residuals; route V has none. Use the default.")
+        L = _ladder(_files_for(s, int(p), int(q)), int(p), int(q), bool(diagcov),
+                    links=lk, start=start, cross=cross)
         L.fit()
     except Exception as e:
         s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
@@ -755,6 +847,11 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     s.current = key
     freq = s.series[0].freq
     txt = evidence.estimation_text(L, max(8, 2 * freq))
+    if s.route == "V":
+        txt = (f"ROUTE V — the full VARMA({p},{q}) of Tiao and Box: each series' own "
+               f"AR({p})/MA({q}) estimated jointly with the cross terms. The LR below is "
+               f"against the same model without cross terms (one AR({p})/MA({q}) per "
+               "series), not against univariate models; those come at N5.\n\n" + txt)
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
     s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "start": L.start_used, "cross": cross},
@@ -986,10 +1083,12 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     H = int(horizon)
     try:
         lk = _links(links)
-        Lc = _ladder(s.files, p, q, diagcov, estwin=estwin, links=lk, cross=cross)
+        Lc = _ladder(_files_for(s, p, q), p, q, diagcov, estwin=estwin, links=lk,
+                     cross=cross)
         Lc.fit()
         _rows, cand = Lc.recursive(H)
-        Ld = _ladder(s.files, 0, 0, True, estwin=estwin)
+        Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
+                     estwin=estwin)
         Ld.fit()
         _rows, diag = Ld.recursive(H)
     except Exception as e:
@@ -1003,6 +1102,11 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
              + (f", links {lk}" if lk else "")
              + (", residual-model form" if cross == "residual" else ""))
     txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s))
+    if s.route == "V":
+        txt = ("ROUTE V: the yardstick is univariate models built by route U's builder "
+               "(art's engine, light; not reviewed in art), "
+               f"{os.path.join(s.v['dir'], '<SERIES>_u.pre')} — they never entered the "
+               "system.\n\n" + txt)
     s.evaluations[(p, q, diagcov, lk, cross, estwin, H)] = (cand, diag)
     s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "estwin": estwin, "horizon": H},

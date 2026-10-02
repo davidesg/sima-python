@@ -434,3 +434,30 @@ def build_univariate(names, data, chars, freq, start, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     return [build_one(data[:, j], chars[j], freq, start, out_dir)
             for j in range(len(names))]
+
+
+# ── route V: the vector first ──────────────────────────────────────────────
+
+V_PROVENANCE = "* Route V (the vector first, Tiao and Box): a specification of sima's raw entry"
+
+
+def v_path(out_dir, name, p=None, q=None):
+    tail = "" if p is None else f"_p{int(p)}q{int(q)}"
+    return os.path.join(out_dir, f"{name}_v{tail}.inp")
+
+
+def write_v(out_dir, names, data, chars, freq, start, p=0, q=0, base=False):
+    """Route V's specifications: each series' transformation, its harmonics,
+    its mean when d = D = 0 and, unless `base`, a free regular AR(p)/MA(q) —
+    with cross orders p, q the ladder is the full VARMA(p, q). Returns paths."""
+    os.makedirs(out_dir, exist_ok=True)
+    out = []
+    for j, nm in enumerate(names):
+        c = chars[j]
+        path = v_path(out_dir, nm, None if base else p, None if base else q)
+        write_inp(path, nm, data[:, j], freq, start, c["lam"], c["d"], c.get("D", 0),
+                  harmonics=c.get("harmonics", False),
+                  mean=(c["d"] == 0 and c.get("D", 0) == 0),
+                  p=0 if base else int(p), q=0 if base else int(q), comment=V_PROVENANCE)
+        out.append(path)
+    return out

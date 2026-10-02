@@ -17,6 +17,8 @@ class Session:
     fits: dict = field(default_factory=dict)       # (p, q, diagcov, links) -> fitted Ladder
     current: tuple = None              # the key of the last estimated model
     evaluations: dict = field(default_factory=dict)  # (p, q, diagcov, estwin, H) -> summary
+    route: str = "U"                   # "U": univariate models on the diagonal; "V": the vector first
+    v: dict = None                     # route V: {"dir", "raw"} (docs/STUDY-raw-entry.md)
 
 
 _SESSIONS: dict = {}

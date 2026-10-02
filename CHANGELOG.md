@@ -2,6 +2,27 @@
 
 ## 0.1.0 — unreleased
 
+### Route V from raw data: `write_specs` — the vector first
+
+- `write_specs` (N0v) writes each series' fue `.inp` with only its
+  characterization (λ, d, D or harmonics, the mean when d = D = 0) and opens
+  the session in route V (Tiao and Box).
+- In route V:
+  - `identify_matrices` reads the vector: method 1, the whole matrices and
+    M(l). It does not pretend a method 2 (there are no univariate models), and
+    proposes M(l)'s full VAR(p);
+  - `estimate(p, q)` writes each series' spec with a free AR(p)/MA(q) of its
+    own (`<SERIES>_v_p{p}q{q}.inp`), so the ladder is the full VARMA(p, q);
+  - `evaluate` compares it with univariate models built by route U's builder,
+    for the yardstick only.
+- No `.pre` is written for the system. Its estimates are rows of the system.
+- **Gas furnace** (Series J), from the raw table in levels:
+  - M(l) is Tiao and Box's Table 12(b);
+  - the exact VAR(6) has φ₁ 1.92 and φ₂ −1.19 for the input (their 1.93,
+    −1.20), CO₂ receiving the gas at lag 3, and no feedback;
+  - out of sample, the VAR(6) improves CO₂'s forecasts by 17–46 % at h ≥ 2
+    but worsens the input's: the unrestricted model needs simplifying.
+
 ### Route U from raw data: `build_univariate`
 
 - `build_univariate` (N0u) builds each series' model on its characterization:

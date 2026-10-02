@@ -317,7 +317,7 @@ def stepwise_lines(sw, names, indent="  "):
     return out
 
 
-def ja_identification(w, res, names, K, qmax, freq):
+def ja_identification(w, res, names, K, qmax, freq, route="U"):
     """Jenkins and Alavi's two identifications [§3.3-3.4], from the ladder.
 
     Method 2 (prewhitened): the correlation matrices of the residuals of the
@@ -342,11 +342,15 @@ def ja_identification(w, res, names, K, qmax, freq):
     Sq = {q: q_partial_corr_matrices(w, K, q) for q in range(1, qmax + 1)}
     Qsym = {q: symbols(v[0], v[1]) for q, v in Sq.items()}
 
-    out = ["JENKINS AND ALAVI (1981) — the two identifications, from the ladder",
+    out = [("ROUTE V — the vector first (Tiao and Box 1981), with Jenkins and Alavi's "
+            "method 1" if route == "V" else
+            "JENKINS AND ALAVI (1981) — the two identifications, from the ladder"),
            f"series (rows i, columns j): {', '.join(names)}.  Element (i, j) at lag k: "
            "series j, k periods back, on series i.",
            "+ / - beyond two standard errors, . inside.", ""]
 
+    if route == "V":
+        S2 = np.full_like(S2, ".")
     # method 2
     q2, long2 = _cutoff(S2, off_diagonal=True)
     links = []
@@ -358,19 +362,27 @@ def ja_identification(w, res, names, K, qmax, freq):
     diag_left = sorted({k + 1 for k in range(min(K, _SHORT_MV))
                         for i in range(m) if S2[k, i, i] != "."})
     r0 = np.corrcoef(res.T)
-    out += [f"METHOD 2, prewhitened — the residuals of the univariate models "
-            f"(n = {res.shape[0]}, s.e. 1/sqrt(n) = {1 / np.sqrt(res.shape[0]):.3f})",
-            "  R_k(a):"]
-    out += [f"    k={k + 1:2d}  {_block(S2[k])}" for k in range(K)]
-    out.append(f"  lag 0: correlations " + ", ".join(
-        f"{names[i]}-{names[j]} {r0[i, j]:+.2f}" for i in range(m) for j in range(i + 1, m)))
-    out.append(f"  reading: the off-diagonal elements cut off after lag {q2}"
-               + (f"; isolated beyond the band at {long2}" if long2 else "")
-               + (f".  Links: {', '.join(links)}." if links else "."))
-    if diag_left:
-        out.append(f"  ! diagonal elements beyond the band at lags {diag_left}: a "
-                   "univariate model leaves autocorrelation — the residual model "
-                   "would be absorbing it; look at art first.")
+    if route == "V":
+        out += ["METHOD 2 — not in route V: there are no univariate models to prewhiten "
+                "with (the 'residuals' of these specifications are the series themselves). "
+                "The vector is read by method 1, below.",
+                "  lag 0: correlations " + ", ".join(
+                    f"{names[i]}-{names[j]} {r0[i, j]:+.2f}" for i in range(m)
+                    for j in range(i + 1, m))]
+    else:
+        out += [f"METHOD 2, prewhitened — the residuals of the univariate models "
+                f"(n = {res.shape[0]}, s.e. 1/sqrt(n) = {1 / np.sqrt(res.shape[0]):.3f})",
+                "  R_k(a):"]
+        out += [f"    k={k + 1:2d}  {_block(S2[k])}" for k in range(K)]
+        out.append(f"  lag 0: correlations " + ", ".join(
+            f"{names[i]}-{names[j]} {r0[i, j]:+.2f}" for i in range(m) for j in range(i + 1, m)))
+        out.append(f"  reading: the off-diagonal elements cut off after lag {q2}"
+                   + (f"; isolated beyond the band at {long2}" if long2 else "")
+                   + (f".  Links: {', '.join(links)}." if links else "."))
+        if diag_left:
+            out.append(f"  ! diagonal elements beyond the band at lags {diag_left}: a "
+                       "univariate model leaves autocorrelation — the residual model "
+                       "would be absorbing it; look at art first.")
 
     # method 1
     # The whole matrices are Jenkins and Alavi's reading (they identify the
@@ -404,9 +416,10 @@ def ja_identification(w, res, names, K, qmax, freq):
                + "".join(f", S_k({q}) after {v}" for q, v in pqw.items())
                + (f"; isolated beyond the band at {sorted(set(long1 + longp))}" if (long1 or longp) else "")
                + ".")
-    out.append(f"  reading, off-diagonal (the cross terms the ladder adds; its diagonal is "
-               f"the univariate models'): R_k after {q1}, S_k after {p1}"
-               + "".join(f", S_k({q}) after {v}" for q, v in pq.items()) + ".")
+    if route != "V":
+        out.append(f"  reading, off-diagonal (the cross terms the ladder adds; its diagonal is "
+                   f"the univariate models'): R_k after {q1}, S_k after {p1}"
+                   + "".join(f", S_k({q}) after {v}" for q, v in pq.items()) + ".")
     out.append("  S_k(q) is unstable in samples of this size (they warn of large values at "
                "higher k, §4.1): read its cut-off as a hint.")
     out.append(f"  reading, Tiao and Box: the last significant M(l) is at l = {tb_p}"
@@ -422,10 +435,14 @@ def ja_identification(w, res, names, K, qmax, freq):
                    "§4.2) — look at art before modelling it.")
 
     # the menu
-    out += ["", "What this says, and the decisions it opens (Jenkins and Alavi: use both; "
-            "if they agree, estimate with more confidence; if not, choose by what each "
-            "explains of the system and by parsimony):"]
-    if q2 == 0 and q1 == 0 and p1 == 0:
+    out += ["", ("What this says, and the decisions it opens (Tiao and Box: the vector "
+                 "first, the full model, then simplify):" if route == "V" else
+                 "What this says, and the decisions it opens (Jenkins and Alavi: use both; "
+                 "if they agree, estimate with more confidence; if not, choose by what each "
+                 "explains of the system and by parsimony):")]
+    if route == "V":
+        pass
+    elif q2 == 0 and q1 == 0 and p1 == 0:
         out.append("  Neither method shows cross structure: the univariate models carry "
                    "it; the system is the diagonal one (N5 is still the test).")
     if q2:
@@ -443,15 +460,29 @@ def ja_identification(w, res, names, K, qmax, freq):
             for j in range(m):
                 if i != j and Psym[k, i, j] != "." and f"{names[i]}<-{names[j]}" not in links1:
                     links1.append(f"{names[i]}<-{names[j]}")
-    if p1:
+    if p1 and route != "V":
         out.append(f"  (b) from method 1: a cross AR of order {p1} (S_k) — "
                    f"estimate(p={p1}, q=0"
                    + (f', links="{", ".join(links1)}"' if links1 else "") + ").")
-    for q, p in pq.items():
+    for q, p in (pq.items() if route != "V" else ()):
         if p and (p < p1 or not p1):
             out.append(f"  (c) from method 1: an ARMA({p},{q}) (S_k({q}) cuts off after "
                        f"{p}) — estimate(p={p}, q={q}).")
-    if tb_p and tb_p != p1:
+    if route == "V":
+        out.append("  Route V: the diagonal is not given, so the WHOLE matrices are the "
+                   "reading — S_k and M(l) choose one order p for every element.")
+        if tb_p:
+            out.append(f"  (a) Tiao and Box's order: M(l) is significant up to l = {tb_p} — "
+                       f"estimate(p={tb_p}, q=0): the full VAR({tb_p}), each series' own "
+                       f"AR({tb_p}) with the cross terms.")
+        if p1w and p1w != tb_p:
+            out.append(f"  (b) S_k's whole-matrix cut-off: estimate(p={p1w}, q=0).")
+        if q1w and not tb_p:
+            out.append(f"  (c) R_k cuts off after {q1w}: a VMA — estimate(p=0, q={q1w}).")
+        out.append("  Mixed orders: S_k(q) above, and Tiao and Tsay's ESCC (not yet in sima). "
+                   "After the fit, simplification by coefficient is what makes a full "
+                   "VARMA readable (Tiao and Box §4).")
+    elif tb_p and tb_p != p1:
         out.append(f"  (d) Tiao and Box's order: M(l) asks for a VAR({tb_p}) on w_t. In the "
                    f"ladder that is the cross order — estimate(p={tb_p}, q=0) — with the "
                    "univariate models kept on the diagonal (theirs would refit the "
