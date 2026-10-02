@@ -2,13 +2,14 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**24 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**26 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
 | tool | what it answers |
 |---|---|
 | [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
+| [`characterize`](#characterize) | N0c — Each raw series' transformation, with art's engine and in art's |
 | [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
 | [`estimate`](#estimate) | N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance. |
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
@@ -19,6 +20,7 @@
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
+| [`load_data`](#load-data) | N0r — RAW DATA: an analyst with series and no univariate models |
 | [`load_example`](#load-example) | N0 for a worked example: copy its files to a working folder (`dest`, |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
 | [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of the last estimated model in the format of FUF |
@@ -49,14 +51,39 @@ N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
     (each series' Box-Cox and seasonal differences; NOT its regular ones):
     the combinations of the series ordered from least to most predictable.
     Nearly white ones are relations among the series that stay stable over
-    time; nearly non-stationary ones (sqrt(lam) >= `near`, the scale of a root: for an AR(1) component lam = phi^2) their common growth.
+    time; nearly non-stationary ones (sqrt(lam) >= `near`, the scale of a
+    root: for an AR(1) component lam = phi^2) their common growth.
     When two or more series are differenced and fewer components look
     non-stationary, the joint model may not need every difference — the
     question of cointegration, which is drvec's (Johansen's test); sima only
-    reads it and never changes a d. `p` is the VAR order (0: the last
-    significant M(l) of Tiao and Box's stepwise table on the levels). Run it
-    after the gate, before the identification, when two or more series are
-    differenced.
+    reads it and never changes a d on its own. `p` is the VAR order (0: the
+    last significant M(l) of Tiao and Box's stepwise table on the levels). Run
+    it after the gate, before the identification, when two or more series are
+    differenced; with raw data (load_data, characterize), right after
+    characterize, on the characterization's levels.
+
+---
+
+## `characterize`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `set` | string | no | `` |
+
+N0c — Each raw series' transformation, with art's engine and in art's
+    order: lambda (Box-Cox, 0 or 1), d (ADF + KPSS, art's policy: one step at a
+    time), seasonality (HAC F-test; harmonics proposed when detected) and a
+    preliminary outlier scan (reported, not treated). Each series keeps its
+    OWN lambda and d — no joint consensus: forcing them alike was the old
+    sima's first fault.
+
+    `set` records the analyst's changes on top of the proposal:
+    "MINK: lam=0, d=0; MUSKRAT: d=1, harmonics=no" (keys lam, d, D,
+    harmonics). It is the starting point of both routes (U: the univariate
+    models first; V: the vector first).
 
 ---
 
@@ -304,6 +331,30 @@ N6 — Orthogonalised impulse responses of the last estimated model.
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
+
+---
+
+## `load_data`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `path` | string | yes | — |
+| `freq` | integer | no | `0` |
+| `start` | string | no | `` |
+
+N0r — RAW DATA: an analyst with series and no univariate models
+    (docs/STUDY-raw-entry.md). An Excel (.xlsx/.xls) or CSV table, one column
+    per series in ORIGINAL levels (never transformed or differenced), a header
+    row with the names, and optionally a first column of dates (a year, or
+    year-period: 1972-08, 1972Q3).
+
+    `freq`: 1, 4 or 12 (0: inferred from the date column). `start`: the first
+    date, "1972-08" or "1850" (empty: from the date column). The table must be
+    complete on one common calendar: missing values are refused, with where.
+    Next: characterize — each series' transformation with art's engine.
 
 ---
 

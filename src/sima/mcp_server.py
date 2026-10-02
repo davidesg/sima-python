@@ -33,21 +33,27 @@ Always answer in the user's language (English if ambiguous). Tool output is in
 English; translate it. Present equations and tables faithfully.
 
 ══════════════════════════════════════════════════════
-WHERE YOU COME FROM: THE UNIVARIATE MODELS, NEVER RAW DATA
+WHERE YOU COME FROM: THE UNIVARIATE MODELS, OR RAW DATA
 ══════════════════════════════════════════════════════
 Your input is one fue file per series: a .pre (an optimum, from art or fue) or
 an .inp (a specification). Each carries the series' whole univariate model:
 Box-Cox, deterministic terms, differencing, mean, ARMA factors. The VARMA keeps
 each model on its DIAGONAL; what you add is the CROSS dynamics between series.
 
-You arrive here in one of two ways:
+You arrive here in one of three ways:
   • from art, with several univariate models the analyst wants to model jointly;
   • from mtram, when its network identification found a CYCLE: two series that
     feed each other. A cycle is where mtram ends. Load the SAME .pre files here.
-There is no raw-data entry. If the user has raw series, send them to art first:
-the univariate model of each series is the seed of the system and the
-yardstick it has to beat. A multivariate drvarma .inp (deprecated) is
-converted with split_inp and each resulting file goes through art.
+  • from RAW DATA, with no univariate models: load_data (the table) and
+    characterize (each series' lambda, d and seasonality, with art's engine;
+    each series keeps its own). Then a route (docs/STUDY-raw-entry.md):
+    (U) build the univariate models first and climb the ladder (Jenkins and
+    Alavi), or (V) the vector first, the univariates only as the yardstick
+    (Tiao and Box). The routes are under construction: say so, and offer art
+    for each series meanwhile. With two or more differenced series, offer
+    canonical_analysis on the levels right after characterize.
+A multivariate drvarma .inp (deprecated) is converted with split_inp and each
+resulting file goes through art.
 
 ══════════════════════════════════════════════════════
 FIRST QUESTION
@@ -68,6 +74,8 @@ add what the original analysis found. Jenkins and Alavi's muskrat and mink
 ══════════════════════════════════════════════════════
 THE PROTOCOL
 ══════════════════════════════════════════════════════
+N0r load_data         raw series (no univariate models): the table
+N0c characterize      each series' lambda, d, seasonality, outliers (art's engine)
 N0  load_pre          the files, their models, the common window
 N1  run_gate          the univariate base, certified. If it FAILS, stop: the
                       joint model does not reproduce the univariate ones, and
@@ -376,6 +384,77 @@ def _fn_load_pre(name, paths_json):
 
 
 @mcp.tool()
+def load_data(name: str, path: str, freq: int = 0, start: str = "") -> str:
+    """N0r — RAW DATA: an analyst with series and no univariate models
+    (docs/STUDY-raw-entry.md). An Excel (.xlsx/.xls) or CSV table, one column
+    per series in ORIGINAL levels (never transformed or differenced), a header
+    row with the names, and optionally a first column of dates (a year, or
+    year-period: 1972-08, 1972Q3).
+
+    `freq`: 1, 4 or 12 (0: inferred from the date column). `start`: the first
+    date, "1972-08" or "1850" (empty: from the date column). The table must be
+    complete on one common calendar: missing values are refused, with where.
+    Next: characterize — each series' transformation with art's engine."""
+    from . import raw
+    try:
+        names, data, dates = raw.read_table(path)
+        f = int(freq)
+        if not f and dates and len(dates) > 1:
+            d0, d1 = raw._parse_date(dates[0], 12), raw._parse_date(dates[1], 12)
+            if d0 and d1:
+                f = 1 if d1[0] - d0[0] == 1 and d0[1] == d1[1] == 1 else (
+                    4 if "q" in str(dates[0]).lower() else 12)
+        if f not in (1, 4, 12):
+            return ("Say the frequency: freq = 1 (annual), 4 (quarterly) or 12 (monthly)"
+                    + ("" if dates else "; the table has no date column") + ".")
+        st = raw._parse_date(start, f) if start.strip() else raw.infer_start(dates, f)
+        if st is None:
+            return ('Say the first date: start = "1972-08" (monthly), "1972Q3" '
+                    '(quarterly) or "1850" (annual); the table has no usable date column.')
+        nonpos = raw.check_table(names, data)
+    except raw.RawError as e:
+        return f"Cannot load: {e}"
+    s = _sess.open_raw(name, os.path.abspath(os.path.expanduser(path)), names, data, f, st)
+    s.guion.add("N0r", "load_data", {"path": path, "freq": f, "start": list(st)},
+                f"{len(names)} series, {data.shape[0]} observations")
+    return (evidence.raw_table_text(names, data, f, st, nonpos, path)
+            + "\n\nNo univariate models: this is the raw entry. Next: characterize — "
+            f'each series\' transformation, with art\'s engine (characterize("{name}")).')
+
+
+@mcp.tool()
+def characterize(name: str, set: str = "") -> str:
+    """N0c — Each raw series' transformation, with art's engine and in art's
+    order: lambda (Box-Cox, 0 or 1), d (ADF + KPSS, art's policy: one step at a
+    time), seasonality (HAC F-test; harmonics proposed when detected) and a
+    preliminary outlier scan (reported, not treated). Each series keeps its
+    OWN lambda and d — no joint consensus: forcing them alike was the old
+    sima's first fault.
+
+    `set` records the analyst's changes on top of the proposal:
+    "MINK: lam=0, d=0; MUSKRAT: d=1, harmonics=no" (keys lam, d, D,
+    harmonics). It is the starting point of both routes (U: the univariate
+    models first; V: the vector first)."""
+    from . import raw
+    try:
+        s = _sess.get_raw(name)
+    except KeyError as e:
+        return str(e)
+    try:
+        if s.chars is None or not set.strip():
+            s.chars = raw.characterize(s.names, s.data, s.freq, s.start)
+        changes = raw.apply_overrides(s.chars, set)
+    except raw.RawError as e:
+        return f"Cannot characterize: {e}"
+    s.guion.add("N0c", "characterize", {"set": set},
+                "; ".join(f"{c['name']} lam {c['lam']:.0f} d {c['d']}"
+                          + (" harmonics" if c["harmonics"] else f" D {c['D']}" if c["D"] else "")
+                          for c in s.chars),
+                "analyst: " + "; ".join(changes) if changes else "")
+    return evidence.characterize_report(s.chars, s.freq, name, changes)
+
+
+@mcp.tool()
 def load_pre(name: str, paths_json: str) -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
@@ -454,15 +533,30 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
     (each series' Box-Cox and seasonal differences; NOT its regular ones):
     the combinations of the series ordered from least to most predictable.
     Nearly white ones are relations among the series that stay stable over
-    time; nearly non-stationary ones (sqrt(lam) >= `near`, the scale of a root: for an AR(1) component lam = phi^2) their common growth.
+    time; nearly non-stationary ones (sqrt(lam) >= `near`, the scale of a
+    root: for an AR(1) component lam = phi^2) their common growth.
     When two or more series are differenced and fewer components look
     non-stationary, the joint model may not need every difference — the
     question of cointegration, which is drvec's (Johansen's test); sima only
-    reads it and never changes a d. `p` is the VAR order (0: the last
-    significant M(l) of Tiao and Box's stepwise table on the levels). Run it
-    after the gate, before the identification, when two or more series are
-    differenced."""
+    reads it and never changes a d on its own. `p` is the VAR order (0: the
+    last significant M(l) of Tiao and Box's stepwise table on the levels). Run
+    it after the gate, before the identification, when two or more series are
+    differenced; with raw data (load_data, characterize), right after
+    characterize, on the characterization's levels."""
     import numpy as np
+    if _sess.has_raw(name) and name not in _sess.names():
+        from . import raw
+        r = _sess.get_raw(name)
+        if r.chars is None:
+            return f'Characterize the series first (characterize("{name}")).'
+        X = raw.levels(r.data, r.chars, r.freq)
+        d = [c["d"] for c in r.chars]
+        txt, facts = evidence.canonical_report(X, r.names, d, r.freq, int(p), float(near),
+                                               call=name, raw=True)
+        r.guion.add("N1b", "canonical_analysis", {"p": facts["p"], "near": near},
+                    f"raw levels; lam {', '.join(f'{v:.3f}' for v in facts['lam'])}; "
+                    f"{facts['near_one']} near 1 of {facts['differenced']} differenced")
+        return txt
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."

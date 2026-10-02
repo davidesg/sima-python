@@ -39,3 +39,42 @@ def get(name):
 
 def names():
     return sorted(_SESSIONS)
+
+
+# --------------------------------------------------------------------------- #
+#  The raw-data entry (docs/STUDY-raw-entry.md)                               #
+# --------------------------------------------------------------------------- #
+
+@dataclass
+class RawSession:
+    """Raw series with no univariate models yet: the table, its calendar and
+    the characterization per series. A route (U or V) turns it into files and
+    a ladder session of the same name."""
+    name: str
+    path: str
+    names: list
+    data: object                       # numpy array, n x m, original levels
+    freq: int
+    start: tuple
+    guion: Guion
+    chars: list = None                 # characterize(): one dict per series
+
+
+_RAW: dict = {}
+
+
+def open_raw(name, path, names, data, freq, start):
+    s = RawSession(name, path, list(names), data, int(freq), tuple(start),
+                   Guion(name, [path]))
+    _RAW[name] = s
+    return s
+
+
+def get_raw(name):
+    if name not in _RAW:
+        raise KeyError(f"no raw data '{name}': load it with load_data")
+    return _RAW[name]
+
+
+def has_raw(name):
+    return name in _RAW

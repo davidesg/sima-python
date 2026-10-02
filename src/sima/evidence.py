@@ -10,6 +10,7 @@ verdict is the analyst's (or, in the autonomous lane, the model's, in writing).
 from __future__ import annotations
 
 import math
+import os
 
 import numpy as np
 
@@ -824,7 +825,7 @@ def _combination(row, names):
     return ", ".join(f"{nm} {v:+.2f}" for nm, v in zip(names, row) if abs(v) >= 0.005)
 
 
-def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call=""):
+def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
     """Box and Tiao's (1977) canonical analysis of the transformed LEVELS x
     (n x m: Box-Cox and seasonal differences, no regular ones), under a
     VAR(p) by least squares (p = 0: the last significant M(l) of Tiao and
@@ -909,21 +910,140 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call=""):
                  f"(§5.2); the threshold {near} on sqrt(lam) is a convention. Interventions are not "
                  "removed from the levels.")
     lines += ["", "## 4 · DECISION — alternatives", ""]
-    opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
-             "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
+    if raw:
+        opts = [("keep the characterization's differences and choose a route",
+                 "the route (U or V)")]
+    else:
+        opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
+                 "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
     if question:
         opts.insert(1, ("take the series to drvec: Johansen's reduced-rank test, a model "
                         "in levels with the error correction", "drvec (outside sima)"))
-        opts.insert(2, ("back to art: reconsider a series' d with this reading in hand",
-                        "art (outside sima)"))
+        opts.insert(2, ("change a series' d with this reading in hand",
+                        f'characterize(name="{call}", set="SERIES: d=0")') if raw else
+                    ("back to art: reconsider a series' d with this reading in hand",
+                     "art (outside sima)"))
     if p_used != max(1, p_tb) or p_tb != 1:
         opts.append(("the same reading at another VAR order",
                      f'canonical_analysis(name="{call}", p=1)'))
     for t, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
-    lines += ["", "sima does not change any d: it belongs to the `.pre`.", "",
+    lines += ["", "sima does not change any d on its own: " + (
+        "it is the analyst's, in characterize." if raw else "it belongs to the `.pre`."), "",
               "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
     facts = {"lam": [float(v) for v in lam], "p": p_used, "p_tb": p_tb,
              "near_one": len(unit), "near_zero": len(white), "differenced": len(diffd),
              "question": bool(question)}
     return "\n".join(lines), facts
+
+
+# --------------------------------------------------------------------------- #
+#  The raw-data entry: the table and the characterization                     #
+# --------------------------------------------------------------------------- #
+
+def raw_table_text(names, data, freq, start, nonpos, path):
+    from .raw import window
+    n, m = data.shape
+    fq = {1: "annual", 4: "quarterly", 12: "monthly"}.get(freq, f"{freq} per year")
+    out = [f"RAW DATA — {os.path.basename(path)}: {m} series, {n} observations, {fq}, "
+           f"{window(start, freq, n)}", "",
+           "  #  series              min          max     first      last"]
+    for j, nm in enumerate(names):
+        y = data[:, j]
+        out.append(f"  {j + 1}  {nm:<14}{y.min():>11.4g}  {y.max():>11.4g}  "
+                   f"{y[0]:>8.4g}  {y[-1]:>8.4g}")
+    if nonpos:
+        out += ["", f"Non-positive values in {', '.join(nonpos)}: logs are impossible "
+                "there (lambda = 1)."]
+    return "\n".join(out)
+
+
+def characterize_report(chars, freq, call, changes=()):
+    """art's four sections for the characterization of raw series."""
+    from .raw import _fmt_p
+    m = len(chars)
+    lines = ["# Characterization — each series' transformation (art's engine)",
+             "*(lambda -> d -> seasonality -> preliminary outliers, in art's order; "
+             "each series keeps its own)*", "", "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "", "```",
+             "  series            lambda   d   seasonal          treatment     outliers (|z|>3.5)"]
+    for c in chars:
+        if c["seasonal"] is None:
+            seas = "annual"
+        else:
+            det, F, p = c["seasonal"]
+            seas = f"{'yes' if det else 'no'} F {F:.2f} p {p:.3f}"
+        treat = ("harmonics" if c["harmonics"] else f"D = {c['D']}" if c["D"] else "—")
+        outl = (", ".join(f"{dt} ({z:+.1f})" for dt, z in c["outliers"][:3])
+                + (" ..." if len(c["outliers"]) > 3 else "")) if c["outliers"] else "none"
+        mark = " *" if c.get("changed") else ""
+        lines.append(f"  {c['name']:<16}{c['lam']:>6.0f}  {c['d']:>2}   {seas:<17} "
+                     f"{treat:<13} {outl}{mark}")
+    lines += ["", "  unit roots (ADF p / KPSS p by d; ADF rejects a unit root, KPSS "
+              "rejects stationarity):"]
+    for c in chars:
+        lines.append(f"  {c['name']:<16}" + "   ".join(
+            f"d={d}: {_fmt_p(a)} / {_fmt_p(k)} {v}" for d, a, k, v in c["unit_root"]))
+    if any(c.get("changed") for c in chars):
+        lines.append("  * changed by the analyst")
+    lines += ["```", "", "## 2 · WHAT IT SHOWS", ""]
+    for c in chars:
+        bits = []
+        if c["corr_raw"] is None:
+            bits.append(f"lambda = 1 ({c['lam_why']})")
+        else:
+            bits.append(f"lambda = {c['lam']:.0f}: the mean-sd correlation is "
+                        f"{c['corr_raw']:+.2f} in levels and {c['corr_log']:+.2f} in logs"
+                        + (" — opposite signs: the statistic does not close it, the "
+                           "domain does (a price or a quantity goes to logs)"
+                           if c["lam_ambiguous"] else ""))
+        dt = c["d_tests"]
+        bits.append(f"d = {c['d']}" + (f" (the tests reach stationarity at d = {dt}; "
+                                        "art's policy takes one step at a time)"
+                                        if dt != c["d"] else ""))
+        if c["seasonal"] is not None:
+            det, F, p = c["seasonal"]
+            bits.append(f"seasonality {'detected' if det else 'not detected'} "
+                        f"(HAC F {F:.2f}, p {p:.3f})")
+        if c["outliers"]:
+            bits.append(f"{len(c['outliers'])} observation(s) beyond 3.5 s.d. on the "
+                        "stationary series, before any model")
+        lines.append(f"- **{c['name']}**: " + "; ".join(bits) + ".")
+    if changes:
+        lines.append("- Changed by the analyst: " + "; ".join(changes) + ".")
+    nd = [c["name"] for c in chars if c["d"] >= 1]
+    lines += ["", "## 3 · CONCLUSIONS", ""]
+    lams = {c["lam"] for c in chars}
+    ds = {c["d"] for c in chars}
+    lines.append("Each series keeps its own transformation"
+                 + ("" if len(lams) == 1 and len(ds) == 1 else
+                    " — and they differ here, which is why there is no joint consensus "
+                    "(the old sima gave every series the largest d)") + ".")
+    if len(nd) >= 2:
+        lines.append(f"{len(nd)} series are differenced ({', '.join(nd)}). Whether the "
+                     "system needs every difference is worth asking NOW, before anything "
+                     "is built on them: Box and Tiao's canonical analysis of the levels.")
+    if any(c["outliers"] for c in chars):
+        lines.append("The outliers are reported, not treated: an intervention belongs to "
+                     "the series' own model (art).")
+    lines.append("This is a starting point, as in art: the formal test of d is "
+                 "Shin-Fuller on an estimated model"
+                 + (", and the seasonal treatment (harmonics or D) is the analyst's choice."
+                    if freq > 1 else "."))
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = [("accept this transformation and choose a route — (U) build the "
+             "univariate models first, then the system (Jenkins and Alavi; the ladder), "
+             "or (V) the vector first, the univariates only as the yardstick (Tiao and "
+             "Box). Both routes are under construction (docs/STUDY-raw-entry.md).",
+             "the route"),
+            ("change a series' lambda, d, D or harmonics",
+             f'characterize(name="{call}", set="SERIES: lam=0, d=1; ...")')]
+    if len(nd) >= 2:
+        opts.insert(1, ("read the levels first: Box and Tiao's canonical analysis",
+                        f'canonical_analysis(name="{call}")'))
+    opts.append(("take a series to art, to build its model there with every node",
+                 "art (outside sima)"))
+    for t, (what, cl) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
+    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    return "\n".join(lines)

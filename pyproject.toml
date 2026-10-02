@@ -41,6 +41,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+# the raw-data entry (load_data, characterize) runs art's engine per series,
+# and reads Excel with pandas; imported lazily, so the ladder works without it
+raw = ["art-tseries", "pandas", "openpyxl"]
 
 [project.urls]
 Homepage = "https://github.com/davidesg/sima"

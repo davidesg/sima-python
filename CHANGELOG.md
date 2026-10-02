@@ -2,6 +2,22 @@
 
 ## 0.1.0 — unreleased
 
+### The raw-data entry: `load_data` and `characterize`
+
+- `load_data` (N0r): an Excel or CSV table of raw series in original levels,
+  with an optional date column. Frequency and start are inferred from the
+  dates or given. Missing values are refused, saying where. A numeric
+  header-less CSV keeps its first row (the old sima dropped it).
+- `characterize` (N0c): each series' λ, d (art's policy), seasonality and a
+  preliminary outlier scan, with art's engine and in art's order. Each series
+  keeps its own transformation: there is no joint consensus. `set=` records the
+  analyst's changes ("mink: lam=0").
+- `canonical_analysis` also reads the characterization's levels, before any
+  model.
+- The two routes, U (univariates first) and V (the vector first), are next
+  (`docs/STUDY-raw-entry.md`). The `raw` extra declares art-tseries, pandas and
+  openpyxl.
+
 ### Tiao and Box's tools: the stepwise M(l) and the canonical analysis
 
 - `identify_matrices`, method 1: Tiao and Box's (1981) stepwise autoregression

@@ -29,7 +29,10 @@ def test_the_instructions_carry_the_protocol_and_its_rules():
         assert node in ins
     assert "YARDSTICK" in ins                  # the univariate model
     assert "CYCLE" in ins and "mtram" in ins   # the hand-over
-    assert "NEVER RAW DATA" in ins             # no entry below the rung
+    # the raw entry (docs/STUDY-raw-entry.md): load_data and characterize,
+    # each series with its own transformation, and the two schools
+    assert "OR RAW DATA" in ins and "load_data" in ins and "characterize" in ins
+    assert "each series keeps its own" in ins and "(U)" in ins and "(V)" in ins
     assert "Cholesky" in ins
     assert "GUIDED" in ins and "AUTONOMOUS" in ins
     # the autonomous lane is written, as art's (BUG-0180 there: without it the

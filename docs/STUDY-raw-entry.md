@@ -243,3 +243,13 @@ entry only, imported lazily as the old server did.
 5. Order of work: `load_data` + `characterize` → route U (flour and
    muskrat–mink checks) → route V (gas furnace), with C of the Tiao–Box study
    right after.
+
+**Done (2026-10-02):**
+- `load_data` and `characterize` (`src/sima/raw.py`, `tests/test_raw_entry.py`);
+- `canonical_analysis` on the raw levels. It gives the same λ as from the
+  `.pre` files on the flour prices.
+- On the mink, art's engine proposes λ = 1: the mean-sd correlations have
+  opposite signs, +0.41 in levels and −0.49 in logs. The report says the domain
+  decides, and `set="mink: lam=0"` gives Jenkins and Alavi's logs.
+
+Next: route U.
