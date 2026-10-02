@@ -91,3 +91,43 @@ def test_canonical_analysis_on_raw_levels_is_the_ladders():
     assert "1  0.758    0.870" in c and "3  0.943    0.971" in c
     assert 'characterize(name="r_fl3", set="SERIES: d=0")' in c
     assert "it is the analyst's, in characterize" in c
+
+
+# ── route U ──────────────────────────────────────────────────────────────────
+
+def test_route_u_builds_the_seed_and_opens_the_ladder(tmp_path):
+    """Muskrat and mink from the raw table: the models art's engine ranks
+    first, with the provenance in every .pre, the gate repeating it, and the
+    guion going on from the raw entry."""
+    import shutil
+    shutil.copy(MM, tmp_path)
+    _fn(M.load_data)("u_mm", str(tmp_path / "mink_muskrat.csv"))
+    assert "Characterize the series first" in _fn(M.build_univariate)("u_mm")
+    _fn(M.characterize)("u_mm", set="mink: lam=0")
+    t = _fn(M.build_univariate)("u_mm")
+    assert "mink: (0,0)  AR(2)" in t and "muskrat: (1,0)  AR(2)" in t
+    assert "not reviewed in art" in t and "run_gate" in t
+    pre = tmp_path / "mink_muskrat_sima" / "mink_u.pre"
+    assert raw.PROVENANCE in pre.read_text()
+    # the mean starts at the series' mean: not a unit root carrying the level
+    s = M._sess.get("u_mm")
+    phi, _theta, mu, _f = s.series[0].polynomials()
+    assert abs(sum(phi)) < 0.8 and mu == pytest.approx(1079, abs=5)
+    g = _fn(M.run_gate)("u_mm")
+    assert "GATE: PASSED" in g and "not reviewed in art: mink, muskrat" in g
+    assert "the analysts' models" not in g
+    assert [e.node for e in s.guion.entries] == ["N0r", "N0c", "N0u", "N0", "N1"]
+    assert "exist and are kept" in _fn(M.build_univariate)("u_mm")
+
+
+def test_route_u_on_the_flour_prices(tmp_path):
+    """Buffalo comes out a random walk (no parameters) in a five-way tie; the
+    gate passes on it; the other two are the example's MA(1)s."""
+    import shutil
+    shutil.copy(FLOUR, tmp_path)
+    _fn(M.load_data)("u_fl", str(tmp_path / "flour_prices.csv"))
+    _fn(M.characterize)("u_fl")
+    t = _fn(M.build_univariate)("u_fl")
+    assert "Buffalo: (1,0)  WN" in t and "none (a random walk)" in t
+    assert "Minneapolis: (1,0)  MA(1)" in t and "-0.2508" in t
+    assert "GATE: PASSED" in _fn(M.run_gate)("u_fl")

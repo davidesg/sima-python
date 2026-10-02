@@ -276,3 +276,161 @@ def window(start, freq, n):
 
 def _fmt_p(p):
     return "—" if p is None or (isinstance(p, float) and math.isnan(p)) else f"{p:.3f}"
+
+
+# ── the fue specification (both routes) ────────────────────────────────────
+
+PROVENANCE = "* Built by sima's raw entry (route U), not reviewed in art"
+
+
+def _operator(title, order, lag_only=0):
+    """An .inp operator block: `order` coefficients at 0, free; with
+    `lag_only` = k, only lag k is free (art's sparse AR[k]/MA[k])."""
+    if order <= 0:
+        return [f"** {title}:", "0"]
+    rows = []
+    for k in range(1, order + 1):
+        rows.append(f"0.000000  {0 if lag_only and k != lag_only else 1}")
+    return [f"** {title}:", f"1 {order}", "**"] + rows
+
+
+def write_inp(path, name, y, freq, start, lam, d, D=0, harmonics=False, mean=False,
+              p=0, q=0, P=0, Q=0, sparse_ar=0, sparse_ma=0, comment=""):
+    """One fue .inp: the transformation (lambda, d, D), the seasonal harmonics
+    as free deterministic terms, an optional free mean, and free ARMA
+    operators at 0. The same layout as drvarma's ladder.split; existing files
+    are overwritten only by the caller's choice (the caller checks)."""
+    s = int(freq)
+    year, sub = start
+    specs = []
+    if harmonics and s > 1:
+        for k in range(1, (s + 1) // 2):
+            specs += [f"cos {k}", f"sin {k}"]
+        if s % 2 == 0:
+            specs.append("alter")
+    nd = len(specs)
+    L = ["************************************************",
+         "* Input file for program FUE                   *",
+         "************************************************"]
+    if comment:
+        L.append(comment)
+    L += ["", "** Frequency of time series: either 1(A), 4(Q) or 12(M):", f" {s}",
+          "** Number of observations and starting date of time series:",
+          f" {len(y)}  {sub if s > 1 else 1} {year} {name}",
+          "** Number of deterministic variables (including seasonal components):", f"{nd}"]
+    if nd:
+        L += ["**"] + specs + ["**", " ".join(["0"] * nd)]
+        for _k in range(nd):
+            L += ["**", "0.000000  1"]
+        L += ["**", " ".join(["0"] * nd)]
+    pr = max(p, sparse_ar)
+    qr = max(q, sparse_ma)
+    L += _operator("Number and orders of regular AR operators", pr, sparse_ar)
+    L += _operator("Number and orders of annual AR operators", P)
+    L += _operator("Number and orders of regular MA operators", qr, sparse_ma)
+    L += _operator("Number and orders of anual MA operators", Q)
+    L += ["** Number and frequencies of regular AR(2) operators with fixed frequency:", "0",
+          "** Number and frequencies of regular MA(2) operators with fixed frequency:", "0",
+          "** Mean parameter (mu):", f"{_mean0(y, lam, d, D, s):.6f} 1" if mean else "0",
+          "** Box-Cox lambda, regular differences and complete annual differences:",
+          f" {float(lam):g}  {int(d)}  {int(D)}",
+          "** Individual factors of the annual difference (starting at freq 0.0):",
+          " ".join(["0"] * (s // 2 + 1)) if s > 1 else " 0",
+          "** ACF/PACF bands (0 Automatic) and reescaling factor:", f" 0 {REFACTOR:g}",
+          "** Time series (stochastic and non-standard deterministic variables):"]
+    L += [f"{v:.15g}" for v in y]
+    with open(path, "w") as fh:
+        fh.write("\n".join(L) + "\n")
+    return path
+
+
+def _mean0(y, lam, d, D, s):
+    """The mean's starting value: the sample mean of the stationary series.
+    Starting at 0 on a series in levels (the mink, ~1080 in 100 ln) let the
+    optimiser push the AR to a unit root to carry the level instead."""
+    w = boxcox(y, lam)
+    for _ in range(int(D)):
+        w = w[s:] - w[:-s]
+    for _ in range(int(d)):
+        w = np.diff(w)
+    return float(np.mean(w))
+
+
+# ── route U: the univariate seed ───────────────────────────────────────────
+
+def _resid(model):
+    r = model.residuals
+    return np.asarray(getattr(r, "data", r), float)
+
+
+def _fit(path):
+    import fue
+    ts, model = fue.load(path)
+    model.fit()
+    return model
+
+
+def build_one(y, c, freq, start, out_dir, top_n=5):
+    """Route U for one series: art's first-ranked orders on the characterized
+    transformation, fitted with fue (the mean kept when d = D = 0, a drift
+    kept only if |t| >= 2), the residuals checked, and the .pre/.out written
+    with the provenance line. Returns a dict of facts."""
+    import art
+    from fue.diagnostics import ljung_box
+    name = c["name"]
+    ts = _ts(y, name, freq, start)
+    D = int(c.get("D", 0))
+    specs = art.suggest_orders(ts, d=c["d"], D=D, lam=c["lam"], top_n=top_n)
+    if not specs:
+        raise RawError(f"{name}: art's identification returned no candidate")
+    sp = specs[0]
+    tied = [x.label() for x in specs if getattr(x, "tied", False)]
+    order = dict(p=int(sp.p if not sp.sparse_ar_lag else 0),
+                 q=int(sp.q if not sp.sparse_ma_lag else 0),
+                 P=int(sp.P), Q=int(sp.Q), sparse_ar=int(sp.sparse_ar_lag),
+                 sparse_ma=int(sp.sparse_ma_lag))
+    base = os.path.join(out_dir, f"{name}_u")
+    stationary = c["d"] == 0 and D == 0
+    common = dict(name=name, y=y, freq=freq, start=start, lam=c["lam"], d=c["d"], D=D,
+                  harmonics=c.get("harmonics", False), comment=PROVENANCE, **order)
+    write_inp(base + ".inp", mean=True, **common)
+    model = _fit(base + ".inp")
+    mean_note = "mean estimated (d = D = 0)" if stationary else ""
+    if not stationary:
+        par = np.asarray(model.params, float)
+        se = np.asarray(model.std_errors, float)
+        t = par[-1] / se[-1] if se[-1] > 0 else 0.0
+        if abs(t) < 2.0:
+            write_inp(base + ".inp", mean=False, **common)
+            model = _fit(base + ".inp")
+            mean_note = f"no drift (|t| = {abs(t):.2f} < 2)"
+        else:
+            mean_note = f"drift kept (t = {t:.2f})"
+    model.write_pre(base + ".pre")
+    model.write_out(base + ".out", inp_name=os.path.basename(base) + ".inp",
+                    out_name=os.path.basename(base) + ".out")
+    with open(base + ".pre") as fh:
+        lines = fh.read().split("\n")
+    if PROVENANCE not in lines:
+        lines.insert(4, PROVENANCE)
+        with open(base + ".pre", "w") as fh:
+            fh.write("\n".join(lines))
+    r = _resid(model)
+    npar = len(np.asarray(model.params, float))
+    lags = [k for k in ((6, 12) if freq == 1 else (freq, 2 * freq)) if k > npar]
+    lb = ljung_box(r, lags=lags, df_correction=npar) if lags else None
+    z = (r - r.mean()) / r.std()
+    big = int(np.argmax(np.abs(z)))
+    return {"name": name, "label": sp.label(), "order": order, "tied": tied,
+            "candidates": [x.label() for x in specs[:3]],
+            "pre": base + ".pre", "mean": mean_note,
+            "params": [float(v) for v in np.asarray(model.params, float)],
+            "sigma": float(np.std(r)),
+            "lb": None if lb is None else list(zip(lb["lags"], lb["statistic"], lb["pvalue"])),
+            "max_z": (date_label(start, freq, len(y) - len(r) + big), float(z[big]))}
+
+
+def build_univariate(names, data, chars, freq, start, out_dir):
+    os.makedirs(out_dir, exist_ok=True)
+    return [build_one(data[:, j], chars[j], freq, start, out_dir)
+            for j in range(len(names))]

@@ -911,8 +911,9 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
                  "removed from the levels.")
     lines += ["", "## 4 · DECISION — alternatives", ""]
     if raw:
-        opts = [("keep the characterization's differences and choose a route",
-                 "the route (U or V)")]
+        opts = [("keep the characterization's differences: route U (the univariate "
+                 "models first)", f'build_univariate(name="{call}")'),
+                ("keep them: route V (the vector first; under construction)", "route V")]
     else:
         opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
                  "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
@@ -1031,11 +1032,10 @@ def characterize_report(chars, freq, call, changes=()):
                  + (", and the seasonal treatment (harmonics or D) is the analyst's choice."
                     if freq > 1 else "."))
     lines += ["", "## 4 · DECISION — alternatives", ""]
-    opts = [("accept this transformation and choose a route — (U) build the "
-             "univariate models first, then the system (Jenkins and Alavi; the ladder), "
-             "or (V) the vector first, the univariates only as the yardstick (Tiao and "
-             "Box). Both routes are under construction (docs/STUDY-raw-entry.md).",
-             "the route"),
+    opts = [("route U: build the univariate models first, then the system (Jenkins "
+             "and Alavi; the ladder)", f'build_univariate(name="{call}")'),
+            ("route V: the vector first, the univariates only as the yardstick (Tiao and "
+             "Box) — under construction (docs/STUDY-raw-entry.md)", "route V"),
             ("change a series' lambda, d, D or harmonics",
              f'characterize(name="{call}", set="SERIES: lam=0, d=1; ...")')]
     if len(nd) >= 2:
@@ -1043,6 +1043,68 @@ def characterize_report(chars, freq, call, changes=()):
                         f'canonical_analysis(name="{call}")'))
     opts.append(("take a series to art, to build its model there with every node",
                  "art (outside sima)"))
+    for t, (what, cl) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
+    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    return "\n".join(lines)
+
+
+def build_report(built, freq, call):
+    """Route U's report: the univariate models sima built, art's four sections."""
+    lines = ["# Route U — the univariate models, built by sima (art's engine, light)",
+             "*(art's first-ranked orders on each series' characterization, fitted with "
+             "fue; not reviewed in art)*", "", "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "", "```"]
+    weak = []
+    for b in built:
+        lines.append(f"{b['name']}: {b['label']}   sigma {b['sigma']:.2f}   {b['mean']}")
+        lines.append(f"  parameters: " + (", ".join(f"{v:.4g}" for v in b["params"])
+                                          if b["params"] else "none (a random walk)"))
+        if b["lb"]:
+            lines.append("  Ljung-Box: " + "   ".join(
+                f"Q({int(k)}) = {q:.1f} p {pv:.3f}{'*' if pv < 0.05 else ''}"
+                for k, q, pv in b["lb"]))
+            if any(pv < 0.05 for _k, _q, pv in b["lb"]):
+                weak.append(b["name"])
+        dt, z = b["max_z"]
+        lines.append(f"  largest residual: {dt} ({z:+.1f} s.d.)")
+        if len(b["tied"]) > 1:
+            lines.append(f"  tie: {', '.join(b['tied'])}")
+        lines.append(f"  file: {b['pre']}")
+        lines.append("")
+    lines[-1:] = ["```", "", "## 2 · WHAT IT SHOWS", ""]
+    for b in built:
+        bits = [f"{b['label'].split()[-1]} on its characterization"]
+        if len(b["tied"]) > 1:
+            bits.append(f"a genuine tie with {len(b['tied']) - 1} other(s): the first was "
+                        "taken; art's domain card would decide it")
+        if b["name"] in weak:
+            bits.append("the residuals are NOT white at the 5 % level")
+        if abs(b["max_z"][1]) >= 3.5:
+            bits.append(f"a large residual at {b['max_z'][0]}")
+        lines.append(f"- **{b['name']}**: " + "; ".join(bits) + ".")
+    lines += ["", "## 3 · CONCLUSIONS", "",
+              "These are art's AUTONOMOUS models in miniature: the orders art ranks first, "
+              "the mean or drift, a residual check. Not done here: over-parameterisation, "
+              "Easter and calendar effects, the formal tests (Shin-Fuller), MEG, "
+              "interventions. Every .pre says so in its header, and the guion records it."]
+    if weak:
+        lines.append(f"Residual autocorrelation in {', '.join(weak)}: that model is not "
+                     "a good seed yet — the system would absorb what it misses (Jenkins "
+                     "and Alavi's diagonal residuals in method 2 will show it).")
+    if any(len(b["tied"]) > 1 for b in built):
+        lines.append("Where there is a tie, another order is as defensible; it changes the "
+                     "seed, not the method.")
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = [("go on: certify these models as the system's base",
+             f'run_gate(name="{call}")')]
+    if weak or any(len(b["tied"]) > 1 for b in built):
+        who = weak or [b["name"] for b in built if len(b["tied"]) > 1]
+        opts.append((f"take {', '.join(who)} to art's guided lane first, and come back "
+                     "with the reviewed .pre (load_pre)", "art (outside sima)"))
+    opts.append(("change a transformation and rebuild",
+                 f'characterize(name="{call}", set="...") then build_univariate(name="{call}", '
+                 "overwrite=True)"))
     for t, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
     lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]

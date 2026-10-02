@@ -48,9 +48,10 @@ You arrive here in one of three ways:
     characterize (each series' lambda, d and seasonality, with art's engine;
     each series keeps its own). Then a route (docs/STUDY-raw-entry.md):
     (U) build the univariate models first and climb the ladder (Jenkins and
-    Alavi), or (V) the vector first, the univariates only as the yardstick
-    (Tiao and Box). The routes are under construction: say so, and offer art
-    for each series meanwhile. With two or more differenced series, offer
+    Alavi) with build_univariate, or (V) the vector first, the univariates
+    only as the yardstick (Tiao and Box; under construction: say so). Route
+    U's models are art's autonomous lane in miniature: say it, and offer art
+    for any series with a tie or a residual problem. With two or more differenced series, offer
     canonical_analysis on the levels right after characterize.
 A multivariate drvarma .inp (deprecated) is converted with split_inp and each
 resulting file goes through art.
@@ -76,6 +77,8 @@ THE PROTOCOL
 ══════════════════════════════════════════════════════
 N0r load_data         raw series (no univariate models): the table
 N0c characterize      each series' lambda, d, seasonality, outliers (art's engine)
+N0u build_univariate  route U: each series' model with art's engine (light, not
+                      reviewed in art), then the ladder session on those files
 N0  load_pre          the files, their models, the common window
 N1  run_gate          the univariate base, certified. If it FAILS, stop: the
                       joint model does not reproduce the univariate ones, and
@@ -455,6 +458,58 @@ def characterize(name: str, set: str = "") -> str:
 
 
 @mcp.tool()
+def build_univariate(name: str, out_dir: str = "", overwrite: bool = False) -> str:
+    """N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each
+    series' univariate model with art's engine, then climb the ladder as
+    always (Jenkins and Alavi: the univariate models first).
+
+    On each series' characterization (characterize): the orders art ranks
+    first, the mean (d = D = 0) or a drift kept only if |t| >= 2, a fue fit,
+    a residual check; `<SERIES>_u.inp/.pre/.out` written to `out_dir`
+    (default: `<data>_sima/` next to the table). Every .pre carries the line
+    "Built by sima's raw entry (route U), not reviewed in art". This is art's
+    autonomous lane in miniature — no over-parameterisation, calendar
+    effects, formal tests or interventions: the report offers art for any
+    series with a tie or a residual problem.
+
+    It then opens the ladder session of the same name with those files (the
+    guion goes on): next, run_gate. Existing files are kept unless
+    `overwrite`."""
+    from . import raw
+    try:
+        r = _sess.get_raw(name)
+    except KeyError as e:
+        return str(e)
+    if r.chars is None:
+        return f'Characterize the series first (characterize("{name}")).'
+    d = os.path.expanduser(out_dir) if out_dir else \
+        os.path.splitext(r.path)[0] + "_sima"
+    pres = [os.path.join(d, f"{nm}_u.pre") for nm in r.names]
+    there = [p for p in pres if os.path.exists(p)]
+    if there and not overwrite:
+        return ("These files exist and are kept: " + ", ".join(there) + ". Load them "
+                f"(load_pre), or rebuild with overwrite=True.")
+    try:
+        built = raw.build_univariate(r.names, r.data, r.chars, r.freq, r.start, d)
+    except Exception as e:                                   # noqa: BLE001
+        return f"Cannot build the univariate models: {e}"
+    r.guion.add("N0u", "build_univariate", {"out_dir": d},
+                "; ".join(f"{b['name']} {b['label'].split()[-1]}" for b in built)
+                + " (route U, not reviewed in art)")
+    try:
+        s = _sess.open_session(name, [b["pre"] for b in built])
+    except Exception as e:                                   # noqa: BLE001
+        return f"Built, but the session could not open: {e}"
+    entries = list(r.guion.entries)
+    s.guion.entries = entries
+    s.guion.add("N0", "load_pre", {"files": len(built)},
+                f"{len(built)} series: {', '.join(_names(s))} (route U)")
+    return (evidence.build_report(built, r.freq, name) + "\n\n"
+            + evidence.series_table(s.series)
+            + "\n\nThe session is open on these files: next, run_gate.")
+
+
+@mcp.tool()
 def load_pre(name: str, paths_json: str) -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
@@ -515,12 +570,27 @@ def run_gate(name: str) -> str:
         return f"The gate could not run: {e}"
     s.guion.add("N1", "run_gate", {},
                 f"passed, difference {s.gate['difference']:.2e}")
+    from .raw import PROVENANCE
+    built = []
+    for x in s.series:
+        try:
+            with open(x.path) as fh:
+                if PROVENANCE in fh.read(2000):
+                    built.append(x.name)
+        except OSError:
+            pass
+    prov = ("\n\nBuilt by sima's raw entry (route U), not reviewed in art: "
+            + ", ".join(built) + ". The gate certifies the cast, not the models."
+            if built else "")
     nd = sum(int(x.model.d or 0) >= 1 for x in s.series)
     nxt = ("Next: canonical_analysis — "
            f"{nd} series are differenced, and Box and Tiao's reading of the levels "
            "says whether they need every difference jointly; then identify_cross."
            if nd >= 2 else "Next: identify_cross.")
-    return evidence.gate_text(s.gate) + "\n\n" + nxt
+    gt = evidence.gate_text(s.gate)
+    if built:
+        gt = gt.replace("the base is the analysts' models", "the base is the models in the files")
+    return gt + prov + "\n\n" + nxt
 
 
 # --------------------------------------------------------------------------- #

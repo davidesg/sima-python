@@ -17,7 +17,11 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
 NODES = {
+    "N0r": "raw data: the table",
+    "N0c": "raw data: each series' transformation",
+    "N0u": "route U: the univariate models built by sima",
     "N0": "entry: the univariate models (fue files)",
+    "N1b": "canonical analysis of the levels",
     "N1": "the diagonal gate",
     "N2": "cross identification (residual CCFs)",
     "N3": "estimation of a candidate",

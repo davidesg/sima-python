@@ -2,12 +2,13 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**26 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**27 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
 | tool | what it answers |
 |---|---|
+| [`build_univariate`](#build-univariate) | N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each |
 | [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
 | [`characterize`](#characterize) | N0c — Each raw series' transformation, with art's engine and in art's |
 | [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
@@ -34,6 +35,35 @@
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
+
+---
+
+## `build_univariate`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `out_dir` | string | no | `` |
+| `overwrite` | boolean | no | `False` |
+
+N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each
+    series' univariate model with art's engine, then climb the ladder as
+    always (Jenkins and Alavi: the univariate models first).
+
+    On each series' characterization (characterize): the orders art ranks
+    first, the mean (d = D = 0) or a drift kept only if |t| >= 2, a fue fit,
+    a residual check; `<SERIES>_u.inp/.pre/.out` written to `out_dir`
+    (default: `<data>_sima/` next to the table). Every .pre carries the line
+    "Built by sima's raw entry (route U), not reviewed in art". This is art's
+    autonomous lane in miniature — no over-parameterisation, calendar
+    effects, formal tests or interventions: the report offers art for any
+    series with a tie or a residual problem.
+
+    It then opens the ladder session of the same name with those files (the
+    guion goes on): next, run_gate. Existing files are kept unless
+    `overwrite`.
 
 ---
 

@@ -252,4 +252,19 @@ entry only, imported lazily as the old server did.
   opposite signs, +0.41 in levels and −0.49 in logs. The report says the domain
   decides, and `set="mink: lam=0"` gives Jenkins and Alavi's logs.
 
-Next: route U.
+**Route U done (2026-10-02):** `build_univariate` (`raw.write_inp`, the `.inp`
+writer both routes share; `raw.build_one`). What the light builder reaches,
+against the analysts' models:
+- **Flour prices:** Buffalo a random walk (a five-way tie with AR(1), MA(1)…);
+  Minneapolis and Kansas City MA(1), θ −0.251 and −0.199, the example's own.
+- **Muskrat–mink** (mink in logs, as the analyst sets it):
+  - mink AR(2), φ (0.89, −0.30), σ 27.2 %, Ljung-Box(12) p 0.064, against art's
+    guided AR(4) with σ 25.7 %;
+  - muskrat ARIMA(2,1,0), σ 33.2 %, against art's ARIMA(6,1,1) with σ 28.1 %
+    and Jenkins and Alavi's.
+
+  Both in ties. This is the honest measure of "not reviewed in art": the
+  long cycles (10 years) are what the guided analysis found and the light
+  builder does not.
+
+Next: route V.

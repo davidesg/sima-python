@@ -2,6 +2,19 @@
 
 ## 0.1.0 — unreleased
 
+### Route U from raw data: `build_univariate`
+
+- `build_univariate` (N0u) builds each series' model on its characterization:
+  - the orders art's engine ranks first, with ties shown;
+  - the mean when d = D = 0, starting at the series' mean (from 0, the mink's
+    AR went to a unit root to carry the level), or a drift only if |t| ≥ 2;
+  - a fue fit and a Ljung-Box check;
+  - `<SERIES>_u.inp/.pre/.out`, every `.pre` marked "not reviewed in art".
+
+  It then opens the ladder session on those files, the guion going on from the
+  raw entry. The gate repeats the provenance, and the menu offers art for any
+  series with a tie or a residual problem.
+
 ### The raw-data entry: `load_data` and `characterize`
 
 - `load_data` (N0r): an Excel or CSV table of raw series in original levels,
