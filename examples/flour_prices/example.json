@@ -1,0 +1,18 @@
+{
+  "name": "flour_prices",
+  "title": "Tiao and Box's tools: flour prices in three cities",
+  "summary": "The Wisconsin tools on the data Tiao and Tsay (1989) analysed: monthly flour price indices in Buffalo, Minneapolis and Kansas City, 1972-1980, from three univariate models built with art's identification. Box and Tiao's (1977) canonical analysis of the levels and Tiao and Box's (1981) stepwise M(l) say what the univariates' differences hide: the prices move together, and the joint model may not need every difference.",
+  "files": ["art/BUFFALO_m01.pre", "art/MINNEAPOLIS_m01.pre", "art/KANSASCITY_m01.pre"],
+  "also": ["art/BUFFALO_m01.out", "art/MINNEAPOLIS_m01.out", "art/KANSASCITY_m01.out",
+           "data/flour_prices.csv", "README.md"],
+  "tutorial": "TUTORIAL.md",
+  "manual": "STUDY-tiao-box",
+  "plan": [
+    "N1 run_gate — the three univariate models, certified",
+    "N1b canonical_analysis — Box and Tiao (1977) on the levels: one common trend, and a contrast between markets",
+    "N2 identify_cross — innovations correlated at 0.96: the same shocks",
+    "N2 identify_matrices — Tiao and Box's stepwise M(l) beside Jenkins and Alavi's S_k, on the differences",
+    "N3 estimate — the VAR(1) M(l) asks for",
+    "N5 evaluate — the yardstick: does it forecast better than the univariates?"
+  ]
+}

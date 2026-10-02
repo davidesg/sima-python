@@ -73,6 +73,12 @@ N1  run_gate          the univariate base, certified. If it FAILS, stop: the
                       joint model does not reproduce the univariate ones, and
                       nothing on top of it can be trusted. If a file is a
                       SPECIFICATION (it moved), offer to go back to art.
+N1b canonical_analysis  when two or more series are differenced: Box and
+                      Tiao's (1977) canonical analysis of the LEVELS. Fewer
+                      near non-stationary components than differenced series
+                      = stationary combinations: the joint model may not need
+                      every difference (cointegration, drvec's). A reading;
+                      sima never changes a d.
 N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       what the univariate models do NOT carry. It proposes
                       cross orders and whether the innovations correlate.
@@ -80,7 +86,9 @@ N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       matrices: method 2 on the univariate residuals
                       (prewhitened: an MA residual model and its links), method
                       1 on the stationary series (S_k, S_k(q): the AR/ARMA
-                      orders), and the comparison. Use both, as they did.
+                      orders; and Tiao and Box's (1981) stepwise M(l), the
+                      test beside S_k's pattern), and the comparison. Use
+                      both, as they did.
     plot_identification  their figure, pair by pair: R_k over S_k, two-sided, in
                       GraphMaker's CCF panel, method=2 (prewhitened) or 1 (not).
 N3  estimate          a candidate: cross orders p, q; full or diagonal
@@ -428,12 +436,48 @@ def run_gate(name: str) -> str:
         return f"The gate could not run: {e}"
     s.guion.add("N1", "run_gate", {},
                 f"passed, difference {s.gate['difference']:.2e}")
-    return evidence.gate_text(s.gate) + "\n\nNext: identify_cross."
+    nd = sum(int(x.model.d or 0) >= 1 for x in s.series)
+    nxt = ("Next: canonical_analysis — "
+           f"{nd} series are differenced, and Box and Tiao's reading of the levels "
+           "says whether they need every difference jointly; then identify_cross."
+           if nd >= 2 else "Next: identify_cross.")
+    return evidence.gate_text(s.gate) + "\n\n" + nxt
 
 
 # --------------------------------------------------------------------------- #
 #  N2                                                                          #
 # --------------------------------------------------------------------------- #
+
+@mcp.tool()
+def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
+    """N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
+    (each series' Box-Cox and seasonal differences; NOT its regular ones):
+    the combinations of the series ordered from least to most predictable.
+    Nearly white ones are relations among the series that stay stable over
+    time; nearly non-stationary ones (sqrt(lam) >= `near`, the scale of a root: for an AR(1) component lam = phi^2) their common growth.
+    When two or more series are differenced and fewer components look
+    non-stationary, the joint model may not need every difference — the
+    question of cointegration, which is drvec's (Johansen's test); sima only
+    reads it and never changes a d. `p` is the VAR order (0: the last
+    significant M(l) of Tiao and Box's stepwise table on the levels). Run it
+    after the gate, before the identification, when two or more series are
+    differenced."""
+    import numpy as np
+    s = _sess.get(name)
+    if s.gate is None:
+        return "Run the gate first (run_gate)."
+    lev = [x.levels() for x in s.series]
+    n = min(len(v) for v in lev)
+    X = np.column_stack([v[-n:] for v in lev])          # aligned at the end
+    d = [int(x.model.d or 0) for x in s.series]
+    txt, facts = evidence.canonical_report(X, _names(s), d, s.series[0].freq,
+                                           int(p), float(near), call=name)
+    s.guion.add("N1b", "canonical_analysis", {"p": facts["p"], "near": near},
+                f"lam {', '.join(f'{v:.3f}' for v in facts['lam'])}; "
+                f"{facts['near_one']} near 1 of {facts['differenced']} differenced"
+                + ("; stationary combinations possible (drvec)" if facts["question"] else ""))
+    return txt
+
 
 @mcp.tool()
 def identify_cross(name: str, nlags: int = 0) -> str:

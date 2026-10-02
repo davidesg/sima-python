@@ -300,6 +300,22 @@ def ja_pair_table(x, names, pairs, K, Kp, method):
     return "\n".join(out).rstrip()
 
 
+def stepwise_lines(sw, names, indent="  "):
+    """Tiao and Box's Table 3/8/12 layout, one line per l: the indicator
+    symbols of the partial autoregression matrix (t-ratios beyond +-2), M(l)
+    with its p-value, and the diagonal of the residual covariance matrix."""
+    from drvarma.identification_mv import symbols
+    sym = symbols(sw["T"], 1.0)
+    out = [f"{indent}  l  partial    M(l)      p     diag Sigma ({', '.join(names)})"]
+    for l in range(len(sw["M"])):
+        out.append(f"{indent}{l + 1:3d}  {_block(sym[l]):9s}{sw['M'][l]:8.1f}  "
+                   f"{sw['pvalue'][l]:6.3f}{'*' if sw['pvalue'][l] < 0.05 else ' '}  "
+                   + " ".join(f"{v:>9.4g}" for v in sw["sigma"][l]))
+    out.append(f"{indent}(* M(l) significant at 5 %. The symbols are their 'crude "
+               "signal-to-noise' guide, not tests.)")
+    return out
+
+
 def ja_identification(w, res, names, K, qmax, freq):
     """Jenkins and Alavi's two identifications [§3.3-3.4], from the ladder.
 
@@ -311,7 +327,8 @@ def ja_identification(w, res, names, K, qmax, freq):
     the analyst reads; nothing is chosen here."""
     from drvarma.identification_mv import (corr_matrices, determinants,
                                            partial_corr_matrices,
-                                           q_partial_corr_matrices, symbols)
+                                           q_partial_corr_matrices, stepwise_ar,
+                                           stepwise_order, symbols)
     w = np.asarray(w, float)
     res = np.asarray(res, float)
     n, m = w.shape
@@ -371,6 +388,12 @@ def ja_identification(w, res, names, K, qmax, freq):
     out += ["  S_k (multivariate Yule-Walker):"] + [f"    k={k + 1:2d}  {_block(Psym[k])}" for k in range(K)]
     for q in range(1, qmax + 1):
         out += [f"  S_k({q}):"] + [f"    k={k + 1:2d}  {_block(Qsym[q][k])}" for k in range(K)]
+    Ls = max(1, min(K, n // (3 * m)))
+    sw = stepwise_ar(w, Ls)
+    tb_p, tb_gaps = stepwise_order(sw)
+    out += [f"  Tiao and Box's (1981) stepwise autoregression (least squares, common "
+            f"sample n = {sw['n_eff']}; M(l) chi-squared with {sw['df']} d.f.):"]
+    out += stepwise_lines(sw, names, indent="    ")
     if m >= 3:
         out += ["  determinants (the same cut-offs, for many series):",
                 "    |R_k| " + " ".join(f"{v:+.3f}" for v in determinants(R1)),
@@ -385,6 +408,12 @@ def ja_identification(w, res, names, K, qmax, freq):
                + "".join(f", S_k({q}) after {v}" for q, v in pq.items()) + ".")
     out.append("  S_k(q) is unstable in samples of this size (they warn of large values at "
                "higher k, §4.1): read its cut-off as a hint.")
+    out.append(f"  reading, Tiao and Box: the last significant M(l) is at l = {tb_p}"
+               + (f" (not significant on the way: {tb_gaps})" if tb_gaps else "")
+               + f"; S_k's whole-matrix cut-off is {p1w}. "
+               + ("They agree." if tb_p == p1w else
+                  "They differ: M(l) is the test, S_k the pattern; on an MA the "
+                  "partials persist (their Table 4), so a long p here can be an MA."))
     seas = [k for k in sorted(set(long1 + longp + long2)) if freq > 1 and k % freq == 0]
     if seas:
         out.append(f"  seasonal lags {seas}: a cross effect there usually means a seasonal "
@@ -421,6 +450,11 @@ def ja_identification(w, res, names, K, qmax, freq):
         if p and (p < p1 or not p1):
             out.append(f"  (c) from method 1: an ARMA({p},{q}) (S_k({q}) cuts off after "
                        f"{p}) — estimate(p={p}, q={q}).")
+    if tb_p and tb_p != p1:
+        out.append(f"  (d) Tiao and Box's order: M(l) asks for a VAR({tb_p}) on w_t. In the "
+                   f"ladder that is the cross order — estimate(p={tb_p}, q=0) — with the "
+                   "univariate models kept on the diagonal (theirs would refit the "
+                   "diagonal too).")
     if p1 and q2:
         out.append("  Their warning (3.26): after prewhitening a cross AR structure reads "
                    "as an MA of higher order, and leads to a mis-specified AR and to "
@@ -429,7 +463,8 @@ def ja_identification(w, res, names, K, qmax, freq):
     facts = {"method2_q": q2, "links": links, "method1_links": links1,
              "method1_q": q1, "method1_p": p1,
              "method1_pq": pq, "method1_whole": {"q": q1w, "p": p1w, "pq": pqw},
-             "diagonal_left": diag_left}
+             "diagonal_left": diag_left, "tb_p": tb_p, "tb_gaps": tb_gaps,
+             "tb_M": [float(v) for v in sw["M"]]}
     return "\n".join(out), facts
 
 
@@ -771,3 +806,124 @@ def wall_frequencies(fit, freq, tol=1e-6):
     """The frequencies (in cycles per observation) of the MA roots on the wall."""
     ma = inverse_roots(fit.theta)
     return sorted({round(abs(np.angle(z)) / (2 * math.pi), 6) for z in ma if abs(z) >= 1.0 - MA_WALL_TOL})
+
+
+# --------------------------------------------------------------------------- #
+#  Box and Tiao (1977): the canonical analysis of the levels                  #
+# --------------------------------------------------------------------------- #
+
+NEAR_ONE = 0.90        # sqrt(lam) from here: a near non-stationary component
+NEAR_ZERO = 0.15       # lam up to here: nearly white (their hog components at .02, .14)
+# The threshold is on sqrt(lam), the scale of a root: for an AR(1) component
+# lam = phi^2 (Box and Tiao's x5: lam .8868, phi .94; Tiao and Tsay's flour
+# contrast: phi .88, lam .76 here). 0.90 is the convention art uses for an MA
+# root that nearly cancels a difference; on lam it would ask for a root of .95.
+
+
+def _combination(row, names):
+    return ", ".join(f"{nm} {v:+.2f}" for nm, v in zip(names, row) if abs(v) >= 0.005)
+
+
+def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call=""):
+    """Box and Tiao's (1977) canonical analysis of the transformed LEVELS x
+    (n x m: Box-Cox and seasonal differences, no regular ones), under a
+    VAR(p) by least squares (p = 0: the last significant M(l) of Tiao and
+    Box's stepwise table, at least 1). Returns (report, facts): art's four
+    sections; the reading, not a test, and no d is changed here."""
+    from drvarma.identification_mv import canonical, stepwise_ar, stepwise_order
+    x = np.asarray(x, float)
+    n, m = x.shape
+    L = max(1, min(2 * freq if freq > 1 else 6, n // (3 * m)))
+    sw = stepwise_ar(x, L)
+    p_tb, gaps = stepwise_order(sw)
+    p_used = int(p) or max(1, p_tb)
+    c = canonical(x, p_used)
+    lam = c["lam"]
+    W = c["weights"]
+    diffd = [nm for nm, dd in zip(names, d) if dd >= 1]
+    root = np.sqrt(lam)
+    unit = [j for j in range(m) if root[j] >= near]
+    white = [j for j in range(m) if lam[j] <= NEAR_ZERO]
+    lines = [f"# Canonical analysis — Box and Tiao (1977)",
+             f"*(the transformed levels: each series' Box-Cox"
+             + (" and seasonal differences" if freq > 1 else "")
+             + f", no regular differences; n = {c['n_eff']}, VAR({p_used}) by least squares)*",
+             "", "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "", "```",
+             "Tiao and Box's stepwise autoregression on the levels:"]
+    lines += stepwise_lines(sw, names)
+    lines += ["", f"components, least to most predictable (VAR({p_used})); "
+              "weights scaled to the largest = 1:",
+              "   j    lam  sqrt(lam)  1-lam   combination"]
+    for j in range(m):
+        tag = (" near 1" if j in unit else " white?" if j in white else "")
+        lines.append(f"  {j + 1:2d}  {lam[j]:.3f}    {root[j]:.3f}   {1 - lam[j]:.3f}   "
+                     f"{_combination(W[j], names)}{tag}")
+    if "shares" in c:
+        sh = c["shares"]
+        lines += ["", "variance components (their Table 4.3): share of each component's "
+                  "variance from each component's past, and from its own shock",
+                  "        " + " ".join(f"   y{i + 1}(t-1)" for i in range(m)) + "     shock"]
+        for j in range(m):
+            lines.append(f"  y{j + 1}  " + " ".join(f"{v:10.3f}" for v in sh[j]))
+    lines += ["```", "", "## 2 · WHAT IT SHOWS", "",
+              "lam is the share of a component's variance its own past predicts "
+              "(2.2); sqrt(lam) is on the scale of a root (for an AR(1) component "
+              "lam = phi^2). Near 0: a nearly white combination, a relation among the series "
+              "that stays stable over time (2.9). Near 1: a nearly non-stationary one, "
+              "the series' common growth (§3.2: for a VAR(1), if and only if roots of "
+              "the AR approach the unit circle).", ""]
+    lines.append(f"- Order: the last significant M(l) on the levels is at l = {p_tb}"
+                 + (f" (gaps {gaps})" if gaps else "")
+                 + (f"; VAR({p_used}) used." if p_used == max(1, p_tb)
+                    else f"; VAR({p_used}) asked for."))
+    lines.append(f"- {len(unit)} component(s) with sqrt(lam) >= {near} (lam >= {near * near:.2f})"
+                 + (": " + "; ".join(f"y{j + 1} = {_combination(W[j], names)}" for j in unit)
+                    if unit else "") + ".")
+    lines.append(f"- {len(white)} nearly white (lam <= {NEAR_ZERO})"
+                 + (": " + "; ".join(f"y{j + 1} = {_combination(W[j], names)}" for j in white)
+                    if white else "") + ".")
+    lines.append(f"- Regular differences in the univariate models: "
+                 + (", ".join(f"{nm} d={dd}" for nm, dd in zip(names, d))) + ".")
+    lines += ["", "## 3 · CONCLUSIONS", ""]
+    question = len(diffd) >= 2 and len(unit) < len(diffd)
+    if len(diffd) < 2:
+        lines.append("Fewer than two series are differenced: the question of joint "
+                     "differencing does not arise. The nearly white components, if any, "
+                     "are static relations worth naming.")
+    elif question:
+        lines.append(f"{len(diffd)} series are differenced, but only {len(unit)} "
+                     f"component(s) of their levels look non-stationary: there may be "
+                     f"{len(diffd) - len(unit)} stationary combination(s) of the levels. "
+                     "Then differencing every series is more than the system needs "
+                     "(Box and Tiao 1977, §4.4: the differenced model carries a "
+                     "non-invertible MA and leaves the autoregressive form), which is "
+                     "cointegration — drvec's ground, where Johansen's test decides.")
+    else:
+        lines.append(f"As many near non-stationary components ({len(unit)}) as "
+                     f"differenced series ({len(diffd)}): the levels show no stationary "
+                     "combination, and the univariates' differences are consistent with "
+                     "the joint reading.")
+    lines.append("A reading, not a test: lam near 1 also comes from a nearly singular "
+                 "innovation covariance (§5.1), near 0 from identities in the data "
+                 f"(§5.2); the threshold {near} on sqrt(lam) is a convention. Interventions are not "
+                 "removed from the levels.")
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
+             "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
+    if question:
+        opts.insert(1, ("take the series to drvec: Johansen's reduced-rank test, a model "
+                        "in levels with the error correction", "drvec (outside sima)"))
+        opts.insert(2, ("back to art: reconsider a series' d with this reading in hand",
+                        "art (outside sima)"))
+    if p_used != max(1, p_tb) or p_tb != 1:
+        opts.append(("the same reading at another VAR order",
+                     f'canonical_analysis(name="{call}", p=1)'))
+    for t, (what, cl) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
+    lines += ["", "sima does not change any d: it belongs to the `.pre`.", "",
+              "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    facts = {"lam": [float(v) for v in lam], "p": p_used, "p_tb": p_tb,
+             "near_one": len(unit), "near_zero": len(white), "differenced": len(diffd),
+             "question": bool(question)}
+    return "\n".join(lines), facts

@@ -380,17 +380,50 @@ Proposed order: **A → E1 → B → C → D**, with E2 optional.
 - C needs the ladder's grammar extended.
 - D is the most new code.
 
-Open decisions:
-1. **Scope:** the 1981 paper's tools (A–C) now, ESCC (D) later, and SCM only
-   as phase-2 reference. Agreed?
-2. **Simplification threshold** (C): the papers give none. |t| < 1 (keep any
-   signal), |t| < 2, or a sequence of LR tests? It is a menu either way.
-3. **Structure** (B): when a triangular ordering is not rejected, does sima
-   only report it, or offer to write the hand-back to mtram?
-4. **The canonical analysis** (E1): as proposed, a reading on the levels that
-   points to drvec and never changes a d? And where does "λ near 1" start
-   (0.9 as a convention, like art's 0.90 for an MA cancelling a difference),
-   given that the paper gives no threshold?
-5. **Data:** Series J and the flour prices go into `examples/` or `tests/fixtures`
-   with their sources. Should the gas furnace become a second worked example
-   (`load_example("tiao_box")`), like Jenkins and Alavi's?
+Decisions (2026-10-02, the study's recommendations accepted):
+1. **Scope:** A, E1, B and C now, in that order of work (A → E1 → B → C); D
+   (ESCC) later; SCM only as a phase-2 reference.
+2. **Simplification threshold** (C): |t| < 1 proposes the restricted model, the
+   LR against the full one checks it; always a menu.
+3. **Structure** (B): sima reports a triangular ordering that is not rejected and
+   OFFERS the hand-back to mtram; it does not hand back on its own. The gas
+   furnace warning goes with it.
+4. **The canonical analysis** (E1): a reading on the levels that points to drvec
+   and never changes a d. Near 1 starts at **√λ ≥ 0.90**, on the scale of a
+   root: for an AR(1) component λ = φ² (Box and Tiao's x₅: λ 0.8868, φ 0.94),
+   so that 0.90 is art's convention for an MA root, and the threshold on λ
+   itself would have asked for a root of 0.95. Calibrate later.
+5. **Data and example:** the gas furnace and the hog moments are drvarma test
+   data (`tests/data/tiao_box/`, `tests/test_tiao_box.py`). The worked example is
+   the **flour prices** (`examples/flour_prices`, `load_example("flour_prices")`):
+   it shows A and E1 together, which the gas furnace cannot (both series are
+   stationary). Its univariate models were built with art's engine; the hog data
+   are not available.
+
+## 7. Done (2026-10-02)
+
+- **A** — `drvarma.identification_mv.stepwise_ar` / `stepwise_order`:
+  - reproduces the gas furnace's M(l) (Table 12(b)) to the printed digit for
+    l = 1..8, with Tiao and Box's conventions found by trying them: common sample
+    t = L+1..n and N = n − L − 1. The last three come out 3.7, 1.0, 4.0 against
+    3.5, 0, 2.0, all non-significant;
+  - reproduces the residual covariance matrices (Σ̂ = S(l)/(n − L)) and the
+    indicator symbols of every fit in Table 14, the spurious feedback at p ≤ 2
+    included;
+  - shown under method 1 in `identify_matrices`, with the reading against
+    S_k's cut-off, and option (d) when they differ.
+- **E1** — `drvarma.identification_mv.canonical` / `canonical_from_moments`, and
+  `LadderSeries.levels()`:
+  - reproduces Box and Tiao's Table 4.2 (eigenvalues and eigenvectors) and
+    Table 4.3 (variance components) from the printed moments. Their C₁ is
+    E(z_{t−1} z_t′), so φ = C₁′C₀⁻¹: the eigenvalues do not tell the
+    orientation, the eigenvectors do;
+  - sima's `canonical_analysis` (node N1b), which `run_gate` proposes when two
+    or more series are differenced.
+- **The flour example**:
+  - the canonical analysis finds the common trend and a contrast between
+    markets with root 0.87 (Tiao and Tsay's φ = 0.88);
+  - on the differences, S_k never cuts off while M(l) says VAR(1);
+  - the VAR(1) does not beat the univariates out of sample.
+
+  The structure is in the levels: drvec.

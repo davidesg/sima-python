@@ -2,6 +2,25 @@
 
 ## 0.1.0 — unreleased
 
+### Tiao and Box's tools: the stepwise M(l) and the canonical analysis
+
+- `identify_matrices`, method 1: Tiao and Box's (1981) stepwise autoregression
+  beside Jenkins and Alavi's S_k. It shows the indicator symbols of each
+  partial autoregression matrix, M(l) with its chi-squared p-value, and the
+  residual variances. The reading compares the last significant M(l) with S_k's
+  cut-off, and option (d) offers M(l)'s order as the cross order when they
+  differ.
+- `canonical_analysis` (node N1b): Box and Tiao's (1977) canonical analysis of
+  the transformed LEVELS. It gives the components from least to most
+  predictable, their combinations and, for a VAR(1), the variance components.
+  When two or more series are differenced and fewer components are near 1
+  (√λ ≥ 0.90, on the scale of a root), it says the joint model may not need
+  every difference and names drvec. It never changes a d. `run_gate` proposes
+  it when two or more series are differenced.
+- `examples/flour_prices` (`load_example("flour_prices")`): the flour prices of
+  Tiao and Tsay (1989), from three univariate models to the yardstick, with the
+  tutorial. Design and decisions: `docs/STUDY-tiao-box.md`.
+
 ### Worked examples in real time: `examples`, `load_example`
 
 - `load_example("jenkins_alavi")` copies the example's files to

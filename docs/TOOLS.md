@@ -2,12 +2,13 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**23 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**24 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
 | tool | what it answers |
 |---|---|
+| [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
 | [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
 | [`estimate`](#estimate) | N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance. |
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
@@ -31,6 +32,31 @@
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
+
+---
+
+## `canonical_analysis`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `p` | integer | no | `0` |
+| `near` | number | no | `0.9` |
+
+N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
+    (each series' Box-Cox and seasonal differences; NOT its regular ones):
+    the combinations of the series ordered from least to most predictable.
+    Nearly white ones are relations among the series that stay stable over
+    time; nearly non-stationary ones (sqrt(lam) >= `near`, the scale of a root: for an AR(1) component lam = phi^2) their common growth.
+    When two or more series are differenced and fewer components look
+    non-stationary, the joint model may not need every difference — the
+    question of cointegration, which is drvec's (Johansen's test); sima only
+    reads it and never changes a d. `p` is the VAR order (0: the last
+    significant M(l) of Tiao and Box's stepwise table on the levels). Run it
+    after the gate, before the identification, when two or more series are
+    differenced.
 
 ---
 
