@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 # pydantic_settings warns about `lifespan` when FastMCP is BUILT, not imported.
 # A stdio server that writes to stderr at start-up can be read as a failure, so
@@ -113,6 +114,13 @@ N4  (in estimate)     LR against the univariates, residuals, convergence.
                       uncorrelated transformed residuals (with dates, the entry
                       to interventions), the residual correlation matrices,
                       the portmanteau matrix.
+N4s simplify          Tiao and Box's simplification: coefficients |t| < 1 at
+                      zero, refitted, tested by LR (and AIC, BIC); adopt with
+                      the estimate call it gives (cached). Several rounds.
+N4t structure         is the system simultaneous? Each pair's cross terms at
+                      zero (LR), and every triangular ordering; one that
+                      stands = a transfer network: offer mtram, never go.
+                      Warn: a low-order fit can show a spurious feedback.
 N4b study_estimation  when estimate says the fit STOPPED ON THE MA
                       INVERTIBILITY WALL: the estimation is ill-defined there.
                       Show the roots, the second path (Shea) and the restarts,
@@ -288,10 +296,50 @@ def _r_doc(name: str) -> str:
 
 
 def _ladder(files, p, q, diagcov, estwin=None, links=None, start="zero",
-            cross="additive"):
+            cross="additive", zeros=None, lik="elf"):
     from drvarma.ladder import Ladder
     return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
-                  links=links or None, start=start, cross=cross)
+                  links=links or None, start=start, cross=cross,
+                  zeros=list(zeros) if zeros else None, lik=lik)
+
+
+_OWN = re.compile(r"(phi|theta)_(.+)\[B\^(\d+)\]")
+
+
+def _zeros(text):
+    """The canonical zeros: a sorted tuple of coefficient names, cross
+    (AR3[A<-B]) and, in route V, own (phi_A[B^3], theta_A[B^1])."""
+    if not text:
+        return ()
+    toks = text if isinstance(text, (list, tuple)) else text.split(",")
+    return tuple(sorted({t.strip() for t in toks if t.strip()}))
+
+
+def _split_zeros(s, zeros):
+    """(cross names for the ladder, own lags {series: {"ar": set, "ma": set}})."""
+    cross, own = [], {}
+    names = _names(s)
+    for z in zeros:
+        m = _OWN.fullmatch(z)
+        if not m:
+            cross.append(z)
+            continue
+        if s.route != "V":
+            raise ValueError(f"'{z}' is a coefficient of a univariate model: on route U "
+                             "the diagonal is art's — simplify it there.")
+        if m.group(2) not in names:
+            raise ValueError(f"'{z}': no series {m.group(2)}")
+        own.setdefault(m.group(2), {"ar": set(), "ma": set()})[
+            "ar" if m.group(1) == "phi" else "ma"].add(int(m.group(3)))
+    return cross, own
+
+
+def _model_ladder(s, key, estwin=None, start="zero", lik="elf"):
+    """The Ladder of a fit key (p, q, diagcov, links, cross, zeros) on its files."""
+    p, q, dc, lk, cr, zs = key
+    cross, own = _split_zeros(s, zs)
+    return _ladder(_files_for(s, p, q, own), p, q, dc, estwin=estwin, links=lk,
+                   start=start, cross=cr, zeros=cross, lik=lik)
 
 
 def _links(links):
@@ -325,7 +373,7 @@ def _diagonal(s):
     return s.diagonal
 
 
-def _files_for(s, p, q):
+def _files_for(s, p, q, own=None):
     """The files a candidate is estimated on. Route U: the session's (the
     univariate models on the diagonal). Route V: each series' specification
     with a free AR(p)/MA(q) of its own, written once per order — with cross
@@ -334,9 +382,10 @@ def _files_for(s, p, q):
         return s.files
     from . import raw
     r = _sess.get_raw(s.v["raw"])
-    paths = [raw.v_path(s.v["dir"], nm, p, q) for nm in r.names]
+    own = own or {}
+    paths = [raw.v_path(s.v["dir"], nm, p, q, own.get(nm)) for nm in r.names]
     if not all(os.path.exists(x) for x in paths):
-        raw.write_v(s.v["dir"], r.names, r.data, r.chars, r.freq, r.start, p, q)
+        raw.write_v(s.v["dir"], r.names, r.data, r.chars, r.freq, r.start, p, q, own=own)
     return paths
 
 
@@ -798,7 +847,7 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
 @mcp.tool()
 def estimate(name: str, p: int, q: int, diagcov: bool = False,
              reason: str = "", links: str = "", start: str = "zero",
-             cross: str = "additive") -> str:
+             cross: str = "additive", zeros: str = "") -> str:
     """N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
     Each series keeps its univariate model on the diagonal (its ARMA factors are
@@ -826,19 +875,28 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     when they have (an airline), the two are different candidates — on m6 the
     residual form converged inside where the additive one stopped on the MA
     wall. identify_matrices' method 2 proposes it.
+
+    `zeros`: coefficients held at zero, by their printed names — Tiao and
+    Box's simplification (simplify proposes them): cross ones "AR3[A<-B],
+    MA1[B<-A]" on either route; a series' own "phi_A[B^4], theta_A[B^1]" on
+    route V only (route U's diagonal is the univariate model, art's). A fit
+    already made with the same arguments is reused, not refitted.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
     lk = _links(links)
-    key = (int(p), int(q), bool(diagcov), lk, cross)
+    zs = _zeros(zeros)
+    key = (int(p), int(q), bool(diagcov), lk, cross, zs)
     try:
         if s.route == "V" and cross == "residual":
             return ('cross="residual" is Jenkins and Alavi\'s model for UNIVARIATE '
                     "residuals; route V has none. Use the default.")
-        L = _ladder(_files_for(s, int(p), int(q)), int(p), int(q), bool(diagcov),
-                    links=lk, start=start, cross=cross)
-        L.fit()
+        if key in s.fits:
+            L = s.fits[key]
+        else:
+            L = _model_ladder(s, key, start=start)
+            L.fit()
     except Exception as e:
         s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                        "cross": cross}, f"failed: {e}", reason)
@@ -854,13 +912,163 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
                "series), not against univariate models; those come at N5.\n\n" + txt)
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
     s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
-                                   "start": L.start_used, "cross": cross},
+                                   "start": L.start_used, "cross": cross,
+                                   "zeros": ", ".join(zs)},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
     nxt = "Next: evaluate — the candidate against the univariates."
     if getattr(L.result, "ma_boundary", 0):
         nxt = ("The fit stopped on the MA invertibility wall: study it before "
                "reading its numbers (study_estimation).")
     return txt + "\n\n" + nxt
+
+
+def _desc(key):
+    p, q, dc, lk, cr, zs = key
+    return (f"p = {p}, q = {q}, {'diagonal' if dc else 'full'} covariance"
+            + (f", links {lk}" if lk else "") + (", residual form" if cr == "residual" else "")
+            + (f", {len(zs)} coefficients at zero" if zs else ""))
+
+
+def _fit_key(s, key):
+    """The fit of a key, from the cache or fitted now (and cached)."""
+    if key not in s.fits:
+        L = _model_ladder(s, key)
+        L.fit()
+        s.fits[key] = L
+    return s.fits[key]
+
+
+def _lr(full, restr):
+    from scipy.stats import chi2
+    lr = max(0.0, 2.0 * (full.result.logL - restr.result.logL))
+    df = int(full.result.npar - restr.result.npar)
+    return {"lr": lr, "df": df, "p": float(chi2.sf(lr, df)) if df > 0 else 1.0}
+
+
+def _estimate_call(name, key):
+    p, q, dc, lk, cr, zs = key
+    return (f'estimate(name="{name}", p={p}, q={q}'
+            + (", diagcov=True" if dc else "") + (f', links="{lk}"' if lk else "")
+            + (', cross="residual"' if cr == "residual" else "")
+            + (f', zeros="{", ".join(zs)}"' if zs else "") + ")")
+
+
+@mcp.tool()
+def simplify(name: str, t: float = 1.0) -> str:
+    """N4s — Tiao and Box's (1981, §4) simplification by coefficient, on the
+    current fit: the cross coefficients (and, on route V, each series' own
+    AR/MA coefficients) with |t| < `t` are held at zero, the model is
+    refitted, and the restriction is tested by LR against the full fit, with
+    AIC and BIC. The restricted fit is cached: adopting it (the estimate call
+    in the menu) is instant. Route U's diagonal is never touched — it is the
+    univariate model, art's. Several rounds are normal (Tiao and Box simplified
+    the SCC model twice)."""
+    import numpy as np
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+    except KeyError:
+        return "Estimate a model first (estimate)."
+    key = s.current
+    r = L.result
+    x, se = np.asarray(r.x, float), np.asarray(r.std_errors, float)
+    cross_re = re.compile(r"(AR|MA)\d+\[.+<-.+\]")
+    drop = []
+    for nm, v, e in zip(r.names, x, se):
+        ok = cross_re.fullmatch(nm) or (s.route == "V" and _OWN.fullmatch(nm))
+        if ok and np.isfinite(e) and e > 0 and abs(v / e) < float(t):
+            drop.append((nm, float(v), float(v / e)))
+    f = {"t": float(t), "desc": _desc(key), "route": s.route, "drop": drop}
+    if drop:
+        key2 = key[:5] + (_zeros(list(key[5]) + [d[0] for d in drop]),)
+        try:
+            L2 = _fit_key(s, key2)
+        except Exception as e:                               # noqa: BLE001
+            return f"The restricted fit failed: {e}"
+        n = np.asarray(r.residuals).shape[0]
+        k1, k2 = r.npar, L2.result.npar
+        f.update(_lr(L, L2), k_full=k1, k_r=k2, ll_full=r.logL, ll_r=L2.result.logL,
+                 aic_full=-2 * r.logL + 2 * k1, aic_r=-2 * L2.result.logL + 2 * k2,
+                 bic_full=-2 * r.logL + k1 * np.log(n), bic_r=-2 * L2.result.logL + k2 * np.log(n))
+        x2, se2 = np.asarray(L2.result.x, float), np.asarray(L2.result.std_errors, float)
+        f["left"] = [(nm, float(v / e)) for nm, v, e in zip(L2.result.names, x2, se2)
+                     if (cross_re.fullmatch(nm) or (s.route == "V" and _OWN.fullmatch(nm)))
+                     and np.isfinite(e) and e > 0 and abs(v / e) < float(t)]
+        s.guion.add("N4s", "simplify", {"t": t, "model": _desc(key)},
+                    f"{len(drop)} coefficients |t| < {t:g} to zero: "
+                    f"LR {f['lr']:.2f} df {f['df']} p {f['p']:.4f}")
+        return evidence.simplify_report(f, name, _estimate_call(name, key2))
+    return evidence.simplify_report(f, name, "")
+
+
+@mcp.tool()
+def structure(name: str, alpha: float = 0.05) -> str:
+    """N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On
+    the current fit: for each ordered pair, the LR test that series j does not
+    enter series i's equation (all its cross AR and MA lags at zero); with up
+    to 4 series, every triangular ordering (each series receives only from
+    those before it). If an ordering stands, the system is a TRANSFER
+    NETWORK — a triangular VARMA is a transfer function model — and sima
+    offers the hand-back to mtram with the same .pre files; it does not hand
+    back on its own. The verdict is only as good as the order of the fit:
+    Tiao and Box's gas furnace shows a spurious feedback at low order."""
+    import itertools
+    s = _sess.get(name)
+    try:
+        L = _current(s)
+    except KeyError:
+        return "Estimate a model first (estimate)."
+    key = s.current
+    p, q, dc, lk, cr, zs = key
+    if p == 0 and q == 0:
+        return "The current fit has no cross dynamics (p = q = 0): nothing to test."
+    names = _names(s)
+    m = len(names)
+    free = set(L.result.names)
+
+    def pair_zeros(i, j):
+        return [f"{k}{l}[{names[i]}<-{names[j]}]" for k, top in (("AR", p), ("MA", q))
+                for l in range(1, top + 1) if f"{k}{l}[{names[i]}<-{names[j]}]" in free]
+
+    tests = {}
+
+    def test(extra, label):
+        if not extra:
+            return {"label": label, "lr": 0.0, "df": 0, "p": 1.0}
+        k2 = key[:5] + (_zeros(list(zs) + extra),)
+        if k2 not in tests:
+            tests[k2] = _lr(L, _fit_key(s, k2))
+        return dict(tests[k2], label=label, key=k2)
+
+    try:
+        pairs = [test(pair_zeros(i, j), f"{names[j]} -> {names[i]}")
+                 for i in range(m) for j in range(m) if i != j]
+        orders = None
+        if m <= 4:
+            orders, seen = [], set()
+            for perm in itertools.permutations(range(m)):
+                pos = {v: k for k, v in enumerate(perm)}
+                extra = sorted(z for i in range(m) for j in range(m)
+                               if i != j and pos[j] > pos[i] for z in pair_zeros(i, j))
+                tag = tuple(extra)
+                if tag in seen:
+                    continue
+                seen.add(tag)
+                t = test(extra, " -> ".join(names[v] for v in perm))
+                t["arrows"] = ", ".join(f"{names[a]} -> {names[b]}"
+                                        for a, b in zip(perm, perm[1:]))
+                t["call"] = _estimate_call(name, t.get("key", key))
+                orders.append(t)
+    except Exception as e:                                   # noqa: BLE001
+        return f"A restricted fit failed: {e}"
+    pre = _yardstick_files(s) if s.route == "V" else s.files
+    f = {"desc": _desc(key), "alpha": float(alpha), "pairs": pairs, "orders": orders,
+         "pre": pre}
+    stand = [t["label"] for t in (orders or []) if t["df"] == 0 or t["p"] >= alpha]
+    s.guion.add("N4t", "structure", {"model": _desc(key), "alpha": alpha},
+                ("orderings standing: " + "; ".join(stand)) if stand else
+                "no triangular ordering stands: feedback")
+    return evidence.structure_report(f, name)
 
 
 @mcp.tool()
@@ -902,9 +1110,10 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     s.guion.add("N4", "check_residuals", {"nlags": K, "model": str(s.current)},
                 f"{facts['n_beyond']} residual correlations beyond the band; "
                 f"{facts['large']} large transformed residuals")
-    p_, q_, dc_, lk_, cr_ = s.current
+    p_, q_, dc_, lk_, cr_, zs_ = s.current
     desc = (f"cross p = {p_}, q = {q_}, {'diagonal' if dc_ else 'full'} covariance"
-            + (f", links {lk_}" if lk_ else "") + (f", cross MA {cr_}" if q_ else ""))
+            + (f", links {lk_}" if lk_ else "") + (f", cross MA {cr_}" if q_ else "")
+            + (f", {len(zs_)} coefficients at zero" if zs_ else ""))
     lines = ["# Checking — Jenkins and Alavi (1981, §5.2)",
              f"*({desc}; n = {n})*", "",
              "## 1 · TABLE", "",
@@ -990,7 +1199,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
     s = _sess.get(name)
     if s.current is None or s.current not in s.fits:
         return "Estimate a model first (estimate)."
-    p, q, diagcov, lk, cross = s.current
+    p, q, diagcov, lk, cross, zs = s.current
     L = s.fits[s.current]
     r = L.result
     freq = s.series[0].freq
@@ -1002,8 +1211,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
            evidence.roots_text(r, freq), ""]
     # 2. the second path
     try:
-        Ls = Ladder(list(s.files), p, q, diagcov=diagcov, lik="shea", links=lk or None,
-                    cross=cross)
+        Ls = _model_ladder(s, s.current, lik="shea")
         rs = Ls.fit()
         out += ["SECOND PATH (Shea's likelihood, AS 242):",
                 f"  logL {rs.logL:.6f}  ({rs.nit} iterations; "
@@ -1064,7 +1272,8 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
 
 @mcp.tool()
 def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
-             diagcov: bool = False, links: str = "", cross: str = "additive") -> str:
+             diagcov: bool = False, links: str = "", cross: str = "additive",
+             zeros: str = "") -> str:
     """N5 — The yardstick: does the candidate forecast better than the univariates?
 
     Estimates the candidate AND the diagonal system (the univariate models) on
@@ -1074,8 +1283,8 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     gain here has no reason to exist, whatever its in-sample significance.
 
     `estwin` counts observations of the FIRST series; leave enough data after it
-    (at least a few dozen origins) or the comparison says little. `links`: as in
-    estimate, the same restricted candidate.
+    (at least a few dozen origins) or the comparison says little. `links` and
+    `zeros`: as in estimate, the same restricted candidate.
     """
     s = _sess.get(name)
     if s.gate is None:
@@ -1083,8 +1292,9 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     H = int(horizon)
     try:
         lk = _links(links)
-        Lc = _ladder(_files_for(s, p, q), p, q, diagcov, estwin=estwin, links=lk,
-                     cross=cross)
+        zs = _zeros(zeros)
+        Lc = _model_ladder(s, (int(p), int(q), bool(diagcov), lk, cross, zs),
+                           estwin=estwin)
         Lc.fit()
         _rows, cand = Lc.recursive(H)
         Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
@@ -1100,14 +1310,15 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
           sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H])
     label = (f"VARMA p={p} q={q} ({'diagonal' if diagcov else 'full'} cov)"
              + (f", links {lk}" if lk else "")
-             + (", residual-model form" if cross == "residual" else ""))
+             + (", residual-model form" if cross == "residual" else "")
+             + (f", {len(zs)} coefficients at zero" if zs else ""))
     txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s))
     if s.route == "V":
         txt = ("ROUTE V: the yardstick is univariate models built by route U's builder "
                "(art's engine, light; not reviewed in art), "
                f"{os.path.join(s.v['dir'], '<SERIES>_u.pre')} — they never entered the "
                "system.\n\n" + txt)
-    s.evaluations[(p, q, diagcov, lk, cross, estwin, H)] = (cand, diag)
+    s.evaluations[(p, q, diagcov, lk, cross, zs, estwin, H)] = (cand, diag)
     s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "estwin": estwin, "horizon": H},
                 f"lower RMSE in {facts['wins']} of {facts['cells']} cells")
@@ -1163,11 +1374,10 @@ def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
         L = _current(s)
         H = int(horizon) or max(s.series[0].freq, 4)
         if estwin:
-            p, q, dc, lk, cr = s.current
-            L = _ladder(s.files, p, q, dc, estwin=int(estwin), links=lk,
-                        start="preliminary", cross=cr)
+            L = _model_ladder(s, s.current, estwin=int(estwin), start="preliminary")
             L.fit()
-            Ld = _ladder(s.files, 0, 0, True, estwin=int(estwin))
+            Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
+                         estwin=int(estwin))
             Ld.fit()
         else:
             Ld = _diagonal(s)

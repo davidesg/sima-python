@@ -204,3 +204,60 @@ def test_route_v_yardstick_is_built_for_n5_only(gas_v):
     cand, diag = list(s.evaluations.values())[-1]
     assert cand[("CO2", 3)]["RMSE"] < 0.8 * diag[("CO2", 3)]["RMSE"]
     assert all(f.endswith("_v.inp") for f in s.files)
+
+
+# ── B and C: structure and simplification (Tiao and Box) ─────────────────────
+
+def test_structure_finds_the_transfer_function(gas_v):
+    """VAR(6): CO2 does not enter the gas equation (Tiao and Box: 'phi_12 small
+    ... over all lags'), the ordering gas -> CO2 stands, mtram is OFFERED."""
+    _fn(M.estimate)("v_gf", 6, 0)
+    t = _fn(M.structure)("v_gf")
+    assert "CO2 -> InputGasRate                LR = 6.01, df 6, p 0.4223" in t
+    assert "InputGasRate -> CO2                LR = 205.13" in t
+    assert "A triangular ordering stands: InputGasRate -> CO2" in t
+    assert "TRANSFER NETWORK" in t and "mtram" in t and "does not hand back on its own" in t
+    assert M._sess.get("v_gf").guion.entries[-1].node == "N4t"
+
+
+def test_structure_shows_the_spurious_feedback_at_low_order(gas_v):
+    """Their Table 14: at AR(2) a feedback appears that is not there."""
+    _fn(M.estimate)("v_gf", 2, 0)
+    t = _fn(M.structure)("v_gf")
+    assert "CO2 -> InputGasRate                LR = 32.24, df 2" in t
+    assert "No triangular ordering stands" in t and "SPURIOUS feedback" in t
+
+
+def test_simplify_and_adopt(gas_v):
+    """|t| < 1 on the VAR(6): 9 coefficients (own ones too: route V), the LR
+    does not object, AIC and BIC fall; adopting it reuses the cached fit."""
+    _fn(M.estimate)("v_gf", 6, 0)
+    t = _fn(M.simplify)("v_gf")
+    assert "to zero (9):" in t and "phi_CO2[B^5]" in t
+    assert "LR = 6.21, df 9, p 0.7186" in t and "AIC falls, BIC falls" in t
+    call = t[t.index('estimate(name="v_gf"'):].split("`")[0]
+    zeros = call.split('zeros="')[1].rstrip('")')
+    s = M._sess.get("v_gf")
+    n_fits = len(s.fits)
+    e = _fn(M.estimate)("v_gf", 6, 0, zeros=zeros)
+    assert len(s.fits) == n_fits and "9 coefficients at zero" not in e
+    assert s.current[5] and "phi_CO2[B^5]" in s.current[5]
+    assert "phi_CO2[B^5]" not in s.fits[s.current].result.names
+    # the own zero is in the spec file, as a fixed coefficient
+    d = M._sess.get("v_gf").v["dir"]
+    assert os.path.exists(os.path.join(d, "CO2_v_p6q0_zar5.inp"))
+
+
+def test_route_u_never_simplifies_the_univariate_models():
+    """On route U the diagonal is art's: simplify proposes cross terms only,
+    and an own zero is refused."""
+    import json
+    ex = os.path.join(ROOT, "examples", "jenkins_alavi", "art")
+    _fn(M.load_pre)("u_s", json.dumps([os.path.join(ex, "MUSKRAT_m03.pre"),
+                                         os.path.join(ex, "MINK_m02.pre")]))
+    _fn(M.run_gate)("u_s")
+    e = _fn(M.estimate)("u_s", 0, 0, zeros="phi_MINK[B^1]")
+    assert "the diagonal is art's" in e
+    _fn(M.estimate)("u_s", 2, 0)
+    t = _fn(M.simplify)("u_s", t=2)
+    assert "phi_" not in t.split("## 2")[0]

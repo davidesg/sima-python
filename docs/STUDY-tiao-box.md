@@ -427,3 +427,13 @@ Decisions (2026-10-02, the study's recommendations accepted):
   - the VAR(1) does not beat the univariates out of sample.
 
   The structure is in the levels: drvec.
+- **B** — `structure` (sima) on `Ladder(zeros=)` (drvarma):
+  - the pair tests and the triangular orderings, with mtram offered, never
+    taken;
+  - gas furnace VAR(6): the ordering gas → CO₂ stands (CO₂ → gas p 0.42);
+  - gas furnace VAR(2): the spurious feedback of Table 14 (p < 0.0001);
+  - muskrat–mink: feedback both ways.
+- **C** — `simplify` and `estimate(zeros=)`: cross zeros on both routes, own
+  zeros on route V (in the spec file). On the gas furnace VAR(6), 9
+  coefficients go (LR p 0.72, AIC and BIC fall), and a second round is
+  offered.

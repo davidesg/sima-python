@@ -2,6 +2,29 @@
 
 ## 0.1.0 — unreleased
 
+### Tiao and Box's structure and simplification: `structure`, `simplify`
+
+- `estimate(..., zeros=)` holds coefficients at zero, by their printed names:
+  - cross terms (`AR3[CO2<-GAS]`) on either route;
+  - a series' own (`phi_CO2[B^5]`) on route V only, written into its spec as a
+    fixed coefficient.
+
+  Route U's diagonal is art's, and is refused. A fit already made with the
+  same arguments is reused. `evaluate` takes `zeros` too.
+- `simplify` (N4s): the coefficients with |t| < 1 (or `t=`) at zero, the model
+  refitted, the LR against the full fit, AIC and BIC, and what fell below the
+  threshold in the refit (another round). Tiao and Box (1981, §4).
+- `structure` (N4t): for each ordered pair, the LR test that series j does not
+  enter series i's equation. With up to 4 series it also tests every
+  triangular ordering. When one stands, the system is a transfer network and
+  sima OFFERS mtram with the same `.pre` files; it never hands back on its own.
+  It warns that a low-order fit can show a spurious feedback.
+- **Gas furnace:**
+  - VAR(6): CO₂ → gas LR 6.0 with 6 d.f. (p 0.42), so gas → CO₂ stands;
+  - VAR(2): the spurious feedback of their Table 14 (LR 32.2, p < 0.0001);
+  - `simplify` drops 9 coefficients (LR 6.2, 9 d.f., p 0.72; AIC and BIC fall).
+- **Muskrat–mink:** feedback both ways, a simultaneous system.
+
 ### Route V from raw data: `write_specs` — the vector first
 
 - `write_specs` (N0v) writes each series' fue `.inp` with only its

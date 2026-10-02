@@ -1140,3 +1140,133 @@ def build_report(built, freq, call):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
     lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- #
+#  Tiao and Box's simplification (C) and the structure of the system (B)     #
+# --------------------------------------------------------------------------- #
+
+def _lr_line(f):
+    return (f"LR = {f['lr']:.2f}, df {f['df']}, p {f['p']:.4f}"
+            if f["df"] > 0 else "nothing to test")
+
+
+def simplify_report(f, call, keycall):
+    """C — the coefficients |t| < t, the restricted refit and its LR."""
+    T = f["t"]
+    lines = [f"# Simplification by coefficient — Tiao and Box (1981, §4)",
+             f"*(the current fit: {f['desc']}; threshold |t| < {T:g})*", "",
+             "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "", "```"]
+    if not f["drop"]:
+        lines += [f"No coefficient with |t| < {T:g} among the "
+                  + ("cross and own " if f["route"] == "V" else "cross ")
+                  + "coefficients.", "```", "",
+                  "## 2 · WHAT IT SHOWS", "", "Nothing to remove at this threshold.", "",
+                  "## 3 · CONCLUSIONS", "", "The model is as simple as this rule makes it.",
+                  "", "## 4 · DECISION — alternatives", "",
+                  f"**A)** go on: `structure(name=\"{call}\")` or `evaluate(...)`",
+                  f"**B)** a stricter threshold: `simplify(name=\"{call}\", t=2)`", "",
+                  "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+        return "\n".join(lines)
+    lines.append(f"to zero ({len(f['drop'])}):")
+    for nm, v, t in f["drop"]:
+        lines.append(f"  {nm:<34} {v:+10.4f}   t {t:+6.2f}")
+    lines += ["", f"                       full        restricted",
+              f"  parameters      {f['k_full']:>9d}   {f['k_r']:>12d}",
+              f"  logL            {f['ll_full']:>12.4f}{f['ll_r']:>14.4f}",
+              f"  AIC             {f['aic_full']:>12.2f}{f['aic_r']:>14.2f}",
+              f"  BIC             {f['bic_full']:>12.2f}{f['bic_r']:>14.2f}",
+              "", f"  restricted against full: {_lr_line(f)}"]
+    if f["left"]:
+        lines.append(f"  after the refit, still |t| < {T:g}: " + ", ".join(
+            f"{nm} ({t:+.2f})" for nm, t in f["left"]))
+    lines += ["```", "", "## 2 · WHAT IT SHOWS", "",
+              f"- {len(f['drop'])} coefficient(s) with |t| < {T:g} held at zero and the model "
+              f"refitted: {f['k_full'] - f['k_r']} parameters fewer.",
+              f"- The LR test of the restriction: {_lr_line(f)}."
+              + (" The data do not object." if f["p"] >= 0.05 else
+                 " The data OBJECT: together these coefficients carry something."),
+              f"- AIC {'falls' if f['aic_r'] < f['aic_full'] else 'rises'}, BIC "
+              f"{'falls' if f['bic_r'] < f['bic_full'] else 'rises'}."]
+    if f["left"]:
+        lines.append(f"- {len(f['left'])} coefficient(s) fell below the threshold in the "
+                     "refit: Tiao and Box simplified more than once (SCC, Table 10).")
+    lines += ["", "## 3 · CONCLUSIONS", ""]
+    if f["p"] >= 0.05:
+        lines.append("The restricted model is as good as the full one in sample and "
+                     "simpler: Tiao and Box's 'considerable simplification is almost "
+                     "invariably possible after an initial model has been fitted'.")
+    else:
+        lines.append("The joint restriction is rejected: take fewer coefficients out "
+                     "(a stricter threshold) or keep the full model.")
+    lines.append("Jenkins and Alavi's caution stays: zeros that create cancelling AR/MA "
+                 "factors are not a simplification. And the test of a model is N5.")
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = [("adopt the restricted model (already fitted: instant)", keycall)]
+    if f["left"]:
+        opts.append(("adopt it, then another round", f'simplify(name="{call}", t={T:g})'))
+    opts += [("a stricter threshold", f'simplify(name="{call}", t=2)'),
+             ("keep the full model", "nothing")]
+    for k, (what, cl) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[k]})** {what}\n   `{cl}`")
+    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    return "\n".join(lines)
+
+
+def structure_report(f, call):
+    """B — is the system simultaneous? Pair by pair and by triangular ordering."""
+    lines = ["# Structure — is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2)",
+             f"*(the current fit: {f['desc']}; each restriction refitted and tested by LR "
+             "against it)*", "", "## 1 · TABLE", "",
+             "_[Claude: show the block below AS IT IS; do not build your own table]_", "",
+             "```", "series j in the equation of series i — all its cross AR and MA lags at zero:"]
+    w = max(34, *(len(t["label"]) + 1 for t in f["pairs"] + (f["orders"] or [])))
+    for t in f["pairs"]:
+        lines.append(f"  {t['label']:<{w}} " + (_lr_line(t) if t["df"] else "already absent")
+                     + ("" if not t["df"] or t["p"] >= f["alpha"] else "   *"))
+    if f["orders"] is not None:
+        lines += ["", "triangular orderings (each series receives only from those before it):"]
+        for t in f["orders"]:
+            lines.append(f"  {t['label']:<{w}} {_lr_line(t)}"
+                         + ("   stands" if t["df"] == 0 or t["p"] >= f["alpha"] else ""))
+    else:
+        lines.append("\n  (more than 4 series: orderings not enumerated; read the pairs)")
+    lines += [f"  * rejected at {f['alpha']:g}", "```", "", "## 2 · WHAT IT SHOWS", ""]
+    for t in f["pairs"]:
+        if not t["df"]:
+            continue
+        lines.append(f"- {t['label']}: "
+                     + ("the data REJECT dropping it — it enters the equation."
+                        if t["p"] < f["alpha"] else "it can be dropped (not rejected)."))
+    stand = [t for t in (f["orders"] or []) if t["df"] == 0 or t["p"] >= f["alpha"]]
+    lines += ["", "## 3 · CONCLUSIONS", ""]
+    if f["orders"] is not None and not stand:
+        lines.append("No triangular ordering stands: there is feedback. The system is "
+                     "simultaneous — sima's ground.")
+    elif stand:
+        best = max(stand, key=lambda t: t["p"] if t["df"] else 1.0)
+        lines.append(f"A triangular ordering stands: {best['label']}. The system is a "
+                     "TRANSFER NETWORK, not a simultaneous one: Tiao and Box's §3.1 — "
+                     "with triangular coefficient matrices a VARMA is a transfer function "
+                     "model. That is mtram's rung (drtran), where exogeneity is declared and "
+                     "tested.")
+    lines.append("The verdict is only as good as the order of the fit: Tiao and Box's gas "
+                 "furnace shows a SPURIOUS feedback at AR(1)-AR(2), gone from AR(3) once "
+                 "the input's own dynamics are captured (Table 14); temporally aggregated "
+                 "data can also create it (Tiao and Wei 1976). The contemporaneous "
+                 "correlation in Sigma is not feedback, and it stays.")
+    lines += ["", "## 4 · DECISION — alternatives", ""]
+    opts = []
+    if stand:
+        opts.append(("take the system to mtram with the network "
+                     + stand[0]["arrows"] + " — the same .pre files: " + ", ".join(
+                         os.path.basename(x) for x in f["pre"]), "mtram (outside sima)"))
+        opts.append(("stay in sima with the triangular restriction (a VARMA with the "
+                     "zeros)", stand[0]["call"]))
+    opts.append(("stay in sima with the full system", "evaluate(...)"))
+    for k, (what, cl) in enumerate(opts):
+        lines.append(f"**{'ABCDEF'[k]})** {what}\n   `{cl}`")
+    lines += ["", "sima offers the hand-back; it does not hand back on its own.", "",
+              "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    return "\n".join(lines)

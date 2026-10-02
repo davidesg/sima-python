@@ -283,19 +283,22 @@ def _fmt_p(p):
 PROVENANCE = "* Built by sima's raw entry (route U), not reviewed in art"
 
 
-def _operator(title, order, lag_only=0):
+def _operator(title, order, lag_only=0, fixed=()):
     """An .inp operator block: `order` coefficients at 0, free; with
-    `lag_only` = k, only lag k is free (art's sparse AR[k]/MA[k])."""
+    `lag_only` = k, only lag k is free (art's sparse AR[k]/MA[k]); the lags in
+    `fixed` are held at zero (a simplification)."""
     if order <= 0:
         return [f"** {title}:", "0"]
     rows = []
     for k in range(1, order + 1):
-        rows.append(f"0.000000  {0 if lag_only and k != lag_only else 1}")
+        free = not (lag_only and k != lag_only) and k not in fixed
+        rows.append(f"0.000000  {1 if free else 0}")
     return [f"** {title}:", f"1 {order}", "**"] + rows
 
 
 def write_inp(path, name, y, freq, start, lam, d, D=0, harmonics=False, mean=False,
-              p=0, q=0, P=0, Q=0, sparse_ar=0, sparse_ma=0, comment=""):
+              p=0, q=0, P=0, Q=0, sparse_ar=0, sparse_ma=0, comment="",
+              fixed_ar=(), fixed_ma=()):
     """One fue .inp: the transformation (lambda, d, D), the seasonal harmonics
     as free deterministic terms, an optional free mean, and free ARMA
     operators at 0. The same layout as drvarma's ladder.split; existing files
@@ -325,9 +328,9 @@ def write_inp(path, name, y, freq, start, lam, d, D=0, harmonics=False, mean=Fal
         L += ["**", " ".join(["0"] * nd)]
     pr = max(p, sparse_ar)
     qr = max(q, sparse_ma)
-    L += _operator("Number and orders of regular AR operators", pr, sparse_ar)
+    L += _operator("Number and orders of regular AR operators", pr, sparse_ar, fixed_ar)
     L += _operator("Number and orders of annual AR operators", P)
-    L += _operator("Number and orders of regular MA operators", qr, sparse_ma)
+    L += _operator("Number and orders of regular MA operators", qr, sparse_ma, fixed_ma)
     L += _operator("Number and orders of anual MA operators", Q)
     L += ["** Number and frequencies of regular AR(2) operators with fixed frequency:", "0",
           "** Number and frequencies of regular MA(2) operators with fixed frequency:", "0",
@@ -441,12 +444,24 @@ def build_univariate(names, data, chars, freq, start, out_dir):
 V_PROVENANCE = "* Route V (the vector first, Tiao and Box): a specification of sima's raw entry"
 
 
-def v_path(out_dir, name, p=None, q=None):
-    tail = "" if p is None else f"_p{int(p)}q{int(q)}"
+def _own_tag(own):
+    """'_zar3.4ma1' for the own lags held at zero, '' for none."""
+    if not own or not (own.get("ar") or own.get("ma")):
+        return ""
+    t = "_z"
+    if own.get("ar"):
+        t += "ar" + ".".join(str(k) for k in sorted(own["ar"]))
+    if own.get("ma"):
+        t += "ma" + ".".join(str(k) for k in sorted(own["ma"]))
+    return t
+
+
+def v_path(out_dir, name, p=None, q=None, own=None):
+    tail = "" if p is None else f"_p{int(p)}q{int(q)}{_own_tag(own)}"
     return os.path.join(out_dir, f"{name}_v{tail}.inp")
 
 
-def write_v(out_dir, names, data, chars, freq, start, p=0, q=0, base=False):
+def write_v(out_dir, names, data, chars, freq, start, p=0, q=0, base=False, own=None):
     """Route V's specifications: each series' transformation, its harmonics,
     its mean when d = D = 0 and, unless `base`, a free regular AR(p)/MA(q) —
     with cross orders p, q the ladder is the full VARMA(p, q). Returns paths."""
@@ -454,10 +469,12 @@ def write_v(out_dir, names, data, chars, freq, start, p=0, q=0, base=False):
     out = []
     for j, nm in enumerate(names):
         c = chars[j]
-        path = v_path(out_dir, nm, None if base else p, None if base else q)
+        oz = (own or {}).get(nm, {})
+        path = v_path(out_dir, nm, None if base else p, None if base else q, oz)
         write_inp(path, nm, data[:, j], freq, start, c["lam"], c["d"], c.get("D", 0),
                   harmonics=c.get("harmonics", False),
                   mean=(c["d"] == 0 and c.get("D", 0) == 0),
-                  p=0 if base else int(p), q=0 if base else int(q), comment=V_PROVENANCE)
+                  p=0 if base else int(p), q=0 if base else int(q), comment=V_PROVENANCE,
+                  fixed_ar=oz.get("ar", ()), fixed_ma=oz.get("ma", ()))
         out.append(path)
     return out

@@ -281,3 +281,8 @@ against the analysts' models:
     forecasts.
 
   That is Tiao and Box's case for simplification: C comes next.
+
+**B and C (2026-10-02):** `structure` and `simplify` work on both routes (see
+STUDY-tiao-box §7). On route V they read Tiao and Box's gas furnace as they did:
+- no feedback at AR(6), the spurious one at AR(2);
+- 9 coefficients simplified away.

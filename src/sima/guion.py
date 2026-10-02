@@ -27,6 +27,8 @@ NODES = {
     "N3": "estimation of a candidate",
     "N4": "in-sample evidence (LR, residuals)",
     "N4b": "study of an ill-defined estimation",
+    "N4s": "simplification by coefficient (Tiao and Box)",
+    "N4t": "structure: simultaneous or a transfer network",
     "N5": "the yardstick: out-of-sample against the univariates",
     "N6": "use: forecast, IRF, FEVD",
 }

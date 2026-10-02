@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**28 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**30 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -32,7 +32,9 @@
 | [`record_decision`](#record-decision) | Record a decision, WHY, on WHAT evidence, and what was set aside. |
 | [`reorder`](#reorder) | N6 — The impulse responses under ANOTHER Cholesky order, against the files'. |
 | [`run_gate`](#run-gate) | N1 — The diagonal gate: does the joint cast reproduce the univariate models? |
+| [`simplify`](#simplify) | N4s — Tiao and Box's (1981, §4) simplification by coefficient, on the |
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
+| [`structure`](#structure) | N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
 | [`write_specs`](#write-specs) | N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector |
@@ -163,6 +165,7 @@ N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do,
 | `links` | string | no | `` |
 | `start` | string | no | `zero` |
 | `cross` | string | no | `additive` |
+| `zeros` | string | no | `` |
 
 N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
@@ -192,6 +195,12 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     residual form converged inside where the additive one stopped on the MA
     wall. identify_matrices' method 2 proposes it.
 
+    `zeros`: coefficients held at zero, by their printed names — Tiao and
+    Box's simplification (simplify proposes them): cross ones "AR3[A<-B],
+    MA1[B<-A]" on either route; a series' own "phi_A[B^4], theta_A[B^1]" on
+    route V only (route U's diagonal is the univariate model, art's). A fit
+    already made with the same arguments is reused, not refitted.
+
 ---
 
 ## `evaluate`
@@ -208,6 +217,7 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 | `diagcov` | boolean | no | `False` |
 | `links` | string | no | `` |
 | `cross` | string | no | `additive` |
+| `zeros` | string | no | `` |
 
 N5 — The yardstick: does the candidate forecast better than the univariates?
 
@@ -218,8 +228,8 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     gain here has no reason to exist, whatever its in-sample significance.
 
     `estwin` counts observations of the FIRST series; leave enough data after it
-    (at least a few dozen origins) or the comparison says little. `links`: as in
-    estimate, the same restricted candidate.
+    (at least a few dozen origins) or the comparison says little. `links` and
+    `zeros`: as in estimate, the same restricted candidate.
 
 ---
 
@@ -624,6 +634,26 @@ N1 — The diagonal gate: does the joint cast reproduce the univariate models?
 
 ---
 
+## `simplify`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `t` | number | no | `1.0` |
+
+N4s — Tiao and Box's (1981, §4) simplification by coefficient, on the
+    current fit: the cross coefficients (and, on route V, each series' own
+    AR/MA coefficients) with |t| < `t` are held at zero, the model is
+    refitted, and the restriction is tested by LR against the full fit, with
+    AIC and BIC. The restricted fit is cached: adopting it (the estimate call
+    in the menu) is instant. Route U's diagonal is never touched — it is the
+    univariate model, art's. Several rounds are normal (Tiao and Box simplified
+    the SCC model twice).
+
+---
+
 ## `split_inp`
 
 **Arguments**
@@ -643,6 +673,27 @@ Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series.
     asked, an estimated mean, seasonal harmonics, a free regular AR/MA). Take
     each one through art to build its univariate model, then come back with the
     .pre files: the univariate models are the seed and the yardstick.
+
+---
+
+## `structure`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `alpha` | number | no | `0.05` |
+
+N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On
+    the current fit: for each ordered pair, the LR test that series j does not
+    enter series i's equation (all its cross AR and MA lags at zero); with up
+    to 4 series, every triangular ordering (each series receives only from
+    those before it). If an ordering stands, the system is a TRANSFER
+    NETWORK — a triangular VARMA is a transfer function model — and sima
+    offers the hand-back to mtram with the same .pre files; it does not hand
+    back on its own. The verdict is only as good as the order of the fit:
+    Tiao and Box's gas furnace shows a spurious feedback at low order.
 
 ---
 
