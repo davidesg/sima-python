@@ -32,6 +32,8 @@ dependencies = [
     "drvarma>=0.2.0",
     # the reference parser of the univariate files, and the univariate cast
     "fue>=0.1.16",
+    # the one graphics engine of the ladder: residual panels and the forecast
+    "pyfug>=2.0.1",
     "numpy>=1.24",
     "scipy>=1.10",
     # mcp<2: mcp 2.0.0 removed `mcp.server.fastmcp` (art-tseries 0.1.3 shipped

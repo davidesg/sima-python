@@ -2,6 +2,18 @@
 
 ## 0.1.0 — unreleased
 
+
+### The forecast figure is fuf's, drawn by pyfug
+
+- `forecast_figure` draws each series with `pyfug.plot_forecast` (fufplot.c),
+  from `forecast_data`. The grid of «all» puts those figures side by side.
+  It used to be drawn here with pieces of `fue.plots` and
+  `fue.report_forecast`.
+- fuf's rule for what is drawn: λ ≥ 0 gives the annual change (a rate in %
+  under a log, the series' units otherwise); λ < 0 gives the level. sima
+  used to draw the level for every λ ≠ 0.
+- pyfug is a dependency.
+
 ### Tiao and Box's structure and simplification: `structure`, `simplify`
 
 - `estimate(..., zeros=)` holds coefficients at zero, by their printed names:
