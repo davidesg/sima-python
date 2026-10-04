@@ -801,7 +801,8 @@ def identify_cross(name: str, nlags: int = 0) -> str:
         return f"Run the gate first ({e})."
     freq = s.series[0].freq
     K = nlags or max(8, 2 * freq)
-    txt, facts = evidence.cross_identification(L.result.residuals, _names(s), K, freq)
+    txt, facts = evidence.cross_identification(L.result.residuals, _names(s), K, freq,
+                                               [x.n_arma() for x in L.series])
     s.guion.add("N2", "identify_cross", {"nlags": K},
                 f"short leads up to {facts['maxlag']}, longer {facts['longer']}, contemporaneous "
                 f"{'yes' if facts['contemporaneous'] else 'no'}")

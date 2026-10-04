@@ -3,6 +3,13 @@
 ## 0.1.0 — unreleased
 
 
+**Hosking's Q on residuals subtracts the ARMA coefficients** (drvarma
+BUG-0015). The estimation report (N3) uses `df = m²·s − k`, with k each
+series' own ARMA coefficients plus the free cross ones. The pair's Q in the
+cross identification (N2) uses `4·K − (k_i + k_j)`. It used `m²·s` and almost
+never rejected. Needs drvarma with `Ladder.n_arma()`. The residual-ccf figure
+keeps GraphMaker's `4(K − (p + q))`.
+
 **`sima --help` and `--version` answer and exit** (drvarma BUG-0014). They
 used to start the stdio server, so the command seemed to hang. Test:
 `tests/test_cli_help.py`.

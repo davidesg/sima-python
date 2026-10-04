@@ -80,7 +80,7 @@ def gate_text(gate, pre_move=1e-3):
 #  N2 — cross identification                                                   #
 # --------------------------------------------------------------------------- #
 
-def cross_identification(res, names, nlags, freq):
+def cross_identification(res, names, nlags, freq, n_arma=None):
     """CCFs of the residuals of the DIAGONAL system, pair by pair.
 
     Those residuals are each series' univariate innovations: prewhitened by
@@ -100,7 +100,10 @@ def cross_identification(res, names, nlags, freq):
     for i in range(m):
         for j in range(i + 1, m):
             rho = ccf(res[:, i], res[:, j], nlags)
-            Q, df, pv = qccf(res[:, i], res[:, j], nlags)
+            # drvarma BUG-0015: the pair's Q subtracts the two univariate
+            # models' ARMA coefficients (`n_arma`, one count per series).
+            k = (n_arma[i] + n_arma[j]) if n_arma is not None else 0
+            Q, df, pv = qccf(res[:, i], res[:, j], nlags, k)
             sig = [k - nlags for k in range(2 * nlags + 1) if abs(rho[k]) > band]
             r0 = rho[nlags]
             A, B = names[i], names[j]
@@ -653,7 +656,10 @@ def estimation_text(L, nlags):
         out.append(f"  {names[a]:<14}" + "".join(f"{sig[a, b] / (d[a] * d[b]):>9.3f}"
                                                for b in range(len(names))))
     if r.residuals is not None and r.residuals.shape[0] > nlags + 1:
-        Q, df, pv = hosking_q(r.residuals, nlags)
+        # drvarma BUG-0015: df = m^2 s minus the ARMA coefficients behind the
+        # residuals (each series' own and the cross ones); with m^2 s the test
+        # almost never rejected.
+        Q, df, pv = hosking_q(r.residuals, nlags, L.n_arma())
         out += ["", f"residuals: Hosking Q({nlags}) = {Q:.2f}, df = {df}, p = {pv:.4f}"
                 f"  ({'white noise not rejected' if pv > 0.05 else 'NOT white noise'})"]
     return "\n".join(out)
