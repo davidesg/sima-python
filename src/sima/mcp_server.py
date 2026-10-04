@@ -1883,7 +1883,32 @@ def split_inp(path: str, out_dir: str, mean: bool = True, harmonics: bool = Fals
             "come back with the .pre files.")
 
 
+def _cli_flags():
+    """-h/--help and --version answer and exit; without them `sima` would
+    start the stdio server and seem to hang (drvarma BUG-0014)."""
+    import sys
+    args = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in args):
+        print("usage: sima [-h] [--version]\n\n"
+              "sima: the MCP server for simultaneous VARMA models (engine: drvarma).\n"
+              "Speaks MCP over stdio: an MCP client (Claude Code, Claude Desktop)\n"
+              "starts it; run by hand it waits for a client on stdin.\n\n"
+              "options:\n"
+              "  -h, --help  show this message and exit\n"
+              "  --version   show the version and exit")
+        sys.exit(0)
+    if "--version" in args:
+        from importlib.metadata import PackageNotFoundError, version
+        try:
+            v = version("sima-tseries")
+        except PackageNotFoundError:
+            v = "unknown"
+        print(f"sima (sima-tseries) {v}")
+        sys.exit(0)
+
+
 def main():
+    _cli_flags()
     mcp.run()
 
 

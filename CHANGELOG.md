@@ -3,6 +3,10 @@
 ## 0.1.0 — unreleased
 
 
+**`sima --help` and `--version` answer and exit** (drvarma BUG-0014). They
+used to start the stdio server, so the command seemed to hang. Test:
+`tests/test_cli_help.py`.
+
 ### The forecast figure is fuf's, drawn by pyfug
 
 - `forecast_figure` draws each series with `pyfug.plot_forecast` (fufplot.c),
