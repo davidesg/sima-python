@@ -192,6 +192,47 @@ replacement. It is the start that makes it fit cleanly.
 
 ---
 
+## Part 4 · Route U: the flour prices and the IPC
+
+### 4.1 The flour prices (Tiao and Box's tools)
+
+The `flour_prices` example brings three univariate models: an MA(1) on the
+differenced logs for each city.
+
+    load_example("flour_prices"); run_gate(...); identify_echelon(...)
+
+The search on the differences chooses **(1, 0, 0)**, with both criteria. In
+log levels it chooses (1, 1, 1), Lütkepohl and Poskitt's own result on these
+data.
+
+The fit, `estimate(indices="1, 0, 0")`:
+- **converges** (termcode 1) with white residuals (Hosking p 0.99);
+- **11 parameters, logL −670.78**, against 14 and −671.34 for route U's
+  VAR(1);
+- **the own MA(1) of the univariate models is replaced** by each row's free
+  AR(n_i)/MA(n_i): Buffalo gets an ARMA(1, 1), and Minneapolis and Kansas
+  City none, linked to Buffalo through A_0.
+
+### 4.2 The IPC: a seasonal factor on the row
+
+Three monthly price indices (`tests/data/IPC_*_ext.pre`):
+- Germany: AR(3) × annual AR(1);
+- Spain: AR(1);
+- France: annual AR(1).
+
+The annual factors of Germany and France become their rows' factors, and
+the search runs on each row filtered by them.
+
+SC chooses **(0, 1, 1)** and HQ (0, 3, 1). SC's fit stops on the MA wall
+and its residuals are not white: the search underfits here, which
+`check_residuals` shows.
+
+THE ROW FACTOR'S CHECK on that fit gives LR 3.63, df 2, p 0.16. The annual
+factors hold on the whole rows. On (1, 1, 1) the check gives p 0.04, a
+marginal rejection.
+
+---
+
 ## References
 
 - E. J. Hannan and L. Kavalieris (1984), "Multivariate linear time series
