@@ -269,14 +269,29 @@ def test_the_echelon_form_on_the_gas_furnace(gas_v):
     assert "the files' order (InputGasRate, CO2)" in t
 
 
-def test_the_echelon_form_is_route_vs():
+def test_the_echelon_form_on_route_u():
+    """Jenkins and Alavi's muskrat and mink (route U, AR(6)/MA(1) and AR(4)):
+    the search says (3, 1), and the rows' own AR(n_i)/MA(n_i) replace the
+    univariate regular ARMA (drvarma Ladder own="free"); no seasonal factor,
+    so no factor check. The residual cross MA is not an echelon form."""
     import json
     ex = os.path.join(ROOT, "examples", "jenkins_alavi", "art")
     _fn(M.load_pre)("u_e", json.dumps([os.path.join(ex, "MUSKRAT_m03.pre"),
                                          os.path.join(ex, "MINK_m02.pre")]))
     _fn(M.run_gate)("u_e")
-    assert "The echelon form is route V's" in _fn(M.identify_echelon)("u_e")
-    assert "The echelon form is route V's" in _fn(M.estimate)("u_e", indices="1, 1")
+    t = _fn(M.identify_echelon)("u_e")
+    assert "Chosen by SC: MUSKRAT 3, MINK 1" in t
+    assert "ROUTE U: each row's own part is a free AR(n_i)/MA(n_i)" in t
+    e = _fn(M.estimate)("u_e", indices="1, 1")
+    assert "ROUTE U — the ECHELON FORM with Kronecker indices (MUSKRAT 1, MINK 1)" in e
+    assert "THE ROW FACTOR'S CHECK" not in e
+    s = M._sess.get("u_e")
+    L = s.fits[s.current]
+    own = [n for n in L.result.names if n.startswith(("phi", "theta"))]
+    assert own == ["phi_MUSKRAT[B^1]", "theta_MUSKRAT[B^1]", "phi_MINK[B^1]",
+                   "theta_MINK[B^1]"]
+    assert "not an echelon form" in _fn(M.estimate)("u_e", indices="1, 1",
+                                                    cross="residual")
 
 
 def test_route_u_never_simplifies_the_univariate_models():

@@ -66,15 +66,41 @@ seed found the indices in 0–49 % of simulated systems
 
 ## Part 2 · How sima implements it
 
-### 2.1 Route V only
+### 2.1 Both routes, and the row factor
 
-The echelon form is fitted on route V's specifications (`write_specs`): each
-series' file carries its transformation, and the system gives it a free
-AR(n_i)/MA(n_i) of its own. On route U the diagonal is the univariate model,
-whose degree (with seasonal factors, 13 and more) is not an echelon row's.
-sima refuses the form there and says so.
+On route V (`write_specs`) each series' file carries its transformation, and
+the system gives it a free AR(n_i)/MA(n_i) of its own.
+
+On route U each series brings its univariate model, and two things change
+(drvarma `docs/ECHELON_PLAN.md` §4).
+
+- **The regular ARMA is replaced** by the row's free AR(n_i)/MA(n_i). The
+  univariate orders are not the indices (§1.3).
+- **The seasonal and fixed-frequency factors become the row's FACTOR.**
+  They multiply the whole row, cross terms included:
+
+      F_i(B) [A(B) w]_i = G_i(B) [M(B) a]_i
+
+  The table keeps its meaning, because the echelon part of each row is
+  still of degree n_i.
+
+Putting the univariate model on the diagonal as it is does not work. Its
+degree is the row's, so the table's high cross lags lose their meaning. On
+muskrat and mink, the larger form (3, 1) ended below (2, 1).
+
+A factor on a whole row is an a priori simplification. Lütkepohl and Poskitt
+accept one only when it is checked, so `estimate` checks it.
+**THE ROW FACTOR'S CHECK** is an LR against the same rows with every
+position the factored product reaches free (own and cross). That fit starts
+at the factored optimum, so the LR cannot be negative. When the factor is
+rejected, compare the form with route U's VARMA(p, q), whose cross terms
+are not filtered by the seasonal factors.
 
 ### 2.2 `identify_echelon(max_index=3, criterion="SC")`
+
+On route U the search runs on each row filtered by its factor,
+(F_i/G_i)(B) w. Unfiltered, it misses: on simulated quarterly systems it
+returned (2, 3) for (1, 0).
 
 It prints the criterion table, every candidate with its dimension,
 log|Σ̃|, HQ and SC, and gives the choice with a menu:
@@ -111,8 +137,6 @@ as on any fit.
 
 ### 2.4 What sima does not do (yet)
 
-- **The echelon form on route U's models**, a seasonal univariate model as a
-  row factor. That is drvarma's stage 4, still to be reviewed.
 - **Choosing the order of the series.** The indices are those of the files'
   order. To try another order, open the data with the series in that order.
 

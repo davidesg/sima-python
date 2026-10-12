@@ -99,9 +99,11 @@ drvarma 0.2.0, see `docs/PUBLISHING.md`).
       - [x] **3. The echelon restriction table** (`Ladder(echelon=)`, A_0
             in the cast) and **5, the index search** (`drvarma.echelon`,
             with the least-squares start), folded into drvarma's 3a-3b.
-      - [ ] Review with the user: whether to go on to **4**, multiplicative
-            row factors with the LR against the unrestricted row (a route-U
-            seasonal diagonal in the echelon form).
+      - [x] **4. Multiplicative row factors** with the LR against the
+            unrestricted row (decided with the user 2026-10-12: the factor
+            multiplies the whole row; drvarma `ECHELON_PLAN.md` §4). Route U
+            in `identify_echelon` and `estimate(indices=)`, with the factor's
+            check.
 
 ## Later
 

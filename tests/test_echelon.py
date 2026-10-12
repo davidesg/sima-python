@@ -79,3 +79,30 @@ def test_what_is_refused(ech):
     assert "give 2, one per series" in _fn(M.estimate)("e10", indices="1")
     assert "leave them at 0" in _fn(M.estimate)("e10", 2, 2, indices="1, 0")
     assert "not a list of integers" in _fn(M.estimate)("e10", indices="one, zero")
+
+
+def test_a_seasonal_row_factor_on_route_u():
+    """Route U with seasonal models (the IPC .pre files: AR(3) x annual AR(1),
+    AR(1), annual AR(1)): the annual factors multiply their whole rows
+    (drvarma echelon stage 4), and estimate checks them by the LR against
+    the same rows with the factor's restriction dropped, which starts at
+    the fit's own likelihood."""
+    import json
+    import os
+    d = os.path.join(os.path.dirname(__file__), "data")
+    _fn(M.load_pre)("ipc_e", json.dumps([os.path.join(d, f"IPC_{c}_ext.pre")
+                                         for c in ("DE", "ES", "FR")]))
+    assert "GATE: PASSED" in _fn(M.run_gate)("ipc_e")
+    t = _fn(M.identify_echelon)("ipc_e")
+    assert "the search ran on each row filtered by them" in t
+    assert "IPC_DE, IPC_FR" in t
+    e = _fn(M.estimate)("ipc_e", indices="1, 1, 1")
+    assert "factors of IPC_DE, IPC_FR multiply their whole rows" in e
+    assert "THE ROW FACTOR'S CHECK" in e
+    s = M._sess.get("ipc_e")
+    L = s.fits[s.current]
+    assert "Phi_IPC_DE[B^12]" in L.result.names and "phi_IPC_DE[B^2]" not in L.result.names
+    ft = L.factor_check
+    assert ft["logL_start"] == pytest.approx(ft["logL"], abs=1e-5)
+    assert ft["df"] > 0 and ft["lr"] >= -1e-6
+    assert any(g.tool == "factor_test" for g in s.guion.entries)
