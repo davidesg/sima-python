@@ -96,6 +96,7 @@ def test_a_seasonal_row_factor_on_route_u():
     t = _fn(M.identify_echelon)("ipc_e")
     assert "the search ran on each row filtered by them" in t
     assert "IPC_DE, IPC_FR" in t
+    assert "pass 1: (" in t and "factors of the univariate models" in t
     e = _fn(M.estimate)("ipc_e", indices="1, 1, 1")
     assert "factors of IPC_DE, IPC_FR multiply their whole rows" in e
     assert "THE ROW FACTOR'S CHECK" in e

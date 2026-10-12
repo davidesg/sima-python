@@ -960,12 +960,16 @@ def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> st
     if criterion not in E.CRITERIA:
         return f"criterion must be one of {', '.join(E.CRITERIA)}."
     _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
-    filt = [tuple(x.split_polynomials()[2:4]) for x in L.series]
     factored = [nm for nm, x in zip(_names(s), L.series) if x.has_row_factor()]
+    hist = []
     try:
-        sr = E.search(W, n_max=int(max_index), criterion=criterion,
-                      filters=filt if factored else None)
-    except ValueError as e:
+        if factored:
+            from drvarma.ladder import search_row_factors
+            sr, hist = search_row_factors(s.files, n_max=int(max_index),
+                                          criterion=criterion)
+        else:
+            sr = E.search(W, n_max=int(max_index), criterion=criterion)
+    except Exception as e:                                   # noqa: BLE001
         return f"The search cannot run: {e}"
     names = _names(s)
     n = sr.indices
@@ -988,6 +992,13 @@ def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> st
                      "included, and the search ran on each row filtered by them. "
                      "estimate checks the factor with an LR test." if factored else ""),
                   ""]
+        if hist:
+            lines += ["The search in passes: the univariate factors first, then those of "
+                      "the exact-ML fit of each choice (a series' univariate model mixes "
+                      "the other rows' factors):"]
+            lines += [f"  pass {k + 1}: ({', '.join(map(str, nn))}), factors of the {src}"
+                      for k, (nn, src) in enumerate(hist)]
+            lines += [""]
     lines += ["## Options", "",
               f'(a) Fit it: estimate(name="{name}", indices="{ind}") — exact ML from the '
               "least-squares estimates of the search; then check_residuals and evaluate.",
