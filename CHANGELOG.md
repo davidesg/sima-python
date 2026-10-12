@@ -2,6 +2,28 @@
 
 ## 0.1.0 — unreleased
 
+### The third form: the echelon VARMA, `identify_echelon` and `estimate(indices=)`
+
+Lütkepohl and Poskitt's (1996) echelon form on route V. Needs drvarma's
+`Ladder(echelon=)` and `drvarma.echelon` (its stages 3a-3b).
+- `identify_echelon(max_index=3, criterion="SC")` searches the Kronecker
+  indices on the stationary vector: a long VAR, then least squares per
+  candidate. It prints the criterion table and a menu, says that the order
+  of the series is part of the form, and records the decision in the guion.
+- `estimate(name, indices="2, 2")` writes each series' spec with its own
+  AR(n_i)/MA(n_i) and fits the echelon form. It starts at the least-squares
+  estimates. `structure`, `simplify`, `check_residuals`, `evaluate(indices=)`,
+  `forecast` and `study_estimation` know the form: a fit key now carries the
+  indices.
+- Route U refuses it: its diagonal is the univariate model.
+- `estimate`'s `start` defaults to the Ladder's own: zero for the VARMA, as
+  before, and the least-squares estimates for the echelon form.
+
+Tests: `tests/test_echelon.py` (a simulated (1, 0) system) and the gas
+furnace in `tests/test_raw_entry.py`, where SC picks (2, 2), i.e. the
+VARMA(2, 2), which from this start converges where from zero it stops on
+the step size. Manual: `docs/MANUAL-echelon.md`.
+
 
 **Hosking's Q on residuals subtracts the ARMA coefficients** (drvarma
 BUG-0015). The estimation report (N3) uses `df = m²·s − k`, with k each

@@ -81,29 +81,27 @@ drvarma 0.2.0, see `docs/PUBLISHING.md`).
       - Postponed (decided 2026-10-11): D, ESCC for mixed orders (Tiao and
         Tsay 1983); and E2, the canonical analysis of the fitted model, which
         is optional.
-- [ ] **The echelon form, seeded from the univariate models** (drvarma
-      `docs/ECHELON_SEEDED_DESIGN.md`, §7). Stages 0-3 go into this version
-      (decided 2026-10-11). The design note predates the new sima and names
-      pieces of the old server (`characterize_series`, `_SEED`), so it has
-      to be placed on the Ladder first.
-      - [ ] **0. Test the assumption before building**, as §8 asks: do the
-            univariate orders predict the Kronecker indices? Simulate systems
-            with known indices, fit the univariates, and compare. If the seed
-            is systematically wrong, stop and rethink before stage 1.
+- [x] **The echelon form** (drvarma `docs/ECHELON_PLAN.md`; the seeded
+      design, `ECHELON_SEEDED_DESIGN.md`, was measured and dropped). Done
+      2026-10-12: `identify_echelon` and `estimate(indices=)` on route V,
+      tested on a simulated system and on the gas furnace;
+      `docs/MANUAL-echelon.md`.
+      - [x] **0. Test the assumption before building**, as §8 asks: do the
+            univariate orders predict the Kronecker indices? No: 0-49 %
+            (drvarma `docs/STUDY-echelon-seed.md`). The indices are searched
+            on the vector instead (Lutkepohl and Poskitt's stages I-II).
       - [x] **1. Seed the diagonal from the `.pre` models** (§3.2): the
             Ladder already does it. The diagonal of each row is the `.pre`'s
             own φᵢ(B)Φᵢ(Bˢ) and θᵢ(B)Θᵢ(Bˢ), kept as a product, and the gate
             requires the diagonal system evaluated there to give the sum of
             the univariate logLs. The check §7 asks for is the gate.
-      - [ ] **2. Unequal row orders**: p_i per equation, by zeroing rows
-            (on `zeros=`; the likelihood already accepts them). In the
-            Ladder, the degree of a row is the larger of its own diagonal
-            (from the `.pre`, seasonal lags included) and its cross terms.
-      - [ ] **3. The echelon restriction table**, which turns stage 2 into an
-            identified form.
-      - Review after stage 3: whether to go on to **4**, multiplicative row
-        factors with the LR against the unrestricted row, and **5**, the
-        index search.
+      - [x] **2. Unequal row orders**: drvarma's `Ladder(rows=)`.
+      - [x] **3. The echelon restriction table** (`Ladder(echelon=)`, A_0
+            in the cast) and **5, the index search** (`drvarma.echelon`,
+            with the least-squares start), folded into drvarma's 3a-3b.
+      - [ ] Review with the user: whether to go on to **4**, multiplicative
+            row factors with the LR against the unrestricted row (a route-U
+            seasonal diagonal in the echelon form).
 
 ## Later
 
