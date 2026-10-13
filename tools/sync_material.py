@@ -41,10 +41,12 @@ EXAMPLE_KEEP = (".pre", ".out", ".csv", ".md", ".json")
 def example_files(src):
     """The files of the worked examples that travel with the package: the
     manifest, the tutorial, the univariate models and the data — not the
-    walkthrough's outputs (out/, figs/) nor the guion it writes."""
+    walkthrough's outputs (out/, figs/), the guion it writes, nor route V's
+    specifications (<data>_sima/)."""
     out = []
     for dp, dns, fns in os.walk(src):
-        dns[:] = [d for d in dns if d not in ("out", "figs", "__pycache__")]
+        dns[:] = [d for d in dns if d not in ("out", "figs", "__pycache__")
+                  and not d.endswith("_sima")]
         for f in fns:
             if f.endswith(EXAMPLE_KEEP) and ".sima." not in f:
                 out.append(os.path.relpath(os.path.join(dp, f), src))
