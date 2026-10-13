@@ -498,9 +498,12 @@ def examples() -> str:
 @mcp.tool()
 def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "") -> str:
     """N0 for a worked example: copy its files to a working folder (`dest`,
-    default ~/sima-examples/<name>; files already there are kept) and load its
-    univariate models, as load_pre does. From here the analysis is the usual
-    one — run_gate, then node by node, the analyst deciding at every pause.
+    default ~/sima-examples/<name>; files already there are kept) and load
+    them. An example from univariate models loads them as load_pre does, and
+    goes on with run_gate. An example from RAW DATA (the vector first, as
+    Tiao and Box or Lutkepohl and Poskitt) loads the table as load_data does,
+    and goes on with characterize. From there the analysis is the usual one,
+    node by node, the analyst deciding at every pause.
 
     Before going on, READ its tutorial, `sima://example/<name>`: at each step
     it says what to look at and what the original analysis found, which you
@@ -517,7 +520,9 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
     src, m = ex
     dest = os.path.expanduser(dest or os.path.join("~", "sima-examples", name))
     kept = 0
-    for rel in list(m["files"]) + list(m.get("also", [])) + [m["tutorial"]]:
+    raw = m.get("raw")
+    for rel in (list(m.get("files", [])) + ([raw["data"]] if raw else [])
+                + list(m.get("also", [])) + [m["tutorial"]]):
         o, d = os.path.join(src, rel), os.path.join(dest, rel)
         os.makedirs(os.path.dirname(d), exist_ok=True)
         if os.path.exists(d):
@@ -525,8 +530,15 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
         else:
             shutil.copy2(o, d)
     session = session or name
-    files = [os.path.join(dest, r) for r in m["files"]]
-    loaded = _fn_load_pre(session, _json.dumps(files))
+    if raw:
+        loaded = getattr(load_data, "fn", load_data)(
+            session, os.path.join(dest, raw["data"]), int(raw.get("freq", 0)),
+            str(raw.get("start", "")))
+        what, nxt = "The data, loaded", f'characterize("{session}")'
+    else:
+        files = [os.path.join(dest, r) for r in m["files"]]
+        loaded = _fn_load_pre(session, _json.dumps(files))
+        what, nxt = "The univariate models, loaded", f'run_gate("{session}")'
     out = [f"# Worked example — {m['title']}", "", m["summary"], "",
            f"Files in `{dest}`" + (f" ({kept} already there, kept as they were)" if kept else "")
            + f"; session `{session}`.", "",
@@ -536,8 +548,8 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
            "lane, ONE node at a time: present each report as always, then add what "
            "the original analysis found at that step, and stop at the pause. The "
            f"method is explained in `sima://doc/{m['manual']}`.", "",
-           "## The univariate models, loaded", "", loaded, "",
-           f"Next: run_gate(\"{session}\")."]
+           f"## {what}", "", loaded, "",
+           f"Next: {nxt} — as the tutorial says."]
     return "\n".join(out)
 
 

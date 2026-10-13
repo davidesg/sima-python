@@ -393,12 +393,18 @@ Decisions (2026-10-02, the study's recommendations accepted):
    root: for an AR(1) component λ = φ² (Box and Tiao's x₅: λ 0.8868, φ 0.94),
    so that 0.90 is art's convention for an MA root, and the threshold on λ
    itself would have asked for a root of 0.95. Calibrate later.
-5. **Data and example:** the gas furnace and the hog moments are drvarma test
-   data (`tests/data/tiao_box/`, `tests/test_tiao_box.py`). The worked example is
-   the **flour prices** (`examples/flour_prices`, `load_example("flour_prices")`):
-   it shows A and E1 together, which the gas furnace cannot (both series are
-   stationary). Its univariate models were built with art's engine; the hog data
-   are not available.
+5. **Data and examples:** the gas furnace and the hog moments are drvarma test
+   data (`tests/data/tiao_box/`, `tests/test_tiao_box.py`). There are two worked
+   examples:
+   - **their own gas furnace** (`examples/tiao_box`, `load_example("tiao_box")`,
+     added 2026-10-13): route V from the raw table. It covers A, B and C: the
+     M(l) of Table 12, no feedback at AR(6) and the spurious one at AR(2) (Table
+     14), and their restricted AR(6) with the transfer weights of Table 13;
+   - **the flour prices** (`examples/flour_prices`, `load_example("flour_prices")`):
+     it shows A and E1 together, which the gas furnace cannot (both series are
+     stationary). Its univariate models were built with art's engine.
+
+   The hog data are not available.
 
 ## 7. Done (2026-10-02)
 

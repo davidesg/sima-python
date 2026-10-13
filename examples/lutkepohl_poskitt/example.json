@@ -1,0 +1,17 @@
+{
+  "name": "lutkepohl_poskitt",
+  "title": "The echelon form: Lütkepohl and Poskitt's flour prices",
+  "summary": "The echelon form on the data Lütkepohl and Poskitt (1996, §4.1) used to show it: monthly flour price indices in Buffalo, Minneapolis and Kansas City, 1972-1980, as rates of change, from the raw table on route V. The Kronecker indices are searched on the vector; sima's criteria choose (0, 0, 0) as theirs do, their (1, 1, 1) overfits, and their two restricted models of five coefficients come out with the same estimates and standard errors.",
+  "raw": {"data": "data/flour_prices.csv", "freq": 12},
+  "also": ["README.md"],
+  "tutorial": "TUTORIAL.md",
+  "manual": "MANUAL-echelon",
+  "plan": [
+    "N0c characterize — the rates of change (logs, d = 1), their transformation",
+    "N0v write_specs, N1 run_gate — route V: the vector first",
+    "N2 identify_echelon — the Kronecker indices: (0, 0, 0) by SC and HQ, (1, 1, 1) by AIC, as their Table 1",
+    "N3 estimate(indices=) — (0, 0, 0), then their (1, 1, 1): 18 coefficients, MA roots at 0.999",
+    "N3 simplify, estimate(zeros=) — their restricted VAR(1) and MA(1), five coefficients each (Table 2)",
+    "N4 check_residuals, N5 evaluate — clean residuals; out of sample, the univariates do as well"
+  ]
+}

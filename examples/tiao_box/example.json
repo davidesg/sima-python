@@ -1,0 +1,18 @@
+{
+  "name": "tiao_box",
+  "title": "Tiao and Box (1981): the gas furnace",
+  "summary": "Tiao and Box's method on their own example: Box and Jenkins' gas furnace, the input gas rate and the output CO2, from the raw table on route V, without telling the method which series is the input. The stepwise M(l) asks for an AR(6); its structure shows no feedback, a delay of three periods and the input's own AR(3), and their restricted AR(6) reproduces Box and Jenkins' transfer function. At AR(2) the same fit shows a feedback that is not there.",
+  "raw": {"data": "data/gas_furnace.csv", "freq": 1, "start": "1000"},
+  "also": ["README.md"],
+  "tutorial": "TUTORIAL.md",
+  "manual": "STUDY-tiao-box",
+  "plan": [
+    "N0c characterize — the levels, as Tiao and Box",
+    "N0v write_specs, N1 run_gate — route V: the vector first",
+    "N2 identify_matrices — Tiao and Box's stepwise M(l): an AR(6) (their Table 12)",
+    "N3 estimate, N4t structure — the VAR(6): no feedback, the gas drives the CO2",
+    "N3 estimate, N4t structure at AR(2) — the spurious feedback of their Table 14",
+    "N3 simplify, estimate(zeros=) — their restricted AR(6): the delay, the input's AR(3)",
+    "N4 check_residuals, N5 evaluate — the CO2 forecasts better with the gas"
+  ]
+}

@@ -105,6 +105,45 @@ drvarma 0.2.0, see `docs/PUBLISHING.md`).
             in `identify_echelon` and `estimate(indices=)`, with the factor's
             check.
 
+## The worked examples of the three forms (done 2026-10-13)
+
+- [x] `jenkins_alavi`: muskrat and mink, from art's univariate models.
+- [x] `tiao_box`: their gas furnace on route V, from the raw table. M(l) of
+      their Table 12, no feedback at AR(6), the spurious one at AR(2) (Table
+      14), their restricted AR(6) and the transfer weights of Table 13.
+- [x] `lutkepohl_poskitt`: their flour prices on route V, the differences of
+      the logs. SC and HQ give (0, 0, 0) as their Table 1; their (1, 1, 1)
+      and their two restricted models of five coefficients (Table 2), with
+      the same estimates and standard errors.
+- [x] `load_example` loads a raw table too (manifest key `raw`).
+- [x] `MANUAL-echelon.md`: it said that in log levels sima chooses (1, 1, 1),
+      "Lütkepohl and Poskitt's own result". Wrong: they work on the
+      differences of the logs, and there their HQ gives (0, 0, 0). Corrected;
+      Part 3 is now their example.
+
+## drvec — its MCP is sima (decided 2026-10-13)
+
+drvec (the VARMA-VEC; Johansen by exact ML) lives only in atsw-gui
+(`engines/drvec`); its Python port has not started. The plan:
+`atsw-gui/docs/PROCESOS-drvec.md`, with the processes, the oracle
+`drvec-v0.12`, the MCP's tools in §5.2 and the port's scope in §6. Like
+drtran-python, it reuses drvarma's Ladder and AS 311 engine and fue's cast;
+only the VEC cast is new.
+
+- **Its MCP is sima**, not a fourth assistant (the user, 2026-10-13).
+  PROCESOS §5.1 recommended a fourth one because drvec "starts from .pre, not
+  from raw series like sima". But sima's normal input is the `.pre` files;
+  the raw entry came later. The rest of what is particular to drvec is
+  content inside sima: the long-run question, the non-standard inference,
+  the tasks in the background.
+- **Order: sima 0.1.0 closes without the VEC**, with the three forms and
+  their examples. drvarma 0.2.0 and sima 0.1.0 are published, and the VEC
+  comes in sima 0.2.0 with the port. The tools are added, nothing that
+  exists changes.
+- [ ] In sima 0.2.0: the handover rule «≥ 2 I(1) series with feedback → test
+      the rank» after `canonical_analysis`, which today only names drvec;
+      the tools of PROCESOS §5.2, and a queue for the bootstrap tasks.
+
 ## Later
 
 - [ ] **Conditional forecasts** on a scenario for one series (the pass-through

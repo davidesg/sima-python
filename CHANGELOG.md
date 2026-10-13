@@ -2,6 +2,28 @@
 
 ## 0.1.0 — unreleased
 
+### The worked examples of Tiao and Box and of the echelon form
+
+Each of the three forms now has a worked example on its authors' own data,
+as Jenkins and Alavi's had:
+- `tiao_box`: Box and Jenkins' gas furnace, route V from the raw table. It
+  reproduces the M(l) of their Table 12, the absence of feedback at AR(6)
+  and the spurious feedback at AR(2) (Table 14), and their restricted AR(6)
+  (5.7), with transfer weights close to their Table 13.
+- `lutkepohl_poskitt`: the flour prices as rates of change, route V. SC and
+  HQ choose (0, 0, 0), as their Table 1 does. Their restricted VAR(1) and
+  MA(1) with five coefficients come out with their estimates and standard
+  errors (Table 2).
+- `load_example` loads a raw table too: the manifest's `raw` key gives the
+  file, the frequency and the start, and the analysis goes on from
+  `characterize`.
+- `tools/sync_material.py` leaves out route V's specifications (`<data>_sima/`).
+- `MANUAL-echelon.md`: Part 3 is now Lütkepohl and Poskitt's example. It
+  corrects a sentence that gave (1, 1, 1) in log levels as "their own
+  result": they work on the differences of the logs.
+
+Tests: `tests/test_examples_route_v.py`.
+
 ### The echelon form on route U: the row factor
 
 drvarma's echelon stage 4 (`docs/ECHELON_PLAN.md` §4) takes route U's models

@@ -465,9 +465,12 @@ N0r — RAW DATA: an analyst with series and no univariate models
 | `dest` | string | no | `` |
 
 N0 for a worked example: copy its files to a working folder (`dest`,
-    default ~/sima-examples/<name>; files already there are kept) and load its
-    univariate models, as load_pre does. From here the analysis is the usual
-    one — run_gate, then node by node, the analyst deciding at every pause.
+    default ~/sima-examples/<name>; files already there are kept) and load
+    them. An example from univariate models loads them as load_pre does, and
+    goes on with run_gate. An example from RAW DATA (the vector first, as
+    Tiao and Box or Lutkepohl and Poskitt) loads the table as load_data does,
+    and goes on with characterize. From there the analysis is the usual one,
+    node by node, the analyst deciding at every pause.
 
     Before going on, READ its tutorial, `sima://example/<name>`: at each step
     it says what to look at and what the original analysis found, which you
