@@ -187,8 +187,10 @@ long VAR has h = 6, Tiao and Box's order.
 
 - **(2, 2) has equal indices, so it is the VARMA(2, 2)**: the same optimum,
   −2649.24. From the least-squares start the optimiser converges on the
-  gradient in 111 iterations. From zero it stops on the step size, and warns
-  against trusting the standard errors.
+  gradient in 111 iterations (with other numpy and scipy versions it may stop
+  at the same optimum because the last step found no lower point). From
+  zero it stops on the step size, and warns against trusting the standard
+  errors.
 - **The gas enters the CO2 equation** at lags 1 and 2, in the AR and the MA.
   The CO2 enters the gas equation more weakly (AR1, AR2 and MA2 with
   |t| ≈ 2.6–3.3).

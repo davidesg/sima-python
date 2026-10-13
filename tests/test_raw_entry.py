@@ -252,16 +252,18 @@ def test_simplify_and_adopt(gas_v):
 
 def test_the_echelon_form_on_the_gas_furnace(gas_v):
     """identify_echelon: SC picks (2, 2), HQ (3, 2). With equal indices the
-    echelon form IS the VARMA(2, 2): the same optimum, -2649.24, but from the
-    least-squares start the search converges on the gradient, where from
-    zero it stops on the step size. On route U the form is refused."""
+    echelon form IS the VARMA(2, 2): the same optimum, -2649.24. From the
+    least-squares start the search converges on the gradient (termcode 1)
+    with Python 3.10's numpy and scipy; with 3.12's and 3.13's it stops at
+    the same optimum, the last step finding no lower point (3). On route U
+    the form is refused."""
     t = _fn(M.identify_echelon)("v_gf", max_index=6)
     assert "Chosen by SC: InputGasRate 2, CO2 2" in t and "HQ would choose (3, 2)" in t
     assert 'estimate(name="v_gf", indices="3, 2"), if the residuals of (a)' in t
     e = _fn(M.estimate)("v_gf", indices="2, 2")
     s = M._sess.get("v_gf")
     ech = s.fits[s.current].result
-    assert ech.logL == pytest.approx(-2649.2382, abs=1e-3) and ech.termcode == 1
+    assert ech.logL == pytest.approx(-2649.2382, abs=1e-3) and ech.termcode in (1, 3)
     assert "cross terms started at echelon" in e
     _fn(M.estimate)("v_gf", 2, 2)
     var = s.fits[s.current].result
