@@ -3,6 +3,10 @@ name: Tests
 # The assistant's battery against the engine it declares (drvarma >= 0.2.0).
 # Until drvarma 0.2.0 is on PyPI, `DRVARMA_SPEC` points at its repository,
 # built with GSL so the compiled likelihood is there, as in the wheels.
+# art (the raw entry's engine), fue (art's estimator) and pyfug (the figures)
+# come from their code,
+# the latest version, not from PyPI: the published releases lag behind what
+# sima calls (pyfug's plot_forecast, art's characterization, fue's fits).
 
 on:
   push:
@@ -12,6 +16,9 @@ on:
 
 env:
   DRVARMA_SPEC: "drvarma @ git+https://github.com/davidesg/drvarma-python@ladder"
+  FUE_SPEC: "fue @ git+https://github.com/davidesg/fue-python@master"
+  PYFUG_SPEC: "pyfug @ git+https://github.com/davidesg/pyfug@master"
+  ART_SPEC: "art-tseries @ git+https://github.com/davidesg/art-python@master"
 
 jobs:
   test:
@@ -30,8 +37,9 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "$DRVARMA_SPEC" cffi
-          python -m pip install -e ".[dev]"
+          python -m pip install "$DRVARMA_SPEC" "$FUE_SPEC" "$PYFUG_SPEC" cffi
+          python -m pip install "$ART_SPEC"
+          python -m pip install -e ".[dev,raw]"
       - name: The compiled engine is there (the ladder is ~250x slower without it)
         run: python -c "import drvarma._drvarma_engine"
       - name: Tests
