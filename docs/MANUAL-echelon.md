@@ -100,7 +100,21 @@ are not filtered by the seasonal factors.
 
 On route U the search runs on each row filtered by its factor,
 (F_i/G_i)(B) w. Unfiltered, it misses: on simulated quarterly systems it
-returned (2, 3) for (1, 0).
+found the indices in 0–6 % of the replications.
+
+The univariate factors are not the rows' factors when a series' marginal
+mixes the others'. So the search runs in passes (drvarma
+`search_row_factors`):
+1. the first pass uses the univariate factors;
+2. each next pass fits the previous choice by exact ML, which estimates
+   the factors jointly, and searches again with those;
+3. the passes stop when the choice repeats, and the report lists them.
+
+On drvarma's simulated systems (`docs/STUDY-echelon-rowfactor.md`):
+- one search with the univariate factors found (2, 1) in 28 % of the
+  replications;
+- the passes found it in 88 %, and the indices in 84–100 % in 16 of the
+  18 cells.
 
 It prints the criterion table, every candidate with its dimension,
 log|Σ̃|, HQ and SC, and gives the choice with a menu:

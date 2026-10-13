@@ -12,8 +12,9 @@ into the echelon form:
   (`Ladder(own="free")`).
 
 What changes in sima:
-- `identify_echelon` runs on route U, searching each row filtered by its
-  factor.
+- `identify_echelon` runs on route U. It searches each row filtered by its
+  factor, in passes (drvarma `search_row_factors`): first with the
+  univariate factors, then with those of the joint fit of each choice.
 - `estimate(indices=)` fits the form on route U. When a row carries a
   factor, it reports THE ROW FACTOR'S CHECK: the LR against the same rows
   with the factor's restriction dropped (`Ladder.factor_test`), recorded in
