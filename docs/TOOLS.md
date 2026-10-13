@@ -19,7 +19,7 @@
 | [`forecast`](#forecast) | N6 — Forecast every series in its level with the last estimated model. |
 | [`forecast_uncertainty`](#forecast-uncertainty) | N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their |
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
-| [`identify_echelon`](#identify-echelon) | N2 — ROUTE V: the third form, the ECHELON VARMA of Lutkepohl and Poskitt |
+| [`identify_echelon`](#identify-echelon) | N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996), |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_data`](#load-data) | N0r — RAW DATA: an analyst with series and no univariate models |
@@ -205,13 +205,16 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     route V only (route U's diagonal is the univariate model, art's). A fit
     already made with the same arguments is reused, not refitted.
 
-    `indices`: route V only — the ECHELON FORM with these Kronecker indices,
-    one per series in the files' order, e.g. "1, 2, 1" (identify_echelon
-    proposes them). Series i gets a free AR(n_i)/MA(n_i) of its own, the cross
-    terms follow Lutkepohl and Poskitt's (1996) table, and the
-    contemporaneous AR0[i<-j] terms make A_0 lower triangular: the order of
-    the series is part of the model. p and q are then max(n_i); leave them
-    at 0. `links` and `zeros` restrict it further.
+    `indices`: the ECHELON FORM with these Kronecker indices, one per series
+    in the files' order, e.g. "1, 2, 1" (identify_echelon proposes them).
+    Series i gets a free AR(n_i)/MA(n_i) of its own, the cross terms follow
+    Lutkepohl and Poskitt's (1996) table, and the contemporaneous AR0[i<-j]
+    terms make A_0 lower triangular: the order of the series is part of the
+    model. p and q are then max(n_i); leave them at 0. `links` and `zeros`
+    restrict it further. On route U the free AR(n_i)/MA(n_i) replaces the
+    univariate model's regular ARMA, and its seasonal and fixed-frequency
+    factors multiply the whole row (the row FACTOR), checked by an LR test
+    against the same rows with the factor's restriction dropped.
 
 ---
 
@@ -351,8 +354,8 @@ N2 — What the univariate models do NOT carry: residual cross-correlations.
 | `max_index` | integer | no | `3` |
 | `criterion` | string | no | `SC` |
 
-N2 — ROUTE V: the third form, the ECHELON VARMA of Lutkepohl and Poskitt
-    (1996), and its Kronecker indices from the data.
+N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996),
+    and its Kronecker indices from the data.
 
     The indices n_i are the row degrees of the system's unique echelon form:
     series i gets its own AR(n_i)/MA(n_i), and their table says which cross
@@ -372,6 +375,11 @@ N2 — ROUTE V: the third form, the ECHELON VARMA of Lutkepohl and Poskitt
     simulated systems (drvarma docs/STUDY-echelon-search.md): the true indices
     in 80-97 % of the replications, more with more data; weak cross dynamics
     are missed (the search underfits), which check_residuals then shows.
+
+    On ROUTE U each univariate model's seasonal and fixed-frequency factors
+    are its row's FACTOR (they multiply the whole row; drvarma's echelon
+    stage 4) and the search runs on each row filtered by them; the
+    univariate regular ARMA is replaced by the row's own AR(n_i)/MA(n_i).
 
 ---
 

@@ -66,15 +66,55 @@ seed found the indices in 0–49 % of simulated systems
 
 ## Part 2 · How sima implements it
 
-### 2.1 Route V only
+### 2.1 Both routes, and the row factor
 
-The echelon form is fitted on route V's specifications (`write_specs`): each
-series' file carries its transformation, and the system gives it a free
-AR(n_i)/MA(n_i) of its own. On route U the diagonal is the univariate model,
-whose degree (with seasonal factors, 13 and more) is not an echelon row's.
-sima refuses the form there and says so.
+On route V (`write_specs`) each series' file carries its transformation, and
+the system gives it a free AR(n_i)/MA(n_i) of its own.
+
+On route U each series brings its univariate model, and two things change
+(drvarma `docs/ECHELON_PLAN.md` §4).
+
+- **The regular ARMA is replaced** by the row's free AR(n_i)/MA(n_i). The
+  univariate orders are not the indices (§1.3).
+- **The seasonal and fixed-frequency factors become the row's FACTOR.**
+  They multiply the whole row, cross terms included:
+
+      F_i(B) [A(B) w]_i = G_i(B) [M(B) a]_i
+
+  The table keeps its meaning, because the echelon part of each row is
+  still of degree n_i.
+
+Putting the univariate model on the diagonal as it is does not work. Its
+degree is the row's, so the table's high cross lags lose their meaning. On
+muskrat and mink, the larger form (3, 1) ended below (2, 1).
+
+A factor on a whole row is an a priori simplification. Lütkepohl and Poskitt
+accept one only when it is checked, so `estimate` checks it.
+**THE ROW FACTOR'S CHECK** is an LR against the same rows with every
+position the factored product reaches free (own and cross). That fit starts
+at the factored optimum, so the LR cannot be negative. When the factor is
+rejected, compare the form with route U's VARMA(p, q), whose cross terms
+are not filtered by the seasonal factors.
 
 ### 2.2 `identify_echelon(max_index=3, criterion="SC")`
+
+On route U the search runs on each row filtered by its factor,
+(F_i/G_i)(B) w. Unfiltered, it misses: on simulated quarterly systems it
+found the indices in 0–6 % of the replications.
+
+The univariate factors are not the rows' factors when a series' marginal
+mixes the others'. So the search runs in passes (drvarma
+`search_row_factors`):
+1. the first pass uses the univariate factors;
+2. each next pass fits the previous choice by exact ML, which estimates
+   the factors jointly, and searches again with those;
+3. the passes stop when the choice repeats, and the report lists them.
+
+On drvarma's simulated systems (`docs/STUDY-echelon-rowfactor.md`):
+- one search with the univariate factors found (2, 1) in 28 % of the
+  replications;
+- the passes found it in 88 %, and the indices in 84–100 % in 16 of the
+  18 cells.
 
 It prints the criterion table, every candidate with its dimension,
 log|Σ̃|, HQ and SC, and gives the choice with a menu:
@@ -111,8 +151,6 @@ as on any fit.
 
 ### 2.4 What sima does not do (yet)
 
-- **The echelon form on route U's models**, a seasonal univariate model as a
-  row factor. That is drvarma's stage 4, still to be reviewed.
 - **Choosing the order of the series.** The indices are those of the files'
   order. To try another order, open the data with the series in that order.
 
@@ -165,6 +203,47 @@ The search points at a small identified model, and the analyst's comparison
 does the rest: the LR, the information criteria, `evaluate`. On these data
 the echelon form is a parsimonious rival to Tiao and Box's VAR(6), not a
 replacement. It is the start that makes it fit cleanly.
+
+---
+
+## Part 4 · Route U: the flour prices and the IPC
+
+### 4.1 The flour prices (Tiao and Box's tools)
+
+The `flour_prices` example brings three univariate models: an MA(1) on the
+differenced logs for each city.
+
+    load_example("flour_prices"); run_gate(...); identify_echelon(...)
+
+The search on the differences chooses **(1, 0, 0)**, with both criteria. In
+log levels it chooses (1, 1, 1), Lütkepohl and Poskitt's own result on these
+data.
+
+The fit, `estimate(indices="1, 0, 0")`:
+- **converges** (termcode 1) with white residuals (Hosking p 0.99);
+- **11 parameters, logL −670.78**, against 14 and −671.34 for route U's
+  VAR(1);
+- **the own MA(1) of the univariate models is replaced** by each row's free
+  AR(n_i)/MA(n_i): Buffalo gets an ARMA(1, 1), and Minneapolis and Kansas
+  City none, linked to Buffalo through A_0.
+
+### 4.2 The IPC: a seasonal factor on the row
+
+Three monthly price indices (`tests/data/IPC_*_ext.pre`):
+- Germany: AR(3) × annual AR(1);
+- Spain: AR(1);
+- France: annual AR(1).
+
+The annual factors of Germany and France become their rows' factors, and
+the search runs on each row filtered by them.
+
+SC chooses **(0, 1, 1)** and HQ (0, 3, 1). SC's fit stops on the MA wall
+and its residuals are not white: the search underfits here, which
+`check_residuals` shows.
+
+THE ROW FACTOR'S CHECK on that fit gives LR 3.63, df 2, p 0.16. The annual
+factors hold on the whole rows. On (1, 1, 1) the check gives p 0.04, a
+marginal rejection.
 
 ---
 
