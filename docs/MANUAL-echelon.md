@@ -4,9 +4,13 @@
 
 This chapter explains the third of sima's identification forms, the echelon
 VARMA of Lütkepohl and Poskitt (1996). It shows how sima finds its Kronecker
-indices and fits it, and works it through on Box and Jenkins' gas furnace,
-the data of the Tiao and Box route. The other two forms are Jenkins and
-Alavi's (`MANUAL-jenkins-alavi.md`) and Tiao and Box's (`STUDY-tiao-box.md`).
+indices and fits it. It works the form through on their own example, the
+flour prices: in a conversation, `load_example("lutkepohl_poskitt")` runs it
+node by node; in the repository, `examples/lutkepohl_poskitt/run.py` runs it
+in one go. Then on Box and Jenkins' gas furnace, the data of Tiao and Box's
+example. The other two forms are Jenkins and Alavi's
+(`MANUAL-jenkins-alavi.md`) and Tiao and Box's (`STUDY-tiao-box.md`), each
+with its worked example.
 
 > H. Lütkepohl and D. S. Poskitt (1996), "Specification of echelon-form VARMA
 > models", *Journal of Business & Economic Statistics* 14, 69–79.
@@ -156,9 +160,59 @@ as on any fit.
 
 ---
 
-## Part 3 · The worked example: the gas furnace
+## Part 3 · The worked example: Lütkepohl and Poskitt's flour prices
 
 ### 3.1 The data and the route
+
+The flour price indices of Buffalo, Minneapolis and Kansas City, monthly,
+1972–1980 (Tiao and Tsay 1989). Lütkepohl and Poskitt (§4.1) use "rates of
+change (first differences of logarithms)" and build no univariate models:
+route V.
+
+    load_example("lutkepohl_poskitt")          # the table, loaded
+    characterize(...); write_specs(...); run_gate(...)
+
+### 3.2 The indices
+
+`identify_echelon(max_index=6)`: SC and HQ choose **(0, 0, 0)**, with
+(1, 1, 1) second; AIC, from the same table, chooses (1, 1, 1). Their Table 1
+gives the same for the full search: HQ (0, 0, 0), AIC (1, 1, 1). They go on
+with (1, 1, 1), "an intermediate value".
+
+### 3.3 The fits
+
+| model | parameters | logL | log\|Σ̃\| | theirs (Table 2) |
+|---|---|---|---|---|
+| (0, 0, 0) | 5 | −687.91 | | |
+| (1, 1, 1), the VARMA(1, 1) | 23 | −659.17 | 4.744 | 4.725 |
+| restricted VAR(1), 5 coefficients | 10 | −669.13 | 5.000 | 4.985 |
+| restricted MA(1), 5 coefficients | 10 | −670.47 | 5.027 | 5.004 |
+
+(log|Σ̃| on sima's scale, 100 × the differences of the logs; theirs converted.)
+
+- **The (1, 1, 1) overfits**: most of its 18 coefficients are small, and a
+  pair of MA roots sits at modulus 0.999.
+- **Their restricted models come out with their estimates and standard
+  errors** to the second decimal. Each equation depends on the lagged
+  changes of Buffalo and Minneapolis only.
+- **The search's (0, 0, 0) underfits**: against the restricted VAR(1), LR
+  37.6 with 5 df, though Hosking's Q does not reject its residuals.
+- **Out of sample** the restricted VAR(1) gains little over the univariates
+  (RMSE ratios 0.94–1.03).
+
+### 3.4 What the example says
+
+The search gives a starting point, not a verdict. On these data both criteria
+underfit, as theirs do. The fits, the LR between them and the restrictions
+lead to a small identified model: five coefficients, against the 14
+parameters of Tiao and Tsay's scalar-component model. The tutorial,
+`sima://example/lutkepohl_poskitt`, follows it step by step.
+
+---
+
+## Part 4 · On Tiao and Box's data: the gas furnace
+
+### 4.1 The data and the route
 
 Box and Jenkins' Series J: the input gas rate and the output CO2, 296
 observations, in levels (d = 0, λ = 1 for the CO2). Route V, as in Tiao and
@@ -168,14 +222,14 @@ Box:
     characterize("gf", set="InputGasRate: d=0; CO2: lam=1, d=0")
     write_specs("gf"); run_gate("gf")
 
-### 3.2 The indices
+### 4.2 The indices
 
     identify_echelon("gf", max_index=6)
 
 SC chooses **(2, 2)** (log|Σ̃| 12.27, SC 12.59) and HQ **(3, 2)**. The
 long VAR has h = 6, Tiao and Box's order.
 
-### 3.3 The fits
+### 4.3 The fits
 
 | model | parameters | logL | AIC | BIC | Hosking Q(8) p |
 |---|---|---|---|---|---|
@@ -199,7 +253,7 @@ long VAR has h = 6, Tiao and Box's order.
   against the univariates are 0.61–0.76 for the CO2, against 0.62–0.78 for
   (2, 2), and 0.92–0.99 for the gas, against 0.98–1.08.
 
-### 3.4 What the example says
+### 4.4 What the example says
 
 The search points at a small identified model, and the analyst's comparison
 does the rest: the LR, the information criteria, `evaluate`. On these data
@@ -208,18 +262,19 @@ replacement. It is the start that makes it fit cleanly.
 
 ---
 
-## Part 4 · Route U: the flour prices and the IPC
+## Part 5 · Route U: the flour prices and the IPC
 
-### 4.1 The flour prices (Tiao and Box's tools)
+### 5.1 The flour prices (Tiao and Box's tools)
 
 The `flour_prices` example brings three univariate models: an MA(1) on the
 differenced logs for each city.
 
     load_example("flour_prices"); run_gate(...); identify_echelon(...)
 
-The search on the differences chooses **(1, 0, 0)**, with both criteria. In
-log levels it chooses (1, 1, 1), Lütkepohl and Poskitt's own result on these
-data.
+The search on the differences chooses **(1, 0, 0)**, with both criteria.
+That is the choice of Poskitt's procedure by HQ in Lütkepohl and Poskitt's
+Table 1, on the same differences. Route V on the same data, their own
+analysis, is Part 3.
 
 The fit, `estimate(indices="1, 0, 0")`:
 - **converges** (termcode 1) with white residuals (Hosking p 0.99);
@@ -229,7 +284,7 @@ The fit, `estimate(indices="1, 0, 0")`:
   AR(n_i)/MA(n_i): Buffalo gets an ARMA(1, 1), and Minneapolis and Kansas
   City none, linked to Buffalo through A_0.
 
-### 4.2 The IPC: a seasonal factor on the row
+### 5.2 The IPC: a seasonal factor on the row
 
 Three monthly price indices (`tests/data/IPC_*_ext.pre`):
 - Germany: AR(3) × annual AR(1);

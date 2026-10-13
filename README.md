@@ -56,10 +56,18 @@ See [`docs/DESIGN.md`](docs/DESIGN.md) and the generated tool reference
   Jenkins and Alavi (1981), how sima implements it tool by tool, and their
   muskrat-mink example worked through from art's univariate models — runnable
   in [`examples/jenkins_alavi/`](examples/jenkins_alavi/).
+* [Tiao and Box's method](docs/STUDY-tiao-box.md): the vector first, Tiao
+  and Box (1981) and Box and Tiao (1977): the stepwise M(l), the canonical
+  analysis of the levels, the structure and the simplification. Their gas
+  furnace is runnable in [`examples/tiao_box/`](examples/tiao_box/), and the
+  flour prices in [`examples/flour_prices/`](examples/flour_prices/).
 * [The echelon form](docs/MANUAL-echelon.md): Lütkepohl and Poskitt's (1996)
-  identified VARMA on route V: the Kronecker indices from the data
-  (`identify_echelon`), the fit (`estimate(indices=...)`), and Box and
-  Jenkins' gas furnace worked through.
+  identified VARMA: the Kronecker indices from the data (`identify_echelon`),
+  the fit (`estimate(indices=...)`), and their flour prices worked through,
+  runnable in [`examples/lutkepohl_poskitt/`](examples/lutkepohl_poskitt/).
+
+Each worked example runs node by node in a conversation with
+`load_example(<name>)` (`examples` lists them).
 
 ## Licence
 
