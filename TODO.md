@@ -50,16 +50,63 @@ missing, in order:
       `sima://defects/{id}` or `sima://engine-defects/{id}`, `sima://docs`.
       Packaged by `tools/sync_material.py` here and in drvarma.
 
+## The three VARMA identification forms — 0.1.0
+
+sima carries the three schools of multivariate identification. All three go
+into 0.1.0, and drvarma 0.2.0 is tagged once they are done (sima depends on
+drvarma 0.2.0, see `docs/PUBLISHING.md`).
+
+- [x] **Jenkins and Alavi (1981), phase 1** (`docs/DESIGN-jenkins-alavi.md`),
+      Python first, in the order A → B → E → D → C → F, all done:
+      - [x] A: the statistics (drvarma `identification_mv`);
+      - [x] B: `identify_matrices`;
+      - [x] E: their checking;
+      - [x] D: the preliminary estimates;
+      - [x] C: the residual-model form;
+      - [x] F: V(l) against the univariates;
+      - [x] validated on muskrat–mink.
+      - [ ] `docs/MANUAL-jenkins-alavi.md` §2.5 still says an own parameter
+            cannot be held at zero. `estimate(zeros=)` does that on route V
+            since Tiao and Box C: update it.
+- [x] **Tiao and Box (1981) and Box and Tiao (1977)**
+      (`docs/STUDY-tiao-box.md`; done 2026-10-02):
+      - [x] A: the stepwise autoregression table with M(l), `stepwise_ar`,
+            under method 1 in `identify_matrices`; gas furnace Table 12(b);
+      - [x] E1: the canonical analysis on the levels, `canonical_analysis`
+            (N1b); hog Tables 4.2 and 4.3;
+      - [x] B: the structural reading, `structure`: triangular orderings and
+            mtram offered, never taken;
+      - [x] C: simplification by coefficient, `simplify` and `zeros=`;
+      - [x] the flour prices example.
+      - Postponed (decided 2026-10-11): D, ESCC for mixed orders (Tiao and
+        Tsay 1983); and E2, the canonical analysis of the fitted model, which
+        is optional.
+- [x] **The echelon form** (drvarma `docs/ECHELON_PLAN.md`; the seeded
+      design, `ECHELON_SEEDED_DESIGN.md`, was measured and dropped). Done
+      2026-10-12: `identify_echelon` and `estimate(indices=)` on route V,
+      tested on a simulated system and on the gas furnace;
+      `docs/MANUAL-echelon.md`.
+      - [x] **0. Test the assumption before building**, as §8 asks: do the
+            univariate orders predict the Kronecker indices? No: 0-49 %
+            (drvarma `docs/STUDY-echelon-seed.md`). The indices are searched
+            on the vector instead (Lutkepohl and Poskitt's stages I-II).
+      - [x] **1. Seed the diagonal from the `.pre` models** (§3.2): the
+            Ladder already does it. The diagonal of each row is the `.pre`'s
+            own φᵢ(B)Φᵢ(Bˢ) and θᵢ(B)Θᵢ(Bˢ), kept as a product, and the gate
+            requires the diagonal system evaluated there to give the sum of
+            the univariate logLs. The check §7 asks for is the gate.
+      - [x] **2. Unequal row orders**: drvarma's `Ladder(rows=)`.
+      - [x] **3. The echelon restriction table** (`Ladder(echelon=)`, A_0
+            in the cast) and **5, the index search** (`drvarma.echelon`,
+            with the least-squares start), folded into drvarma's 3a-3b.
+      - [x] **4. Multiplicative row factors** with the LR against the
+            unrestricted row (decided with the user 2026-10-12: the factor
+            multiplies the whole row; drvarma `ECHELON_PLAN.md` §4). Route U
+            in `identify_echelon` and `estimate(indices=)`, with the factor's
+            check.
+
 ## Later
 
-- [ ] **Jenkins and Alavi (1981), phase 1** (`docs/DESIGN-jenkins-alavi.md`),
-      Python first, order A → B → E → D → C → F: [x] A statistics
-      (drvarma `identification_mv`), [x] B `identify_matrices`, [x] E their
-      checking, [x] D preliminary estimates, [x] C the residual-model form,
-      [x] F V(l) against the univariates; [x] validation on muskrat–mink.
-- [ ] **Echelon VARMA** (Kronecker indices) as a specification form: see
-      drvarma's `docs/ECHELON_SEEDED_DESIGN.md`. The specification should be a
-      file both engines read (like drtran's `.cns`), not code in one of them.
 - [ ] **Conditional forecasts** on a scenario for one series (the pass-through
       use: `MODELS_RESULTS.md` §4 of drvarma C).
 - [ ] With `estwin`, the gate says "not an optimum" when the reason is that the

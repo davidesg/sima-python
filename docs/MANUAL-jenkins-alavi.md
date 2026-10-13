@@ -218,11 +218,13 @@ decisions.
 
 ### 2.5 What sima does not do (yet)
 
-* **Deleting single parameters.** Jenkins and Alavi deleted the small ones
-  after estimation. sima restricts cross terms by pair (`links`), but cannot
-  yet fix an individual own parameter of a series at zero inside the system.
-* **The echelon form** (Kronecker indices) is phase 2, built on these
-  statistics.
+* **Deleting a univariate model's own parameters inside the system.**
+  Jenkins and Alavi deleted the small ones after estimation. sima deletes
+  single cross coefficients (`zeros`, proposed by `simplify`), but on route U
+  the diagonal is the univariate model, art's: an own parameter is
+  simplified there, not in the system.
+* **The echelon form** (Kronecker indices) is fitted on route V, not on the
+  univariate models: see `MANUAL-echelon.md`.
 
 ---
 

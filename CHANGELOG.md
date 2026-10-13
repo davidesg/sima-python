@@ -2,6 +2,57 @@
 
 ## 0.1.0 — unreleased
 
+### The echelon form on route U: the row factor
+
+drvarma's echelon stage 4 (`docs/ECHELON_PLAN.md` §4) takes route U's models
+into the echelon form:
+- the seasonal and fixed-frequency factors of each `.pre` multiply its whole
+  row (the row FACTOR);
+- its regular ARMA is replaced by the row's free AR(n_i)/MA(n_i)
+  (`Ladder(own="free")`).
+
+What changes in sima:
+- `identify_echelon` runs on route U. It searches each row filtered by its
+  factor, in passes (drvarma `search_row_factors`): first with the
+  univariate factors, then with those of the joint fit of each choice.
+- `estimate(indices=)` fits the form on route U. When a row carries a
+  factor, it reports THE ROW FACTOR'S CHECK: the LR against the same rows
+  with the factor's restriction dropped (`Ladder.factor_test`), recorded in
+  the guion.
+- `cross="residual"` is refused with indices on either route.
+
+On the examples:
+- the flour prices (route U) give (1, 0, 0), which converges with white
+  residuals;
+- muskrat and mink give (3, 1);
+- in the IPC the factor holds (p 0.16).
+
+Tests: route U's echelon form on muskrat and mink (`tests/test_raw_entry.py`)
+and on the IPC with its annual factors (`tests/test_echelon.py`).
+
+### The third form: the echelon VARMA, `identify_echelon` and `estimate(indices=)`
+
+Lütkepohl and Poskitt's (1996) echelon form on route V. Needs drvarma's
+`Ladder(echelon=)` and `drvarma.echelon` (its stages 3a-3b).
+- `identify_echelon(max_index=3, criterion="SC")` searches the Kronecker
+  indices on the stationary vector: a long VAR, then least squares per
+  candidate. It prints the criterion table and a menu, says that the order
+  of the series is part of the form, and records the decision in the guion.
+- `estimate(name, indices="2, 2")` writes each series' spec with its own
+  AR(n_i)/MA(n_i) and fits the echelon form. It starts at the least-squares
+  estimates. `structure`, `simplify`, `check_residuals`, `evaluate(indices=)`,
+  `forecast` and `study_estimation` know the form: a fit key now carries the
+  indices.
+- Route U refused it then: its diagonal is the univariate model. The row
+  factor (above) lifts that.
+- `estimate`'s `start` defaults to the Ladder's own: zero for the VARMA, as
+  before, and the least-squares estimates for the echelon form.
+
+Tests: `tests/test_echelon.py` (a simulated (1, 0) system) and the gas
+furnace in `tests/test_raw_entry.py`, where SC picks (2, 2), i.e. the
+VARMA(2, 2), which from this start converges where from zero it stops on
+the step size. Manual: `docs/MANUAL-echelon.md`.
+
 
 **Hosking's Q on residuals subtracts the ARMA coefficients** (drvarma
 BUG-0015). The estimation report (N3) uses `df = m²·s − k`, with k each

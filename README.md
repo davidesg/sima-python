@@ -56,6 +56,10 @@ See [`docs/DESIGN.md`](docs/DESIGN.md) and the generated tool reference
   Jenkins and Alavi (1981), how sima implements it tool by tool, and their
   muskrat-mink example worked through from art's univariate models — runnable
   in [`examples/jenkins_alavi/`](examples/jenkins_alavi/).
+* [The echelon form](docs/MANUAL-echelon.md): Lütkepohl and Poskitt's (1996)
+  identified VARMA on route V: the Kronecker indices from the data
+  (`identify_echelon`), the fit (`estimate(indices=...)`), and Box and
+  Jenkins' gas furnace worked through.
 
 ## Licence
 

@@ -610,7 +610,10 @@ def estimation_text(L, nlags):
     r = L.result
     names = [s.name for s in L.series]
     links = getattr(L, "links", None)
-    out = [f"ESTIMATED: cross orders p = {L.p}, q = {L.q}, "
+    ech = getattr(L, "echelon", None)
+    head = (f"echelon form, Kronecker indices ({', '.join(map(str, ech))})" if ech
+            else f"cross orders p = {L.p}, q = {L.q}")
+    out = [f"ESTIMATED: {head}, "
            f"{'diagonal' if L.diagcov else 'full'} innovation covariance"
            + ("; cross MA in the residual-model form (Jenkins-Alavi 3.22)"
               if getattr(L, "cross", "additive") == "residual" else ""),

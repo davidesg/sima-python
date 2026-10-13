@@ -248,6 +248,52 @@ def test_simplify_and_adopt(gas_v):
     assert os.path.exists(os.path.join(d, "CO2_v_p6q0_zar5.inp"))
 
 
+# ── the echelon form (Lutkepohl and Poskitt) ────────────────────────────────
+
+def test_the_echelon_form_on_the_gas_furnace(gas_v):
+    """identify_echelon: SC picks (2, 2), HQ (3, 2). With equal indices the
+    echelon form IS the VARMA(2, 2): the same optimum, -2649.24, but from the
+    least-squares start the search converges on the gradient, where from
+    zero it stops on the step size. On route U the form is refused."""
+    t = _fn(M.identify_echelon)("v_gf", max_index=6)
+    assert "Chosen by SC: InputGasRate 2, CO2 2" in t and "HQ would choose (3, 2)" in t
+    assert 'estimate(name="v_gf", indices="3, 2"), if the residuals of (a)' in t
+    e = _fn(M.estimate)("v_gf", indices="2, 2")
+    s = M._sess.get("v_gf")
+    ech = s.fits[s.current].result
+    assert ech.logL == pytest.approx(-2649.2382, abs=1e-3) and ech.termcode == 1
+    assert "cross terms started at echelon" in e
+    _fn(M.estimate)("v_gf", 2, 2)
+    var = s.fits[s.current].result
+    assert var.logL == pytest.approx(ech.logL, abs=1e-3) and var.npar == ech.npar
+    assert "the files' order (InputGasRate, CO2)" in t
+
+
+def test_the_echelon_form_on_route_u():
+    """Jenkins and Alavi's muskrat and mink (route U, AR(6)/MA(1) and AR(4)):
+    the search says (3, 1), and the rows' own AR(n_i)/MA(n_i) replace the
+    univariate regular ARMA (drvarma Ladder own="free"); no seasonal factor,
+    so no factor check. The residual cross MA is not an echelon form."""
+    import json
+    ex = os.path.join(ROOT, "examples", "jenkins_alavi", "art")
+    _fn(M.load_pre)("u_e", json.dumps([os.path.join(ex, "MUSKRAT_m03.pre"),
+                                         os.path.join(ex, "MINK_m02.pre")]))
+    _fn(M.run_gate)("u_e")
+    t = _fn(M.identify_echelon)("u_e")
+    assert "Chosen by SC: MUSKRAT 3, MINK 1" in t
+    assert "ROUTE U: each row's own part is a free AR(n_i)/MA(n_i)" in t
+    e = _fn(M.estimate)("u_e", indices="1, 1")
+    assert "ROUTE U — the ECHELON FORM with Kronecker indices (MUSKRAT 1, MINK 1)" in e
+    assert "THE ROW FACTOR'S CHECK" not in e
+    s = M._sess.get("u_e")
+    L = s.fits[s.current]
+    own = [n for n in L.result.names if n.startswith(("phi", "theta"))]
+    assert own == ["phi_MUSKRAT[B^1]", "theta_MUSKRAT[B^1]", "phi_MINK[B^1]",
+                   "theta_MINK[B^1]"]
+    assert "not an echelon form" in _fn(M.estimate)("u_e", indices="1, 1",
+                                                    cross="residual")
+
+
 def test_route_u_never_simplifies_the_univariate_models():
     """On route U the diagonal is art's: simplify proposes cross terms only,
     and an own zero is refused."""

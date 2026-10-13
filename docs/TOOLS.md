@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**30 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**31 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -19,6 +19,7 @@
 | [`forecast`](#forecast) | N6 — Forecast every series in its level with the last estimated model. |
 | [`forecast_uncertainty`](#forecast-uncertainty) | N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their |
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
+| [`identify_echelon`](#identify-echelon) | N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996), |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
 | [`load_data`](#load-data) | N0r — RAW DATA: an analyst with series and no univariate models |
@@ -158,14 +159,15 @@ N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do,
 | name | type | required | default |
 |---|---|---|---|
 | `name` | string | yes | — |
-| `p` | integer | yes | — |
-| `q` | integer | yes | — |
+| `p` | integer | no | `0` |
+| `q` | integer | no | `0` |
 | `diagcov` | boolean | no | `False` |
 | `reason` | string | no | `` |
 | `links` | string | no | `` |
-| `start` | string | no | `zero` |
+| `start` | string | no | `` |
 | `cross` | string | no | `additive` |
 | `zeros` | string | no | `` |
+| `indices` | string | no | `` |
 
 N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
@@ -181,11 +183,13 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     q; names as in identify_cross). Empty (default): every pair. identify_cross
     proposes it as option (d) when only some pairs showed anything.
 
-    `start`: where the cross terms start — "zero" (default) or "preliminary",
-    Jenkins and Alavi's preliminary estimates (the cross MA from the
-    univariate residuals' cross covariances, the cross AR from Yule-Walker).
-    Usually the same optimum in fewer iterations; on an ill-defined estimation
-    (the MA wall) a second path worth comparing.
+    `start`: where the cross terms start — "zero" (the default for the
+    VARMA) or "preliminary", Jenkins and Alavi's preliminary estimates (the
+    cross MA from the univariate residuals' cross covariances, the cross AR
+    from Yule-Walker). Usually the same optimum in fewer iterations; on an
+    ill-defined estimation (the MA wall) a second path worth comparing. The
+    echelon form starts at Lutkepohl and Poskitt's least-squares estimates
+    ("echelon", its default).
 
     `cross`: how the cross MA enters — "additive" (default: a cross polynomial
     beside the univariate operators) or "residual", Jenkins and Alavi's form
@@ -201,6 +205,17 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     route V only (route U's diagonal is the univariate model, art's). A fit
     already made with the same arguments is reused, not refitted.
 
+    `indices`: the ECHELON FORM with these Kronecker indices, one per series
+    in the files' order, e.g. "1, 2, 1" (identify_echelon proposes them).
+    Series i gets a free AR(n_i)/MA(n_i) of its own, the cross terms follow
+    Lutkepohl and Poskitt's (1996) table, and the contemporaneous AR0[i<-j]
+    terms make A_0 lower triangular: the order of the series is part of the
+    model. p and q are then max(n_i); leave them at 0. `links` and `zeros`
+    restrict it further. On route U the free AR(n_i)/MA(n_i) replaces the
+    univariate model's regular ARMA, and its seasonal and fixed-frequency
+    factors multiply the whole row (the row FACTOR), checked by an LR test
+    against the same rows with the factor's restriction dropped.
+
 ---
 
 ## `evaluate`
@@ -210,14 +225,15 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 | name | type | required | default |
 |---|---|---|---|
 | `name` | string | yes | — |
-| `p` | integer | yes | — |
-| `q` | integer | yes | — |
-| `estwin` | integer | yes | — |
+| `p` | integer | no | `0` |
+| `q` | integer | no | `0` |
+| `estwin` | integer | no | `0` |
 | `horizon` | integer | no | `12` |
 | `diagcov` | boolean | no | `False` |
 | `links` | string | no | `` |
 | `cross` | string | no | `additive` |
 | `zeros` | string | no | `` |
+| `indices` | string | no | `` |
 
 N5 — The yardstick: does the candidate forecast better than the univariates?
 
@@ -228,8 +244,8 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     gain here has no reason to exist, whatever its in-sample significance.
 
     `estwin` counts observations of the FIRST series; leave enough data after it
-    (at least a few dozen origins) or the comparison says little. `links` and
-    `zeros`: as in estimate, the same restricted candidate.
+    (at least a few dozen origins) or the comparison says little. `links`,
+    `zeros` and `indices`: as in estimate, the same candidate.
 
 ---
 
@@ -325,6 +341,45 @@ N2 — What the univariate models do NOT carry: residual cross-correlations.
     and the menu of candidates, each with its argument. It does not choose.
 
     `nlags` defaults to twice the frequency (24 for monthly data).
+
+---
+
+## `identify_echelon`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `max_index` | integer | no | `3` |
+| `criterion` | string | no | `SC` |
+
+N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996),
+    and its Kronecker indices from the data.
+
+    The indices n_i are the row degrees of the system's unique echelon form:
+    series i gets its own AR(n_i)/MA(n_i), and their table says which cross
+    terms are free, the contemporaneous ones included. Unlike the VARMA(p, q),
+    the form is identified: no common factors, no MA driven to the wall by
+    spare parameters. The univariate orders do NOT give the indices (every
+    component's marginal is ARMA(N, N), N = the sum of the indices), so they
+    are searched on the stationary vector: a long VAR (its residuals stand
+    for the innovations), then least squares on each candidate's echelon form
+    with one round of Hannan and Kavalieris' correction, and a criterion. SC
+    (default) or HQ, which overfits. Every candidate with each index in
+    0..`max_index` while there are at most 256, Hannan and Kavalieris' two
+    steps beyond.
+
+    The ORDER of the series is part of the echelon form (A_0 is lower
+    triangular): the indices are those of the files' order. Measured on
+    simulated systems (drvarma docs/STUDY-echelon-search.md): the true indices
+    in 80-97 % of the replications, more with more data; weak cross dynamics
+    are missed (the search underfits), which check_residuals then shows.
+
+    On ROUTE U each univariate model's seasonal and fixed-frequency factors
+    are its row's FACTOR (they multiply the whole row; drvarma's echelon
+    stage 4) and the search runs on each row filtered by them; the
+    univariate regular ARMA is replaced by the row's own AR(n_i)/MA(n_i).
 
 ---
 

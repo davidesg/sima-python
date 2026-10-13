@@ -106,9 +106,16 @@ N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       both, as they did.
     plot_identification  their figure, pair by pair: R_k over S_k, two-sided, in
                       GraphMaker's CCF panel, method=2 (prewhitened) or 1 (not).
+    identify_echelon  the third form, Lutkepohl and Poskitt's (1996) echelon
+                      VARMA. Its Kronecker indices from the data (a long VAR,
+                      then least squares per candidate, SC). The order of the
+                      series is part of the model. On route U the models'
+                      seasonal factors multiply their whole rows.
 N3  estimate          a candidate: cross orders p, q; full or diagonal
                       covariance; optionally `links`, the cross dynamics only
                       on the pairs identify_cross found (its option (d)).
+                      `indices` fits the echelon form instead (route U: with
+                      the row factor's LR check).
 N4  (in estimate)     LR against the univariates, residuals, convergence.
     check_residuals   Jenkins and Alavi's checking: large residuals on the
                       uncorrelated transformed residuals (with dates, the entry
@@ -223,7 +230,8 @@ RULES THAT ARE NOT NEGOTIATED
 8. Resources to ASK for when needed: sima://protocol (this text),
    sima://defects (sima's and the engine's defect registers; one report with
    sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
-   user manual: sima://doc/MANUAL-jenkins-alavi), sima://examples and
+   user manual: sima://doc/MANUAL-jenkins-alavi and
+   sima://doc/MANUAL-echelon), sima://examples and
    sima://example/<name> (a worked example's tutorial).
 """
 
@@ -295,12 +303,19 @@ def _r_doc(name: str) -> str:
     return doc(name)
 
 
-def _ladder(files, p, q, diagcov, estwin=None, links=None, start="zero",
-            cross="additive", zeros=None, lik="elf"):
+def _ladder(files, p, q, diagcov, estwin=None, links=None, start=None,
+            cross="additive", zeros=None, lik="elf", echelon=None, own="spec"):
+    """start None: the Ladder's default (zero; the stage II estimates for
+    the echelon form). own "free": the echelon rows' own part replaces each
+    univariate model's regular ARMA (route U)."""
     from drvarma.ladder import Ladder
+    if echelon:
+        p = q = 0                       # the indices give the orders
     return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
                   links=links or None, start=start, cross=cross,
-                  zeros=list(zeros) if zeros else None, lik=lik)
+                  zeros=list(zeros) if zeros else None, lik=lik,
+                  echelon=tuple(echelon) if echelon else None,
+                  own=own if echelon else "spec")
 
 
 _OWN = re.compile(r"(phi|theta)_(.+)\[B\^(\d+)\]")
@@ -334,12 +349,70 @@ def _split_zeros(s, zeros):
     return cross, own
 
 
-def _model_ladder(s, key, estwin=None, start="zero", lik="elf"):
-    """The Ladder of a fit key (p, q, diagcov, links, cross, zeros) on its files."""
-    p, q, dc, lk, cr, zs = key
+def _key(p, q, diagcov=False, links="", cross="additive", zeros=(), indices=()):
+    """A fit key: (p, q, diagcov, links, cross, zeros, indices). `indices`
+    is () for the VARMA(p, q), the Kronecker indices for the echelon form
+    (then p = q = their maximum)."""
+    ech = tuple(int(k) for k in indices)
+    if ech:
+        p = q = max(ech)
+    return (int(p), int(q), bool(diagcov), links, cross, zeros, ech)
+
+
+def _indices(text):
+    """The Kronecker indices from "1, 2, 1", "(1,2,1)" or a list: a tuple."""
+    if not text:
+        return ()
+    if isinstance(text, (list, tuple)):
+        return tuple(int(k) for k in text)
+    toks = re.findall(r"-?\d+", str(text))
+    if not toks or re.sub(r"[\d\s,()\[\]-]", "", str(text)):
+        raise ValueError(f"indices: '{text}' is not a list of integers, e.g. \"1, 2, 1\"")
+    return tuple(int(k) for k in toks)
+
+
+def _model_ladder(s, key, estwin=None, start=None, lik="elf"):
+    """The Ladder of a fit key (p, q, diagcov, links, cross, zeros, indices)
+    on its files."""
+    p, q, dc, lk, cr, zs, ech = key
     cross, own = _split_zeros(s, zs)
-    return _ladder(_files_for(s, p, q, own), p, q, dc, estwin=estwin, links=lk,
-                   start=start, cross=cr, zeros=cross, lik=lik)
+    files = _files_for(s, p, q, own, orders=ech or None)
+    return _ladder(files, p, q, dc, estwin=estwin, links=lk, start=start, cross=cr,
+                   zeros=cross, lik=lik, echelon=ech or None,
+                   own="free" if (ech and s.route != "V") else "spec")
+
+
+def _factor_check(s, L):
+    """The row factor's LR test (drvarma Ladder.factor_test), once per fit:
+    its text, recorded in the guion."""
+    if getattr(L, "factor_check", None) is None:
+        try:
+            L.factor_check = L.factor_test()
+        except Exception as e:                               # noqa: BLE001
+            return f"THE ROW FACTOR'S CHECK could not run: {e}"
+    t = L.factor_check
+    if t["df"] <= 0:
+        return ("THE ROW FACTOR'S CHECK: the factored rows have no cross terms to share "
+                "it (index 0, or links and zeros removed them), so each factor is its "
+                "univariate model's: nothing to test here (art checks it).")
+    fr = t["free"].result
+    head = (f"THE ROW FACTOR'S CHECK — the same rows with every position the factored "
+            f"product reaches free: LR {t['lr']:.2f}, df {t['df']}, p {t['p']:.4f} "
+            f"(logL {t['logL']:.2f} -> {t['logL_free']:.2f}).")
+    if fr.termcode not in (1, 2):
+        head += (f" The free rows' optimiser stopped with termcode {fr.termcode}: it "
+                 "started at this fit, so the LR is a lower bound.")
+    if t["p"] >= 0.05:
+        read = ("The factor holds: these rows keep the univariate models' seasonal "
+                "structure, the cross terms included.")
+    else:
+        read = ("The data reject the factor: the seasonality of these rows is not the "
+                "univariate models', once the cross terms share it. Compare with the "
+                "VARMA(p, q) of route U, where the seasonal factors stay on the diagonal "
+                "and the cross terms are not filtered by them.")
+    s.guion.add("N3", "factor_test", {}, f"LR {t['lr']:.2f} df {t['df']} p {t['p']:.4f}")
+    return ("A seasonal factor on a whole row is an a priori simplification, which "
+            "Lutkepohl and Poskitt accept only when it is checked.\n" + head + "\n" + read)
 
 
 def _links(links):
@@ -373,19 +446,27 @@ def _diagonal(s):
     return s.diagonal
 
 
-def _files_for(s, p, q, own=None):
+def _files_for(s, p, q, own=None, orders=None):
     """The files a candidate is estimated on. Route U: the session's (the
     univariate models on the diagonal). Route V: each series' specification
     with a free AR(p)/MA(q) of its own, written once per order — with cross
-    orders p, q the ladder is the full VARMA(p, q), Tiao and Box's model."""
+    orders p, q the ladder is the full VARMA(p, q), Tiao and Box's model.
+    `orders`: one degree per series instead (the echelon form's indices:
+    series i gets a free AR(n_i)/MA(n_i))."""
     if s.route != "V":
         return s.files
     from . import raw
     r = _sess.get_raw(s.v["raw"])
     own = own or {}
-    paths = [raw.v_path(s.v["dir"], nm, p, q, own.get(nm)) for nm in r.names]
-    if not all(os.path.exists(x) for x in paths):
-        raw.write_v(s.v["dir"], r.names, r.data, r.chars, r.freq, r.start, p, q, own=own)
+    deg = list(orders) if orders else [None] * len(r.names)
+    paths = []
+    for j, nm in enumerate(r.names):
+        pj, qj = (p, q) if deg[j] is None else (deg[j], deg[j])
+        path = raw.v_path(s.v["dir"], nm, pj, qj, own.get(nm))
+        if not os.path.exists(path):
+            raw.write_v(s.v["dir"], [nm], r.data[:, [j]], [r.chars[j]], r.freq, r.start,
+                        pj, qj, own={nm: own[nm]} if nm in own else None)
+        paths.append(path)
     return paths
 
 
@@ -841,14 +922,109 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
     return txt
 
 
+@mcp.tool()
+def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> str:
+    """N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996),
+    and its Kronecker indices from the data.
+
+    The indices n_i are the row degrees of the system's unique echelon form:
+    series i gets its own AR(n_i)/MA(n_i), and their table says which cross
+    terms are free, the contemporaneous ones included. Unlike the VARMA(p, q),
+    the form is identified: no common factors, no MA driven to the wall by
+    spare parameters. The univariate orders do NOT give the indices (every
+    component's marginal is ARMA(N, N), N = the sum of the indices), so they
+    are searched on the stationary vector: a long VAR (its residuals stand
+    for the innovations), then least squares on each candidate's echelon form
+    with one round of Hannan and Kavalieris' correction, and a criterion. SC
+    (default) or HQ, which overfits. Every candidate with each index in
+    0..`max_index` while there are at most 256, Hannan and Kavalieris' two
+    steps beyond.
+
+    The ORDER of the series is part of the echelon form (A_0 is lower
+    triangular): the indices are those of the files' order. Measured on
+    simulated systems (drvarma docs/STUDY-echelon-search.md): the true indices
+    in 80-97 % of the replications, more with more data; weak cross dynamics
+    are missed (the search underfits), which check_residuals then shows.
+
+    On ROUTE U each univariate model's seasonal and fixed-frequency factors
+    are its row's FACTOR (they multiply the whole row; drvarma's echelon
+    stage 4) and the search runs on each row filtered by them; the
+    univariate regular ARMA is replaced by the row's own AR(n_i)/MA(n_i).
+    """
+    from drvarma import echelon as E
+    s = _sess.get(name)
+    try:
+        L = _diagonal(s)
+    except Exception as e:                                   # noqa: BLE001
+        return f"Run the gate first ({e})."
+    if criterion not in E.CRITERIA:
+        return f"criterion must be one of {', '.join(E.CRITERIA)}."
+    _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
+    factored = [nm for nm, x in zip(_names(s), L.series) if x.has_row_factor()]
+    hist = []
+    try:
+        if factored:
+            from drvarma.ladder import search_row_factors
+            sr, hist = search_row_factors(s.files, n_max=int(max_index),
+                                          criterion=criterion)
+        else:
+            sr = E.search(W, n_max=int(max_index), criterion=criterion)
+    except Exception as e:                                   # noqa: BLE001
+        return f"The search cannot run: {e}"
+    names = _names(s)
+    n = sr.indices
+    ind = ", ".join(map(str, n))
+    other = "HQ" if criterion == "SC" else "SC"
+    alt = min(sr.fits, key=lambda k: sr.fits[k].criterion(other))
+    lines = ["# Echelon form — the Kronecker indices (Lutkepohl and Poskitt 1996)", "",
+             "_[Claude: show the block below AS IT IS]_", "", "```", sr.text(names), "```", "",
+             f"**Chosen by {criterion}: {', '.join(f'{a} {k}' for a, k in zip(names, n))}** "
+             f"(McMillan degree {sum(n)}; {E.dim(n)} AR/MA coefficients).",
+             f"{other} would choose ({', '.join(map(str, alt))}).", "",
+             "The order of the series is part of the form: these are the indices in the "
+             f"files' order ({', '.join(names)}).", ""]
+    if s.route != "V":
+        lines += ["ROUTE U: each row's own part is a free AR(n_i)/MA(n_i) in place of the "
+                  "univariate model's regular ARMA (the univariate orders are not the "
+                  "indices)."
+                  + (f" The seasonal and fixed-frequency factors of {', '.join(factored)} "
+                     "are their rows' FACTOR: they multiply the whole row, cross terms "
+                     "included, and the search ran on each row filtered by them. "
+                     "estimate checks the factor with an LR test." if factored else ""),
+                  ""]
+        if hist:
+            lines += ["The search in passes: the univariate factors first, then those of "
+                      "the exact-ML fit of each choice (a series' univariate model mixes "
+                      "the other rows' factors):"]
+            lines += [f"  pass {k + 1}: ({', '.join(map(str, nn))}), factors of the {src}"
+                      for k, (nn, src) in enumerate(hist)]
+            lines += [""]
+    lines += ["## Options", "",
+              f'(a) Fit it: estimate(name="{name}", indices="{ind}") — exact ML from the '
+              "least-squares estimates of the search; then check_residuals and evaluate.",
+              "(b) Compare it with the VARMA(p, q) of identify_matrices: both are fitted "
+              "on the same specifications, and the echelon form is identified where the "
+              "VARMA(p, q) with spare orders is not."]
+    if alt != n:
+        why = ("if the residuals of (a) show what it leaves out" if sum(alt) > sum(n)
+               else "if (a)'s extra terms do not pay for themselves (LR, evaluate)")
+        lines.append(f'(c) {other}\'s choice, estimate(name="{name}", '
+                     f'indices="{", ".join(map(str, alt))}"), {why}.')
+    s.guion.add("N2", "identify_echelon", {"max_index": int(max_index),
+                                           "criterion": criterion},
+                f"indices ({ind}) by {criterion}, long VAR({sr.h}); {other} "
+                f"({', '.join(map(str, alt))})")
+    return "\n".join(lines)
+
+
 # --------------------------------------------------------------------------- #
 #  N3 / N4                                                                     #
 # --------------------------------------------------------------------------- #
 
 @mcp.tool()
-def estimate(name: str, p: int, q: int, diagcov: bool = False,
-             reason: str = "", links: str = "", start: str = "zero",
-             cross: str = "additive", zeros: str = "") -> str:
+def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
+             reason: str = "", links: str = "", start: str = "",
+             cross: str = "additive", zeros: str = "", indices: str = "") -> str:
     """N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
     Each series keeps its univariate model on the diagonal (its ARMA factors are
@@ -863,11 +1039,13 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     q; names as in identify_cross). Empty (default): every pair. identify_cross
     proposes it as option (d) when only some pairs showed anything.
 
-    `start`: where the cross terms start — "zero" (default) or "preliminary",
-    Jenkins and Alavi's preliminary estimates (the cross MA from the
-    univariate residuals' cross covariances, the cross AR from Yule-Walker).
-    Usually the same optimum in fewer iterations; on an ill-defined estimation
-    (the MA wall) a second path worth comparing.
+    `start`: where the cross terms start — "zero" (the default for the
+    VARMA) or "preliminary", Jenkins and Alavi's preliminary estimates (the
+    cross MA from the univariate residuals' cross covariances, the cross AR
+    from Yule-Walker). Usually the same optimum in fewer iterations; on an
+    ill-defined estimation (the MA wall) a second path worth comparing. The
+    echelon form starts at Lutkepohl and Poskitt's least-squares estimates
+    ("echelon", its default).
 
     `cross`: how the cross MA enters — "additive" (default: a cross polynomial
     beside the univariate operators) or "residual", Jenkins and Alavi's form
@@ -882,13 +1060,36 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     MA1[B<-A]" on either route; a series' own "phi_A[B^4], theta_A[B^1]" on
     route V only (route U's diagonal is the univariate model, art's). A fit
     already made with the same arguments is reused, not refitted.
+
+    `indices`: the ECHELON FORM with these Kronecker indices, one per series
+    in the files' order, e.g. "1, 2, 1" (identify_echelon proposes them).
+    Series i gets a free AR(n_i)/MA(n_i) of its own, the cross terms follow
+    Lutkepohl and Poskitt's (1996) table, and the contemporaneous AR0[i<-j]
+    terms make A_0 lower triangular: the order of the series is part of the
+    model. p and q are then max(n_i); leave them at 0. `links` and `zeros`
+    restrict it further. On route U the free AR(n_i)/MA(n_i) replaces the
+    univariate model's regular ARMA, and its seasonal and fixed-frequency
+    factors multiply the whole row (the row FACTOR), checked by an LR test
+    against the same rows with the factor's restriction dropped.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
     lk = _links(links)
     zs = _zeros(zeros)
-    key = (int(p), int(q), bool(diagcov), lk, cross, zs)
+    try:
+        ech = _indices(indices)
+    except ValueError as e:
+        return str(e)
+    if ech:
+        if cross == "residual":
+            return ('cross="residual" (Jenkins and Alavi\'s 3.22) is not an echelon '
+                    "form: leave cross at its default.")
+        if len(ech) != len(s.series):
+            return f"indices: give {len(s.series)}, one per series ({', '.join(_names(s))})."
+        if (int(p), int(q)) not in ((0, 0), (max(ech), max(ech))):
+            return f"With indices, p and q are max(n_i) = {max(ech)}: leave them at 0."
+    key = _key(p, q, diagcov, lk, cross, zs, ech)
     try:
         if s.route == "V" and cross == "residual":
             return ('cross="residual" is Jenkins and Alavi\'s model for UNIVARIATE '
@@ -896,17 +1097,34 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
         if key in s.fits:
             L = s.fits[key]
         else:
-            L = _model_ladder(s, key, start=start)
+            L = _model_ladder(s, key, start=start or None)
             L.fit()
     except Exception as e:
         s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
-                                       "cross": cross}, f"failed: {e}", reason)
+                                       "cross": cross, "indices": ", ".join(map(str, ech))},
+                    f"failed: {e}", reason)
         return f"Estimation failed: {e}"
     s.fits[key] = L
     s.current = key
     freq = s.series[0].freq
     txt = evidence.estimation_text(L, max(8, 2 * freq))
-    if s.route == "V":
+    if ech:
+        factored = [x.name for x in L.series if x.has_row_factor()]
+        txt = (f"ROUTE {s.route} — the ECHELON FORM with Kronecker indices "
+               f"({', '.join(f'{nm} {k}' for nm, k in zip(_names(s), ech))}), Lutkepohl "
+               "and Poskitt (1996): each series' own AR(n_i)/MA(n_i) with the cross "
+               "terms of their table, A_0 lower triangular (the AR0 terms; the order of "
+               "the series is part of the model)."
+               + (" On route U the own AR(n_i)/MA(n_i) replaces each univariate model's "
+                  "regular ARMA." if s.route != "V" else "")
+               + (f" The seasonal and fixed-frequency factors of {', '.join(factored)} "
+                  "multiply their whole rows (the row FACTOR)." if factored else "")
+               + f" Started at their least-squares estimates ({L.start_used}). The LR "
+               "below is against the same model without cross terms; the univariates "
+               "come at N5.\n\n" + txt)
+        if factored:
+            txt += "\n\n" + _factor_check(s, L)
+    elif s.route == "V":
         txt = (f"ROUTE V — the full VARMA({p},{q}) of Tiao and Box: each series' own "
                f"AR({p})/MA({q}) estimated jointly with the cross terms. The LR below is "
                f"against the same model without cross terms (one AR({p})/MA({q}) per "
@@ -914,7 +1132,8 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
     lr = "" if (p == 0 and q == 0 and diagcov) else " LR %.2f df %d p %.4f" % L.lr_test()
     s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "start": L.start_used, "cross": cross,
-                                   "zeros": ", ".join(zs)},
+                                   "zeros": ", ".join(zs),
+                                   "indices": ", ".join(map(str, ech))},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
     nxt = "Next: evaluate — the candidate against the univariates."
     if getattr(L.result, "ma_boundary", 0):
@@ -924,8 +1143,10 @@ def estimate(name: str, p: int, q: int, diagcov: bool = False,
 
 
 def _desc(key):
-    p, q, dc, lk, cr, zs = key
-    return (f"p = {p}, q = {q}, {'diagonal' if dc else 'full'} covariance"
+    p, q, dc, lk, cr, zs, ech = key
+    head = (f"echelon form, indices {', '.join(map(str, ech))}" if ech
+            else f"p = {p}, q = {q}")
+    return (f"{head}, {'diagonal' if dc else 'full'} covariance"
             + (f", links {lk}" if lk else "") + (", residual form" if cr == "residual" else "")
             + (f", {len(zs)} coefficients at zero" if zs else ""))
 
@@ -947,8 +1168,9 @@ def _lr(full, restr):
 
 
 def _estimate_call(name, key):
-    p, q, dc, lk, cr, zs = key
-    return (f'estimate(name="{name}", p={p}, q={q}'
+    p, q, dc, lk, cr, zs, ech = key
+    head = (f'indices="{", ".join(map(str, ech))}"' if ech else f"p={p}, q={q}")
+    return (f'estimate(name="{name}", {head}'
             + (", diagcov=True" if dc else "") + (f', links="{lk}"' if lk else "")
             + (', cross="residual"' if cr == "residual" else "")
             + (f', zeros="{", ".join(zs)}"' if zs else "") + ")")
@@ -981,7 +1203,7 @@ def simplify(name: str, t: float = 1.0) -> str:
             drop.append((nm, float(v), float(v / e)))
     f = {"t": float(t), "desc": _desc(key), "route": s.route, "drop": drop}
     if drop:
-        key2 = key[:5] + (_zeros(list(key[5]) + [d[0] for d in drop]),)
+        key2 = key[:5] + (_zeros(list(key[5]) + [d[0] for d in drop]),) + key[6:]
         try:
             L2 = _fit_key(s, key2)
         except Exception as e:                               # noqa: BLE001
@@ -1020,7 +1242,7 @@ def structure(name: str, alpha: float = 0.05) -> str:
     except KeyError:
         return "Estimate a model first (estimate)."
     key = s.current
-    p, q, dc, lk, cr, zs = key
+    p, q, dc, lk, cr, zs, ech = key
     if p == 0 and q == 0:
         return "The current fit has no cross dynamics (p = q = 0): nothing to test."
     names = _names(s)
@@ -1028,15 +1250,16 @@ def structure(name: str, alpha: float = 0.05) -> str:
     free = set(L.result.names)
 
     def pair_zeros(i, j):
-        return [f"{k}{l}[{names[i]}<-{names[j]}]" for k, top in (("AR", p), ("MA", q))
-                for l in range(1, top + 1) if f"{k}{l}[{names[i]}<-{names[j]}]" in free]
+        # AR0 is the echelon form's contemporaneous term (absent otherwise)
+        return [f"{k}{l}[{names[i]}<-{names[j]}]" for k, lo, top in (("AR", 0, p), ("MA", 1, q))
+                for l in range(lo, top + 1) if f"{k}{l}[{names[i]}<-{names[j]}]" in free]
 
     tests = {}
 
     def test(extra, label):
         if not extra:
             return {"label": label, "lr": 0.0, "df": 0, "p": 1.0}
-        k2 = key[:5] + (_zeros(list(zs) + extra),)
+        k2 = key[:5] + (_zeros(list(zs) + extra),) + key[6:]
         if k2 not in tests:
             tests[k2] = _lr(L, _fit_key(s, k2))
         return dict(tests[k2], label=label, key=k2)
@@ -1111,8 +1334,10 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     s.guion.add("N4", "check_residuals", {"nlags": K, "model": str(s.current)},
                 f"{facts['n_beyond']} residual correlations beyond the band; "
                 f"{facts['large']} large transformed residuals")
-    p_, q_, dc_, lk_, cr_, zs_ = s.current
-    desc = (f"cross p = {p_}, q = {q_}, {'diagonal' if dc_ else 'full'} covariance"
+    p_, q_, dc_, lk_, cr_, zs_, ech_ = s.current
+    head_ = (f"echelon form, indices {', '.join(map(str, ech_))}" if ech_
+             else f"cross p = {p_}, q = {q_}")
+    desc = (f"{head_}, {'diagonal' if dc_ else 'full'} covariance"
             + (f", links {lk_}" if lk_ else "") + (f", cross MA {cr_}" if q_ else "")
             + (f", {len(zs_)} coefficients at zero" if zs_ else ""))
     lines = ["# Checking — Jenkins and Alavi (1981, §5.2)",
@@ -1200,12 +1425,13 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
     s = _sess.get(name)
     if s.current is None or s.current not in s.fits:
         return "Estimate a model first (estimate)."
-    p, q, diagcov, lk, cross, zs = s.current
+    p, q, diagcov, lk, cross, zs, ech = s.current
     L = s.fits[s.current]
     r = L.result
     freq = s.series[0].freq
-    out = [f"STUDY of the fit p = {p}, q = {q}, "
-           f"{'diagonal' if diagcov else 'full'} covariance" + (f", links {lk}" if lk else ""),
+    out = [f"STUDY of the fit "
+           + (f"echelon {', '.join(map(str, ech))}, " if ech else f"p = {p}, q = {q}, ")
+           + f"{'diagonal' if diagcov else 'full'} covariance" + (f", links {lk}" if lk else ""),
            f"  as estimated: logL {r.logL:.6f}, {r.nit} iterations, "
            + (f"STOPPED ON THE MA WALL ({r.ma_boundary} of {r.ma_nroots} roots)"
               if getattr(r, "ma_boundary", 0) else "not on the MA wall"), "",
@@ -1272,9 +1498,9 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
 # --------------------------------------------------------------------------- #
 
 @mcp.tool()
-def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
+def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 12,
              diagcov: bool = False, links: str = "", cross: str = "additive",
-             zeros: str = "") -> str:
+             zeros: str = "", indices: str = "") -> str:
     """N5 — The yardstick: does the candidate forecast better than the univariates?
 
     Estimates the candidate AND the diagonal system (the univariate models) on
@@ -1284,17 +1510,19 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     gain here has no reason to exist, whatever its in-sample significance.
 
     `estwin` counts observations of the FIRST series; leave enough data after it
-    (at least a few dozen origins) or the comparison says little. `links` and
-    `zeros`: as in estimate, the same restricted candidate.
+    (at least a few dozen origins) or the comparison says little. `links`,
+    `zeros` and `indices`: as in estimate, the same candidate.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
+    if not int(estwin):
+        return "Give estwin: the observations of the first series to estimate on."
     H = int(horizon)
     try:
         lk = _links(links)
         zs = _zeros(zeros)
-        Lc = _model_ladder(s, (int(p), int(q), bool(diagcov), lk, cross, zs),
+        Lc = _model_ladder(s, _key(p, q, diagcov, lk, cross, zs, _indices(indices)),
                            estwin=estwin)
         Lc.fit()
         _rows, cand = Lc.recursive(H)
@@ -1309,7 +1537,9 @@ def evaluate(name: str, p: int, q: int, estwin: int, horizon: int = 12,
     # 1, half a year, a year and two
     hs = (list(range(1, min(H, 5) + 1)) if freq == 1 else
           sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H])
-    label = (f"VARMA p={p} q={q} ({'diagonal' if diagcov else 'full'} cov)"
+    ech = _indices(indices)
+    head = f"ECHELON ({', '.join(map(str, ech))})" if ech else f"VARMA p={p} q={q}"
+    label = (f"{head} ({'diagonal' if diagcov else 'full'} cov)"
              + (f", links {lk}" if lk else "")
              + (", residual-model form" if cross == "residual" else "")
              + (f", {len(zs)} coefficients at zero" if zs else ""))
@@ -1375,7 +1605,8 @@ def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
         L = _current(s)
         H = int(horizon) or max(s.series[0].freq, 4)
         if estwin:
-            L = _model_ladder(s, s.current, estwin=int(estwin), start="preliminary")
+            L = _model_ladder(s, s.current, estwin=int(estwin),
+                              start=None if s.current[6] else "preliminary")
             L.fit()
             Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
                          estwin=int(estwin))
