@@ -220,11 +220,12 @@ decisions.
 
 * **Deleting a univariate model's own parameters inside the system.**
   Jenkins and Alavi deleted the small ones after estimation. sima deletes
-  single cross coefficients (`zeros`, proposed by `simplify`), but on route U
-  the diagonal is the univariate model, art's: an own parameter is
-  simplified there, not in the system.
-* **The echelon form** (Kronecker indices) is fitted on route V, not on the
-  univariate models: see `MANUAL-echelon.md`.
+  single cross coefficients (`zeros`, proposed by `simplify`), but on the
+  ladder the diagonal is the univariate model, art's: an own parameter is
+  simplified there, not in the system. In the echelon form it is different:
+  each row's own AR(n_i)/MA(n_i) replaces the univariate model's regular
+  ARMA, so `zeros` and `simplify` reach it on route U as on route V (see
+  `MANUAL-echelon.md`).
 
 ---
 

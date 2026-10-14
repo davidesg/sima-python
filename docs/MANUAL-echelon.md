@@ -149,7 +149,10 @@ system, 20 % of the fits from zero ended below the true parameters, and none
 from this start. MA roots that least squares leaves outside the unit circle
 are pulled inside first, and the report says so.
 
-`links` and `zeros` restrict the form further. `simplify`, `structure`,
+`links` and `zeros` restrict the form further, the own coefficients
+included: `phi_A[B^1]`, `theta_A[B^1]`. On route U too, since the own
+AR(n_i)/MA(n_i) replaces the univariate model's regular ARMA and is no
+longer art's. `simplify`, `structure`,
 `check_residuals`, `evaluate`, `forecast` and `study_estimation` work on it
 as on any fit.
 
@@ -324,11 +327,14 @@ Buffalo and an AR(1) for Minneapolis and Kansas City (logs, d = 1). On them
 the search gives **(0, 0, 0)** by SC and HQ, as in Part 3. The (1, 1, 1)
 again ends with two own MA coefficients at −1.000.
 
-Route U cannot write Lütkepohl and Poskitt's restricted VAR(1) exactly. Its
-own coefficients are art's: Buffalo has no AR, and Kansas City's AR(1)
-cannot be set to zero. With their cross zeros on art's diagonal the fit is
-logL −679.14 (10 parameters). Route V's is −669.13 (10). Buffalo's own
-dynamics matter in the system although the univariate model has none.
+In the echelon form their restricted VAR(1) is written on route U as on
+route V: (1, 1, 1) with the MA part and their five zeros held at zero, own
+coefficients included. The fit is route V's, logL −669.13 (10 parameters).
+On Jenkins and Alavi's ladder, without indices, the own coefficients are
+art's: Buffalo has no AR, and Kansas City's AR(1) cannot be set to zero.
+With their cross zeros on art's diagonal the fit is logL −679.14 (10).
+Buffalo's own dynamics matter in the system although the univariate model
+has none.
 
 Univariate analysis in art finds a permanent jump in all three cities over
 December 1973 – January 1974, the grain price shock: +24 % to +28 %, a
