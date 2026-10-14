@@ -175,7 +175,13 @@ dynamics it finds are significant in sample (LR 37.6) and small out of
 sample. The levels hold what ties the markets (`flour_prices`), and testing
 that is drvec's ground.
 
-**An aside: route U on the same data.** `flour_prices` starts from three
-univariate MA(1) models on the same differences. There
-`identify_echelon` chooses (1, 0, 0) with SC and HQ, which is Poskitt's
-procedure's choice by HQ in their Table 1 (`sima://doc/MANUAL-echelon`, Part 5).
+**An aside: the bound of the search.** `flour_prices` runs the same search
+on the same differences, from three univariate MA(1) models, with the
+default `max_index=3`. There SC and HQ choose (1, 0, 0), which is Poskitt's
+procedure's choice by HQ in their Table 1. The route is not what changes it:
+the univariate ARMA plays no part in the search, and route V with
+`max_index=3` gives the same (1, 0, 0). The bound sets the common sample
+(T 95 with 3, T 92 with 6), and on these data that flips the choice
+(`sima://doc/MANUAL-echelon`, §5.1).
+
+**A second aside: the analyst's models and the 1973 shock.** With the univariate models built in art (a random walk and two AR(1)), and then with the December 1973 – January 1974 step that art finds in all three cities, the cross dynamics of their restricted models stops being significant (LR 5.1, df 3, p 0.16). Whether that shock is an anomaly or the transmission itself is a position, not a result (`sima://doc/MANUAL-echelon`, §5.3). The steps above are theirs.

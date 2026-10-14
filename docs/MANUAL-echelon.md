@@ -271,10 +271,25 @@ differenced logs for each city.
 
     load_example("flour_prices"); run_gate(...); identify_echelon(...)
 
-The search on the differences chooses **(1, 0, 0)**, with both criteria.
-That is the choice of Poskitt's procedure by HQ in Lütkepohl and Poskitt's
-Table 1, on the same differences. Route V on the same data, their own
-analysis, is Part 3.
+With the default bound, `max_index=3`, the search on the differences chooses
+**(1, 0, 0)**, with both criteria. That is the choice of Poskitt's procedure
+by HQ in Lütkepohl and Poskitt's Table 1, on the same differences.
+
+The difference from Part 3, which chooses (0, 0, 0), is the bound and not
+the route. The univariate ARMA plays no part in the search: each row's is
+replaced by its own AR(n_i)/MA(n_i). Route V gives the same table with the
+same bound. What the bound changes is the sample. Every candidate is
+compared on a common sample that starts after the long VAR's h lags plus
+`max_index`:
+
+| `max_index` | T  | log\|S\| (0, 0, 0) | SC and HQ choose |
+|-------------|----|--------------------|------------------|
+| 3           | 95 | 5.3605             | (1, 0, 0)        |
+| 6           | 92 | 5.4205             | (0, 0, 0)        |
+
+On 99 differences three observations flip the choice. Part 3 uses 6,
+Lütkepohl and Poskitt's bound. The report does not yet give T (BUG-0005).
+Route V on the same data, their own analysis, is Part 3.
 
 The fit, `estimate(indices="1, 0, 0")`:
 - **converges** (termcode 1) with white residuals (Hosking p 0.99);
@@ -301,6 +316,64 @@ and its residuals are not white: the search underfits here, which
 THE ROW FACTOR'S CHECK on that fit gives LR 3.63, df 2, p 0.16. The annual
 factors hold on the whole rows. On (1, 1, 1) the check gives p 0.04, a
 marginal rejection.
+
+### 5.3 The flour prices with the analyst's models: the 1973 shock
+
+The univariate models built in art for Part 3's data are a random walk for
+Buffalo and an AR(1) for Minneapolis and Kansas City (logs, d = 1). On them
+the search gives **(0, 0, 0)** by SC and HQ, as in Part 3. The (1, 1, 1)
+again ends with two own MA coefficients at −1.000.
+
+Route U cannot write Lütkepohl and Poskitt's restricted VAR(1) exactly. Its
+own coefficients are art's: Buffalo has no AR, and Kansas City's AR(1)
+cannot be set to zero. With their cross zeros on art's diagonal the fit is
+logL −679.14 (10 parameters). Route V's is −669.13 (10). Buffalo's own
+dynamics matter in the system although the univariate model has none.
+
+Univariate analysis in art finds a permanent jump in all three cities over
+December 1973 – January 1974, the grain price shock: +24 % to +28 %, a
+two-month step. Refitting with that step in each univariate model (the
+analyst's robustness set):
+
+|                                       | without the step | with the step |
+|---------------------------------------|------------------|---------------|
+| log\|S\| (0,0,0) / (1,1,1)            | 5.4205 / 4.9739  | 4.9937 / 4.6395 |
+| AIC (T 92) (0,0,0) / (1,1,1)          | 5.42 / **5.37**  | **4.99** / 5.03 |
+| (1, 1, 1)                             | two own MA at −1.000 | stops on the MA wall |
+| their cross zeros against (0,0,0)     | LR 17.5, df 5    | LR 5.1, df 3, p 0.16 |
+| simplified VAR(1) against (0,0,0)     | LR 29.7, df 6    | LR 18.3, df 4 |
+
+- **The indices do not move**, but AIC, the only criterion that favoured
+  their intermediate (1, 1, 1), no longer does.
+- **The cross dynamics around Minneapolis, the core of their restricted
+  models, is no longer significant.** What survives is Buffalo's lag in
+  Kansas City (0.83, t 3.78), with Minneapolis's at −0.52: the lagged
+  Buffalo−Minneapolis spread.
+- **Out of sample the univariate models with the step forecast best.** At
+  h = 1 their RMSE is 6.70 (Minneapolis) and 6.97 (Kansas City). Route V's
+  restricted VAR(1) gives 7.04 and 7.42, and the AR(1) models without the
+  step give 7.05 and 7.22.
+
+The step's ω are art's estimates, held fixed in the system. Likelihood
+ratios within each set are valid; logL across the two sets are not
+comparable.
+
+**What the example says about the order of the analysis.** The univariate
+analysis first is not only the yardstick for forecasting (N5). It is where
+anomalous incidents are found, and an incident common to the series can
+manufacture cross dynamics, or inflate it.
+
+**The caution.** Whether that incident is anomalous is not a result of the
+analysis but a position. A common shock that reaches the markets a month
+apart may be the cross relation itself: the transmission one wants to
+measure. Read that way, the step hides structure, and the article's model
+without interventions is the right one. Read as an outside event, the step
+cleans the estimates, and the cross dynamics
+is mostly that event. The analysis cannot decide between the two; it can
+show how much rides on the choice, as here. Both sets are kept: the base
+models, and the step as a robustness check.
+
+Part 3, Lütkepohl and Poskitt's analysis on route V, stays as they did it.
 
 ---
 
