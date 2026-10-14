@@ -48,3 +48,21 @@ def test_simplify_proposes_the_own_coefficients(flour):
 def test_without_indices_the_diagonal_is_still_arts(flour):
     t = _fn(M.estimate)(flour, 1, 0, zeros="phi_Minneapolis[B^1]")
     assert "is a coefficient of a univariate model" in t
+
+
+def test_the_lr_is_against_the_model_without_cross_terms(flour):
+    # BUG-0002: at (0, 0, 0) the LR has 3 df, the innovation covariances; the
+    # univariates' AR(1) is not in it, so it is not against the univariates
+    t = _fn(M.estimate)(flour, indices="0, 0, 0")
+    lr = [ln for ln in t.splitlines() if "LR = " in ln]
+    assert lr and "df = 3" in lr[0]
+    assert all("(the univariates)" not in ln for ln in lr)
+    assert "against the same model without cross terms" in lr[0]
+
+
+def test_load_pre_does_not_count_the_placeholder(flour):
+    # BUG-0001: the random walk carries fue's AR(1) fixed at 0.0
+    t = _fn(M.load_pre)("flu_tbl", json.dumps(
+        [os.path.join(DATA, "Buffalo_rw.pre"), os.path.join(DATA, "Minneapolis_ar1.pre")]))
+    rows = {ln.split()[1]: ln for ln in t.splitlines() if ln.strip()[:1].isdigit()}
+    assert "AR 0" in rows["Buffalo"] and "AR 1" in rows["Minneapolis"]

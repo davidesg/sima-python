@@ -1,11 +1,11 @@
 ---
 id: BUG-0002
 title: El LR de estimate dice «against the diagonal system (the univariates)» y es contra el mismo modelo sin términos cruzados
-status: open
+status: fixed
 severity: low
 component: evidence
 found_in: 0.1.0
-fixed_in: 
+fixed_in: 0.1.0
 reported: 2026-10-14
 reporter: David / Claude — ejemplo lutkepohl_poskitt en ruta U con los modelos de art, forma echelon
 tags:
@@ -51,10 +51,12 @@ llegaron la ruta V y la forma echelon.
 
 ## Fix
 
-La línea del LR: «against the same model without cross terms (the diagonal
-system): LR = …». Si se quiere el contraste contra los univariantes, es N5
-(`evaluate`), no este LR.
+`evidence.estimation_text`: «against the same model without cross terms (the
+diagonal system): LR = …», lo que se calcula y lo que dice la cabecera. La
+comparación con los univariantes es la de N5. Test:
+`tests/test_echelon_route_u.py::test_the_lr_is_against_the_model_without_cross_terms`.
 
 ## Validation
 
-El repro: ninguna línea del LR dice «(the univariates)».
+El repro sale con 0: a (0, 0, 0) la línea del LR dice «against the same model
+without cross terms (the diagonal system): LR = 437.511, df = 3».

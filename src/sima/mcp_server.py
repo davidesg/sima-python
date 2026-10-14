@@ -484,14 +484,87 @@ def _files_for(s, p, q, own=None, orders=None):
 
 
 def _yardstick_files(s):
-    """Route V's yardstick: the univariate models of route U's builder, for N5
-    only (they never enter the system). Built once, next to the specs."""
+    """Route V's yardstick: the analyst's univariate models if evaluate was
+    given them (BUG-0004), else those of route U's builder, for N5 only (they
+    never enter the system). Built once, next to the specs, with what the
+    builder chose and among which (yardstick.json)."""
+    if s.v.get("yardstick"):
+        return s.v["yardstick"]
     from . import raw
     r = _sess.get_raw(s.v["raw"])
     pres = [os.path.join(s.v["dir"], f"{nm}_u.pre") for nm in r.names]
     if not all(os.path.exists(x) for x in pres):
-        raw.build_univariate(r.names, r.data, r.chars, r.freq, r.start, s.v["dir"])
+        facts = raw.build_univariate(r.names, r.data, r.chars, r.freq, r.start, s.v["dir"])
+        with open(os.path.join(s.v["dir"], "yardstick.json"), "w") as fh:
+            json.dump({f["name"]: {"label": f["label"], "tied": f["tied"]} for f in facts},
+                      fh, indent=1)
     return pres
+
+
+def _paths(text):
+    """A JSON list of paths, or the paths separated by commas (as load_pre)."""
+    try:
+        paths = json.loads(text)
+    except json.JSONDecodeError:
+        paths = [p.strip() for p in text.split(",") if p.strip()]
+    return [str(p) for p in ([paths] if isinstance(paths, str) else paths)]
+
+
+def _set_yardstick(s, files):
+    """The analyst's univariates as route V's yardstick: one fue file per
+    series, the same series and transformation as the specs. Kept in the
+    session: evaluate, forecast_uncertainty and structure read them."""
+    from drvarma.ladder import load
+    paths = _paths(files)
+    r = _sess.get_raw(s.v["raw"])
+    if len(paths) != len(r.names):
+        raise ValueError(f"the yardstick takes one file per series ({len(r.names)}: "
+                         f"{', '.join(r.names)}); got {len(paths)}")
+    by = {x.name: x for x in load(paths)}
+    if set(by) != set(r.names):
+        raise ValueError(f"the yardstick's series ({', '.join(sorted(by))}) are not the "
+                         f"system's ({', '.join(r.names)})")
+    for nm, c in zip(r.names, r.chars):
+        m = by[nm].model
+        if (float(m.boxlam), int(m.d), int(m.D or 0)) != \
+                (float(c["lam"]), int(c["d"]), int(c.get("D", 0))):
+            raise ValueError(
+                f"{nm}: the yardstick's transformation (lam={m.boxlam:g}, d={m.d}, "
+                f"D={m.D or 0}) is not the system's (lam={c['lam']:g}, d={c['d']}, "
+                f"D={c.get('D', 0)}): the forecasts would not be of the same thing")
+    s.v["yardstick"] = [by[nm].path for nm in r.names]
+
+
+def _yardstick_text(s):
+    """Which models the yardstick is, series by series (BUG-0004)."""
+    from drvarma.ladder import load
+    files = _yardstick_files(s)
+    try:
+        with open(os.path.join(s.v["dir"], "yardstick.json")) as fh:
+            built = json.load(fh)
+    except (OSError, ValueError):
+        built = {}
+    rows = []
+    for x in load(files):
+        p, q = x.orders()
+        m = x.model
+        row = f"  {x.name:<14} ARIMA({p},{m.d},{q})" + (f", D = {m.D}" if m.D else "")
+        if not s.v.get("yardstick"):
+            b = built.get(x.name, {})
+            if len(b.get("tied", [])) > 1:
+                # art's labels open with the differences, "(d,D)  MA(1)"
+                lbl = lambda t: re.sub(r"^\(\d+,\d+\)\s+", "", t)
+                row += (f"  — {lbl(b['label'])}, the first of art's tie: "
+                        f"{', '.join(map(lbl, b['tied']))}")
+        rows.append(row + f"  ({x.path})")
+    if s.v.get("yardstick"):
+        head = "ROUTE V: the yardstick is the analyst's univariate models, given to evaluate"
+    else:
+        head = ("ROUTE V: the yardstick is univariate models built by route U's builder "
+                "(art's engine, light; not reviewed in art). Inside a tie the builder "
+                "takes the first: the analyst's models may be others, and the ratios "
+                "depend on it. Give yours with evaluate(yardstick=...)")
+    return head + " — they never entered the system:\n" + "\n".join(rows)
 
 
 # --------------------------------------------------------------------------- #
@@ -1539,7 +1612,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
 @mcp.tool()
 def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 12,
              diagcov: bool = False, links: str = "", cross: str = "additive",
-             zeros: str = "", indices: str = "") -> str:
+             zeros: str = "", indices: str = "", yardstick: str = "") -> str:
     """N5 — The yardstick: does the candidate forecast better than the univariates?
 
     Estimates the candidate AND the diagonal system (the univariate models) on
@@ -1551,10 +1624,25 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
     `estwin` counts observations of the FIRST series; leave enough data after it
     (at least a few dozen origins) or the comparison says little. `links`,
     `zeros` and `indices`: as in estimate, the same candidate.
+
+    `yardstick` (route V): the analyst's univariate models, one fue file per
+    series (a JSON list or comma-separated paths), e.g. their `.pre` from art.
+    Without it the yardstick is route U's light builder, which takes the first
+    of a tie in art's ranking; the report names the models either way. Once
+    given it stays for the session (forecast_uncertainty and structure use it).
+    On route U the yardstick is already the loaded files.
     """
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
+    if yardstick.strip():
+        if s.route != "V":
+            return ("On route U the yardstick is the univariate models loaded with "
+                    "load_pre: there is nothing to give.")
+        try:
+            _set_yardstick(s, yardstick)
+        except Exception as e:                               # noqa: BLE001
+            return f"The yardstick was not taken: {e}"
     if not int(estwin):
         return "Give estwin: the observations of the first series to estimate on."
     H = int(horizon)
@@ -1584,10 +1672,7 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
              + (f", {len(zs)} coefficients at zero" if zs else ""))
     txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s))
     if s.route == "V":
-        txt = ("ROUTE V: the yardstick is univariate models built by route U's builder "
-               "(art's engine, light; not reviewed in art), "
-               f"{os.path.join(s.v['dir'], '<SERIES>_u.pre')} — they never entered the "
-               "system.\n\n" + txt)
+        txt = _yardstick_text(s) + "\n\n" + txt
     s.evaluations[(p, q, diagcov, lk, cross, zs, estwin, H)] = (cand, diag)
     s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                    "estwin": estwin, "horizon": H},

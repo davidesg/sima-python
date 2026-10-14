@@ -1,11 +1,11 @@
 ---
 id: BUG-0001
 title: load_pre muestra un paseo aleatorio (0,1,0) como «AR 1» en la tabla de los modelos
-status: open
+status: fixed
 severity: low
 component: server
 found_in: 0.1.0
-fixed_in: 
+fixed_in: 0.1.0
 reported: 2026-10-14
 reporter: David / Claude — ejemplo lutkepohl_poskitt en ruta U con los modelos de art
 tags:
@@ -44,11 +44,12 @@ coeficientes son libres. `orders()` sólo lo usa esta tabla.
 
 ## Fix
 
-En drvarma, `orders()` cuenta sólo los factores con algún coeficiente libre
-(o cuyo polinomio no sea idénticamente cero). El mismo criterio que art
-BUG-0241 (`guion_adopt`): un factor con todas sus banderas fijas no es un
-orden estimado.
+En drvarma (`LadderSeries.orders()`, rama `ladder`): un lado (AR o MA) cuyos
+factores tienen todos los coeficientes fijos a cero no tiene orden; es el
+relleno de fue. Un coeficiente libre sembrado a cero —el `.inp` de art— sí
+cuenta. Test en drvarma: `tests/test_ladder_orders.py`; en sima:
+`tests/test_echelon_route_u.py::test_load_pre_does_not_count_the_placeholder`.
 
 ## Validation
 
-El repro: Buffalo sale `AR 0`, Minneapolis `AR 1`.
+El repro sale con 0: Buffalo `AR 0`, Minneapolis `AR 1`.
