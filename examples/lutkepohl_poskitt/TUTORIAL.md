@@ -162,8 +162,12 @@ against Buffalo −0.71. That is the contrast between markets of the
     evaluate("lutkepohl_poskitt", 1, 0, 72, horizon=6, zeros="phi_KansasCity[B^1], AR1[Buffalo<-KansasCity], AR1[Minneapolis<-KansasCity], AR1[KansasCity<-Buffalo]")
 
 The yardstick is univariate models built by route U's builder on the same
-transformation. The restricted VAR(1) gains little: RMSE ratios 1.03, 0.94
-and 1.00 at one step, about 1.00 at six.
+transformation, and the report names them: a random walk for Buffalo and an
+MA(1) for Minneapolis and Kansas City, the first of a tie in art's ranking.
+The restricted VAR(1) gains little: RMSE ratios 1.03, 0.94 and 1.00 at one
+step, about 1.00 at six. The ratios depend on the yardstick: with the
+analyst's models from art as the yardstick (`yardstick=` with their `.pre`,
+an AR(1) for Minneapolis and Kansas City) Minneapolis's 0.94 becomes 1.00.
 
 **In the paper:** they leave the comparison to Grubb (1992), who favoured a
 VAR(1) for the undifferenced data, and in whose comparison "the MA(1) model

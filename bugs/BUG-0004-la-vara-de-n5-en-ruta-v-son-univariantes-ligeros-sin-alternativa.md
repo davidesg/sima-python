@@ -1,11 +1,11 @@
 ---
 id: BUG-0004
 title: En ruta V, evaluate mide contra univariantes ligeros que elige solo, sin decir cuáles son ni aceptar los del analista
-status: open
+status: fixed
 severity: medium
 component: server
 found_in: 0.1.0
-fixed_in: 
+fixed_in: 0.1.0
 reported: 2026-10-14
 reporter: David / Claude — ejemplo lutkepohl_poskitt, ruta V (tutorial) frente a ruta U con los modelos de art
 tags:
@@ -51,14 +51,23 @@ meses y h = 6; sale con 1 mientras el bug siga abierto. La cifra de art
 
 ## Fix
 
-1. El informe de N5 en ruta V nombra la vara: el modelo de cada serie
-   (órdenes y, si el constructor eligió dentro de un empate, cuál y entre
-   cuáles).
-2. `evaluate` (o la sesión de ruta V) acepta los univariantes del analista
-   —`.pre` de art— como vara, con la misma ventana; el constructor ligero
-   queda como defecto.
+1. El informe de N5 en ruta V nombra la vara, serie a serie: su ARIMA y el
+   fichero, y si es la del constructor ligero, cuál tomó y entre cuáles del
+   empate de art (`yardstick.json`, que escribe al construirla). Dice además
+   que los cocientes dependen de esa elección y cómo dar otra.
+2. `evaluate(yardstick=...)` acepta los univariantes del analista, un fichero
+   de fue por serie: las mismas series y la misma transformación (λ, d, D) que
+   las especificaciones, o se rechaza con el motivo. Queda en la sesión:
+   `forecast_uncertainty` y `structure` la usan también. En ruta U la vara ya
+   son los ficheros cargados.
+
+El paso 9 del tutorial de `lutkepohl_poskitt` lo cuenta. Tests:
+`tests/test_yardstick.py` (3).
 
 ## Validation
 
-El repro: `evaluate` acepta la vara del analista y el informe nombra los
-modelos de la vara.
+El repro sale con 0. Con los `.pre` de art como vara, la misma evaluación da
+para Minneapolis a h = 1 RMSE 7.035 frente a 7.046 (cociente 0.999), lo que el
+informe anotaba desde la ruta U; con la vara ligera, 7.035 frente a 7.478
+(0.941), y el informe dice ahora que esa vara es el MA(1) que el constructor
+tomó, el primero del empate.

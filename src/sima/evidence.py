@@ -648,8 +648,10 @@ def estimation_text(L, nlags):
     out += ["", f"exact log-likelihood {r.logL:.6f}  ({r.npar} parameters)"]
     if not (L.p == 0 and L.q == 0 and L.diagcov):
         lr, df, pv = L.lr_test()
-        out += [f"against the diagonal system (the univariates): LR = {lr:.3f}, "
-                f"df = {df}, p = {pv:.4f}",
+        # BUG-0002: the same model without cross terms, not the univariates:
+        # on route V and in the echelon form the diagonal is not theirs (N5 is)
+        out += [f"against the same model without cross terms (the diagonal system): "
+                f"LR = {lr:.3f}, df = {df}, p = {pv:.4f}",
                 "  In sample. Significance here is necessary, not sufficient: the",
                 "  cross terms have to pay for themselves out of sample (N5)."]
     sig = r.sigma
@@ -953,7 +955,8 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
     if raw:
         opts = [("keep the characterization's differences: route U (the univariate "
                  "models first)", f'build_univariate(name="{call}")'),
-                ("keep them: route V (the vector first; under construction)", "route V")]
+                ("keep them: route V (the vector first, the univariates only as the "
+                 "yardstick)", f'write_specs(name="{call}")')]
     else:
         opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
                  "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
@@ -1075,7 +1078,7 @@ def characterize_report(chars, freq, call, changes=()):
     opts = [("route U: build the univariate models first, then the system (Jenkins "
              "and Alavi; the ladder)", f'build_univariate(name="{call}")'),
             ("route V: the vector first, the univariates only as the yardstick (Tiao and "
-             "Box) — under construction (docs/STUDY-raw-entry.md)", "route V"),
+             "Box)", f'write_specs(name="{call}")'),
             ("change a series' lambda, d, D or harmonics",
              f'characterize(name="{call}", set="SERIES: lam=0, d=1; ...")')]
     if len(nd) >= 2:

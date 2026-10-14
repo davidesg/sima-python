@@ -202,8 +202,10 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     `zeros`: coefficients held at zero, by their printed names — Tiao and
     Box's simplification (simplify proposes them): cross ones "AR3[A<-B],
     MA1[B<-A]" on either route; a series' own "phi_A[B^4], theta_A[B^1]" on
-    route V only (route U's diagonal is the univariate model, art's). A fit
-    already made with the same arguments is reused, not refitted.
+    route V, and on route U in the echelon form (with `indices`), whose own
+    AR(n_i)/MA(n_i) is sima's; otherwise route U's diagonal is the univariate
+    model, art's. A fit already made with the same arguments is reused, not
+    refitted.
 
     `indices`: the ECHELON FORM with these Kronecker indices, one per series
     in the files' order, e.g. "1, 2, 1" (identify_echelon proposes them).
@@ -234,6 +236,7 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 | `cross` | string | no | `additive` |
 | `zeros` | string | no | `` |
 | `indices` | string | no | `` |
+| `yardstick` | string | no | `` |
 
 N5 — The yardstick: does the candidate forecast better than the univariates?
 
@@ -246,6 +249,13 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     `estwin` counts observations of the FIRST series; leave enough data after it
     (at least a few dozen origins) or the comparison says little. `links`,
     `zeros` and `indices`: as in estimate, the same candidate.
+
+    `yardstick` (route V): the analyst's univariate models, one fue file per
+    series (a JSON list or comma-separated paths), e.g. their `.pre` from art.
+    Without it the yardstick is route U's light builder, which takes the first
+    of a tie in art's ranking; the report names the models either way. Once
+    given it stays for the session (forecast_uncertainty and structure use it).
+    On route U the yardstick is already the loaded files.
 
 ---
 
@@ -702,12 +712,13 @@ N1 — The diagonal gate: does the joint cast reproduce the univariate models?
 | `t` | number | no | `1.0` |
 
 N4s — Tiao and Box's (1981, §4) simplification by coefficient, on the
-    current fit: the cross coefficients (and, on route V, each series' own
-    AR/MA coefficients) with |t| < `t` are held at zero, the model is
-    refitted, and the restriction is tested by LR against the full fit, with
-    AIC and BIC. The restricted fit is cached: adopting it (the estimate call
-    in the menu) is instant. Route U's diagonal is never touched — it is the
-    univariate model, art's. Several rounds are normal (Tiao and Box simplified
+    current fit: the cross coefficients (and, on route V or in the echelon
+    form, each series' own AR/MA coefficients) with |t| < `t` are held at
+    zero, the model is refitted, and the restriction is tested by LR against
+    the full fit, with AIC and BIC. The restricted fit is cached: adopting it
+    (the estimate call in the menu) is instant. Route U's univariate models
+    are never touched — they are art's; the echelon form's own part, which
+    replaces their regular ARMA, is sima's, and is simplified like the rest. Several rounds are normal (Tiao and Box simplified
     the SCC model twice).
 
 ---
