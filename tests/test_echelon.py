@@ -7,6 +7,8 @@ estimate(indices=). A simulated system with known indices (1, 0):
 
 i.e. A_0 = [[1, 0], [-.5, 1]]: y2 has no dynamics of its own, only a
 contemporaneous term on y1."""
+import re
+
 import numpy as np
 import pytest
 
@@ -46,6 +48,16 @@ def test_identify_echelon_finds_the_indices(ech):
     assert "order of the series is part of the form" in t
     g = M._sess.get("e10").guion.entries[-1]
     assert "identify_echelon" in str(g)
+
+
+def test_identify_echelon_says_its_sample(ech):
+    """BUG-0005: max_index moves the common sample; the report says on how many."""
+    for k in (1, 2):
+        t = _fn(M.identify_echelon)("e10", max_index=k)
+        m = re.search(r"T = (\d+) of the (\d+) observations", t)
+        assert m, t
+        assert f"max_index = {k}" in t
+        assert int(m.group(2)) - int(m.group(1)) >= k
 
 
 def test_estimate_fits_the_echelon_form(ech):

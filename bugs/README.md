@@ -4,7 +4,7 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**5 report(s), 5 open.**
+**5 report(s), 4 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
@@ -12,5 +12,5 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0002](BUG-0002-el-lr-dice-contra-los-univariantes-y-es-contra-el-modelo-sin-cruces.md) | open | low | evidence | El LR de estimate dice «against the diagonal system (the univariates)» y es contra el mismo modelo sin términos cruzados | — |
 | [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | open | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | — |
 | [BUG-0004](BUG-0004-la-vara-de-n5-en-ruta-v-son-univariantes-ligeros-sin-alternativa.md) | open | medium | server | En ruta V, evaluate mide contra univariantes ligeros que elige solo, sin decir cuáles son ni aceptar los del analista | — |
-| [BUG-0005](BUG-0005-la-eleccion-de-indices-depende-de-max-index-y-el-informe-no-da-t.md) | open | medium | evidence | identify_echelon cambia de elección con max_index (la muestra común encoge) sin decir sobre cuántas observaciones calcula la tabla; el MANUAL lo atribuye a la ruta U | — |
+| [BUG-0005](BUG-0005-la-eleccion-de-indices-depende-de-max-index-y-el-informe-no-da-t.md) | fixed | medium | evidence | identify_echelon cambia de elección con max_index (la muestra común encoge) sin decir sobre cuántas observaciones calcula la tabla; el MANUAL lo atribuye a la ruta U | 0.1.0 |
 

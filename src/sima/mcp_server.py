@@ -988,8 +988,19 @@ def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> st
     ind = ", ".join(map(str, n))
     other = "HQ" if criterion == "SC" else "SC"
     alt = min(sr.fits, key=lambda k: sr.fits[k].criterion(other))
+    # BUG-0005: every candidate is compared on one sample, which starts after
+    # the long VAR's h lags plus max_index (and the row factors' degree), so
+    # max_index moves the sample and can move the choice. Say on how many.
+    T = next(iter(sr.fits.values())).T
+    lost = W.shape[0] - T
     lines = ["# Echelon form — the Kronecker indices (Lutkepohl and Poskitt 1996)", "",
              "_[Claude: show the block below AS IT IS]_", "", "```", sr.text(names), "```", "",
+             f"The table is computed on T = {T} of the {W.shape[0]} observations of the "
+             f"stationary vector: every candidate on the same sample, which starts after "
+             f"the long VAR's {sr.h} lag{'s' if sr.h != 1 else ''} plus max_index = "
+             f"{int(max_index)}{' and the row factors' if lost > sr.h + int(max_index) else ''}. "
+             "A different max_index changes that sample, and on a short series it can "
+             "change the choice.", "",
              f"**Chosen by {criterion}: {', '.join(f'{a} {k}' for a, k in zip(names, n))}** "
              f"(McMillan degree {sum(n)}; {E.dim(n)} AR/MA coefficients).",
              f"{other} would choose ({', '.join(map(str, alt))}).", "",
