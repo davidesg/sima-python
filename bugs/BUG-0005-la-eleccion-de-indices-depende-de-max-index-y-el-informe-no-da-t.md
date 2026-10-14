@@ -1,11 +1,11 @@
 ---
 id: BUG-0005
 title: identify_echelon cambia de elección con max_index (la muestra común encoge) sin decir sobre cuántas observaciones calcula la tabla; el MANUAL lo atribuye a la ruta U
-status: open
+status: fixed
 severity: medium
 component: evidence
 found_in: 0.1.0
-fixed_in: 
+fixed_in: 0.1.0
 reported: 2026-10-14
 reporter: David / Claude — ejemplo lutkepohl_poskitt, comparación con el aparte de flour_prices
 tags:
@@ -68,5 +68,10 @@ ni sima lo exponen.
 
 ## Validation
 
-El repro: el informe de `identify_echelon` dice sobre cuántas observaciones
-se calculó la tabla.
+Arreglado en sima (`identify_echelon`), sin tocar drvarma: tras la tabla,
+«The table is computed on T = 92 of the 99 observations of the stationary
+vector: every candidate on the same sample, which starts after the long VAR's
+1 lag plus max_index = 6. A different max_index changes that sample, and on a
+short series it can change the choice.» El repro sale con 0; test
+`tests/test_echelon.py::test_identify_echelon_says_its_sample`. El punto 2
+(MANUAL §5.1 y el aparte del tutorial) se corrigió en el PR #5.

@@ -1,11 +1,11 @@
 ---
 id: BUG-0003
 title: En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art
-status: open
+status: fixed
 severity: medium
 component: server
 found_in: 0.1.0
-fixed_in: 
+fixed_in: 0.1.0
 reported: 2026-10-14
 reporter: David / Claude — ejemplo lutkepohl_poskitt en ruta U con los modelos de art, forma echelon
 tags:
@@ -68,4 +68,18 @@ fija), que sigue siendo de art. Actualizar el docstring de `estimate`
 
 ## Validation
 
-El repro: el VAR(1) dentro de (1, 1, 1) se estima, sin θ ni MA1.
+Arreglado en sima y en drvarma:
+
+- drvarma (rama `ladder`): `LadderSeries.with_regular(k, zeros=)` y
+  `Ladder(..., own="free", own_zeros=)` fijan a cero retardos de la parte
+  propia libre, que salen también de los mínimos cuadrados del arranque.
+- sima: `_own_is_free` —ruta V, o forma echelon con índices— decide si
+  `zeros` y `simplify` alcanzan los propios; en ruta U sin índices siguen
+  siendo de art.
+
+El repro sale con 0. En el ejemplo, el VAR(1) dentro de (1, 1, 1) en ruta U da
+logL −667.677245, el de la ruta V, y su VAR(1) restringido −669.129921, el de
+su Tabla 2; `simplify` propone `phi_KansasCity[B^1]`, como ellos. Tests:
+`tests/test_echelon_route_u.py` (sima) y
+`test_echelon_rowfactor.py::test_own_zeros_hold_the_free_own_lags_at_zero`
+(drvarma). MANUAL-echelon §2.3 y §5.3, MANUAL-jenkins-alavi §2.5.

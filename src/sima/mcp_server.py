@@ -304,10 +304,12 @@ def _r_doc(name: str) -> str:
 
 
 def _ladder(files, p, q, diagcov, estwin=None, links=None, start=None,
-            cross="additive", zeros=None, lik="elf", echelon=None, own="spec"):
+            cross="additive", zeros=None, lik="elf", echelon=None, own="spec",
+            own_zeros=None):
     """start None: the Ladder's default (zero; the stage II estimates for
     the echelon form). own "free": the echelon rows' own part replaces each
-    univariate model's regular ARMA (route U)."""
+    univariate model's regular ARMA (route U); `own_zeros` holds some of its
+    lags at zero (BUG-0003)."""
     from drvarma.ladder import Ladder
     if echelon:
         p = q = 0                       # the indices give the orders
@@ -315,7 +317,8 @@ def _ladder(files, p, q, diagcov, estwin=None, links=None, start=None,
                   links=links or None, start=start, cross=cross,
                   zeros=list(zeros) if zeros else None, lik=lik,
                   echelon=tuple(echelon) if echelon else None,
-                  own=own if echelon else "spec")
+                  own=own if echelon else "spec",
+                  own_zeros=own_zeros if (echelon and own == "free") else None)
 
 
 _OWN = re.compile(r"(phi|theta)_(.+)\[B\^(\d+)\]")
@@ -330,7 +333,15 @@ def _zeros(text):
     return tuple(sorted({t.strip() for t in toks if t.strip()}))
 
 
-def _split_zeros(s, zeros):
+def _own_is_free(s, key):
+    """Are a fit's own AR/MA coefficients sima's? On route V always; on
+    route U only in the echelon form, whose free AR(n_i)/MA(n_i) replaces
+    the univariate model's regular ARMA (BUG-0003). Otherwise they are the
+    univariate model's, art's."""
+    return s.route == "V" or bool(key[6])
+
+
+def _split_zeros(s, zeros, echelon=False):
     """(cross names for the ladder, own lags {series: {"ar": set, "ma": set}})."""
     cross, own = [], {}
     names = _names(s)
@@ -339,9 +350,10 @@ def _split_zeros(s, zeros):
         if not m:
             cross.append(z)
             continue
-        if s.route != "V":
+        if s.route != "V" and not echelon:
             raise ValueError(f"'{z}' is a coefficient of a univariate model: on route U "
-                             "the diagonal is art's — simplify it there.")
+                             "the diagonal is art's — simplify it there (in the "
+                             "echelon form, with indices, the own part is sima's).")
         if m.group(2) not in names:
             raise ValueError(f"'{z}': no series {m.group(2)}")
         own.setdefault(m.group(2), {"ar": set(), "ma": set()})[
@@ -375,11 +387,12 @@ def _model_ladder(s, key, estwin=None, start=None, lik="elf"):
     """The Ladder of a fit key (p, q, diagcov, links, cross, zeros, indices)
     on its files."""
     p, q, dc, lk, cr, zs, ech = key
-    cross, own = _split_zeros(s, zs)
+    cross, own = _split_zeros(s, zs, echelon=bool(ech))
     files = _files_for(s, p, q, own, orders=ech or None)
+    free = bool(ech) and s.route != "V"
     return _ladder(files, p, q, dc, estwin=estwin, links=lk, start=start, cross=cr,
                    zeros=cross, lik=lik, echelon=ech or None,
-                   own="free" if (ech and s.route != "V") else "spec")
+                   own="free" if free else "spec", own_zeros=own if free else None)
 
 
 def _factor_check(s, L):
@@ -988,8 +1001,19 @@ def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> st
     ind = ", ".join(map(str, n))
     other = "HQ" if criterion == "SC" else "SC"
     alt = min(sr.fits, key=lambda k: sr.fits[k].criterion(other))
+    # BUG-0005: every candidate is compared on one sample, which starts after
+    # the long VAR's h lags plus max_index (and the row factors' degree), so
+    # max_index moves the sample and can move the choice. Say on how many.
+    T = next(iter(sr.fits.values())).T
+    lost = W.shape[0] - T
     lines = ["# Echelon form — the Kronecker indices (Lutkepohl and Poskitt 1996)", "",
              "_[Claude: show the block below AS IT IS]_", "", "```", sr.text(names), "```", "",
+             f"The table is computed on T = {T} of the {W.shape[0]} observations of the "
+             f"stationary vector: every candidate on the same sample, which starts after "
+             f"the long VAR's {sr.h} lag{'s' if sr.h != 1 else ''} plus max_index = "
+             f"{int(max_index)}{' and the row factors' if lost > sr.h + int(max_index) else ''}. "
+             "A different max_index changes that sample, and on a short series it can "
+             "change the choice.", "",
              f"**Chosen by {criterion}: {', '.join(f'{a} {k}' for a, k in zip(names, n))}** "
              f"(McMillan degree {sum(n)}; {E.dim(n)} AR/MA coefficients).",
              f"{other} would choose ({', '.join(map(str, alt))}).", "",
@@ -1070,8 +1094,10 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
     `zeros`: coefficients held at zero, by their printed names — Tiao and
     Box's simplification (simplify proposes them): cross ones "AR3[A<-B],
     MA1[B<-A]" on either route; a series' own "phi_A[B^4], theta_A[B^1]" on
-    route V only (route U's diagonal is the univariate model, art's). A fit
-    already made with the same arguments is reused, not refitted.
+    route V, and on route U in the echelon form (with `indices`), whose own
+    AR(n_i)/MA(n_i) is sima's; otherwise route U's diagonal is the univariate
+    model, art's. A fit already made with the same arguments is reused, not
+    refitted.
 
     `indices`: the ECHELON FORM with these Kronecker indices, one per series
     in the files' order, e.g. "1, 2, 1" (identify_echelon proposes them).
@@ -1191,12 +1217,13 @@ def _estimate_call(name, key):
 @mcp.tool()
 def simplify(name: str, t: float = 1.0) -> str:
     """N4s — Tiao and Box's (1981, §4) simplification by coefficient, on the
-    current fit: the cross coefficients (and, on route V, each series' own
-    AR/MA coefficients) with |t| < `t` are held at zero, the model is
-    refitted, and the restriction is tested by LR against the full fit, with
-    AIC and BIC. The restricted fit is cached: adopting it (the estimate call
-    in the menu) is instant. Route U's diagonal is never touched — it is the
-    univariate model, art's. Several rounds are normal (Tiao and Box simplified
+    current fit: the cross coefficients (and, on route V or in the echelon
+    form, each series' own AR/MA coefficients) with |t| < `t` are held at
+    zero, the model is refitted, and the restriction is tested by LR against
+    the full fit, with AIC and BIC. The restricted fit is cached: adopting it
+    (the estimate call in the menu) is instant. Route U's univariate models
+    are never touched — they are art's; the echelon form's own part, which
+    replaces their regular ARMA, is sima's, and is simplified like the rest. Several rounds are normal (Tiao and Box simplified
     the SCC model twice)."""
     import numpy as np
     s = _sess.get(name)
@@ -1210,7 +1237,7 @@ def simplify(name: str, t: float = 1.0) -> str:
     cross_re = re.compile(r"(AR|MA)\d+\[.+<-.+\]")
     drop = []
     for nm, v, e in zip(r.names, x, se):
-        ok = cross_re.fullmatch(nm) or (s.route == "V" and _OWN.fullmatch(nm))
+        ok = cross_re.fullmatch(nm) or (_own_is_free(s, key) and _OWN.fullmatch(nm))
         if ok and np.isfinite(e) and e > 0 and abs(v / e) < float(t):
             drop.append((nm, float(v), float(v / e)))
     f = {"t": float(t), "desc": _desc(key), "route": s.route, "drop": drop}
@@ -1227,7 +1254,7 @@ def simplify(name: str, t: float = 1.0) -> str:
                  bic_full=-2 * r.logL + k1 * np.log(n), bic_r=-2 * L2.result.logL + k2 * np.log(n))
         x2, se2 = np.asarray(L2.result.x, float), np.asarray(L2.result.std_errors, float)
         f["left"] = [(nm, float(v / e)) for nm, v, e in zip(L2.result.names, x2, se2)
-                     if (cross_re.fullmatch(nm) or (s.route == "V" and _OWN.fullmatch(nm)))
+                     if (cross_re.fullmatch(nm) or (_own_is_free(s, key) and _OWN.fullmatch(nm)))
                      and np.isfinite(e) and e > 0 and abs(v / e) < float(t)]
         s.guion.add("N4s", "simplify", {"t": t, "model": _desc(key)},
                     f"{len(drop)} coefficients |t| < {t:g} to zero: "
