@@ -45,7 +45,10 @@ dependencies = [
 dev = ["pytest>=7"]
 # the raw-data entry (load_data, characterize) runs art's engine per series,
 # and reads Excel with pandas; imported lazily, so the ladder works without it
-raw = ["art-tseries", "pandas", "openpyxl"]
+# art-tseries >=0.2.3: the art this release is tested with (an open bound let an
+# old art run the raw entry). ".dev0" only while CI installs art from master:
+# >=0.2.3 when it is on PyPI.
+raw = ["art-tseries>=0.2.3.dev0", "pandas", "openpyxl"]
 
 [project.urls]
 Homepage = "https://github.com/davidesg/sima"
