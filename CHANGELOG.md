@@ -1,6 +1,6 @@
 # Changelog — sima-tseries
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-10-15
 
 ### The worked examples of Tiao and Box and of the echelon form
 
