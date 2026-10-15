@@ -52,9 +52,8 @@ missing, in order:
 
 ## The three VARMA identification forms — 0.1.0
 
-sima carries the three schools of multivariate identification. All three go
-into 0.1.0, and drvarma 0.2.0 is tagged once they are done (sima depends on
-drvarma 0.2.0, see `docs/PUBLISHING.md`).
+sima carries the three schools of multivariate identification. All three are
+in 0.1.0, published with drvarma 0.2.0 on 2026-10-15 (atsw 2.0.0).
 
 - [x] **Jenkins and Alavi (1981), phase 1** (`docs/DESIGN-jenkins-alavi.md`),
       Python first, in the order A → B → E → D → C → F, all done:
@@ -154,5 +153,7 @@ only the VEC cast is new.
 ## Housekeeping
 
 - [ ] `tools/gen_tools_md.py` is a copy of art's: make it a shared dev tool.
-- [ ] CI: the tests need `drvarma>=0.2.0` from PyPI; until it is published the
-      workflow installs drvarma from its repository.
+- [x] CI: `drvarma>=0.2.0` is on PyPI (2026-10-15). The tests workflow still
+      installs fue, pyfug, drvarma and art from their repositories on purpose,
+      to test against what comes next; the published set is tested by art's
+      *Preflight atsw* with `origen=pypi`.
