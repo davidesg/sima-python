@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "sima-tseries"
-version         = "0.1.0"
+version         = "0.1.1"
 description     = "sima — the MCP assistant for simultaneous VARMA models on the ATSW ladder (engine: drvarma)"
 readme          = "README.md"
 license         = { text = "GPL-2.0-or-later" }
@@ -50,7 +50,10 @@ dev = ["pytest>=7"]
 raw = ["art-tseries>=0.2.3", "pandas", "openpyxl"]
 
 [project.urls]
-Homepage = "https://github.com/davidesg/sima"
+Homepage = "https://github.com/davidesg/sima-python"
+Repository = "https://github.com/davidesg/sima-python"
+Issues = "https://github.com/davidesg/sima-python/issues"
+Changelog = "https://github.com/davidesg/sima-python/blob/main/CHANGELOG.md"
 
 [project.scripts]
 sima = "sima.mcp_server:main"

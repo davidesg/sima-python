@@ -18,8 +18,13 @@ the same files.
 ## Install
 
 ```sh
-pip install sima-tseries
+pip install sima-tseries            # from univariate models (.pre / .inp files)
+pip install "sima-tseries[raw]"     # also from raw data: adds art-tseries, pandas, openpyxl
 ```
+
+The raw entry (`load_data`, `characterize`, `build_univariate`, `write_specs`)
+uses art's engine, so it needs the `raw` extra; so do the worked examples that
+start from the data (`lutkepohl_poskitt`, `tiao_box`).
 
 Register the server in your MCP client (the command is `sima`, stdio). The
 binary wheels of drvarma carry the compiled likelihood the ladder needs. If
@@ -29,12 +34,18 @@ they are missing, drvarma warns and runs about 250 times slower.
 
 | node | tool | what it answers |
 |---|---|---|
+| N0r–N0c | `load_data`, `characterize` | raw data: the table, and each series' λ, d and seasonality (art's engine) |
+| N0u / N0v | `build_univariate` / `write_specs` | route U (the univariate models first) or route V (the vector first) |
 | N0 | `load_pre` | the univariate models, the common window |
 | N1 | `run_gate` | does the joint model reproduce the univariate ones? (it stops the analysis if not) |
-| N2 | `identify_cross` | what the univariate models do NOT carry: residual cross-correlations |
-| N3–N4 | `estimate` | a candidate: cross orders, covariance, LR against the univariates |
-| N5 | `evaluate` | **the yardstick**: does it forecast better than the univariates? |
-| N6 | `forecast`, `impulse_response`, `variance_decomposition` | use of the chosen model |
+| N1b | `canonical_analysis` | Box and Tiao's canonical analysis of the levels |
+| N2 | `identify_cross`, `identify_matrices`, `identify_echelon` | the cross dynamics: residual CCFs, Jenkins and Alavi's matrices, the Kronecker indices of the echelon form |
+| N3–N4 | `estimate`, `check_residuals`, `simplify`, `structure` | a candidate and its LR, the checking, Tiao and Box's simplification, is it really simultaneous? |
+| N4b | `study_estimation` | a fit on the MA invertibility wall |
+| N5 | `evaluate`, `forecast_uncertainty` | **the yardstick**: does it forecast better than the univariates? |
+| N6 | `forecast`, `impulse_response`, `variance_decomposition`, `reorder` | use of the chosen model |
+| — | `plot_*` | the figures |
+| — | `examples`, `load_example` | the worked examples |
 | — | `record_decision`, `export_guion` | the record of the analysis |
 | — | `split_inp` | out of drvarma's deprecated multivariate `.inp` |
 
@@ -47,24 +58,24 @@ Two rules shape everything:
   options with their arguments for and against. The analyst decides in the
   guided lane, and the model decides, in writing, in the autonomous lane.
 
-See [`docs/DESIGN.md`](docs/DESIGN.md) and the generated tool reference
-[`docs/TOOLS.md`](docs/TOOLS.md).
+See [`docs/DESIGN.md`](https://github.com/davidesg/sima-python/blob/main/docs/DESIGN.md) and the generated tool reference
+[`docs/TOOLS.md`](https://github.com/davidesg/sima-python/blob/main/docs/TOOLS.md).
 
 ## User manual
 
-* [Jenkins and Alavi's method](docs/MANUAL-jenkins-alavi.md): the method of
+* [Jenkins and Alavi's method](https://github.com/davidesg/sima-python/blob/main/docs/MANUAL-jenkins-alavi.md): the method of
   Jenkins and Alavi (1981), how sima implements it tool by tool, and their
   muskrat-mink example worked through from art's univariate models — runnable
-  in [`examples/jenkins_alavi/`](examples/jenkins_alavi/).
-* [Tiao and Box's method](docs/STUDY-tiao-box.md): the vector first, Tiao
+  in [`examples/jenkins_alavi/`](https://github.com/davidesg/sima-python/tree/main/examples/jenkins_alavi/).
+* [Tiao and Box's method](https://github.com/davidesg/sima-python/blob/main/docs/STUDY-tiao-box.md): the vector first, Tiao
   and Box (1981) and Box and Tiao (1977): the stepwise M(l), the canonical
   analysis of the levels, the structure and the simplification. Their gas
-  furnace is runnable in [`examples/tiao_box/`](examples/tiao_box/), and the
-  flour prices in [`examples/flour_prices/`](examples/flour_prices/).
-* [The echelon form](docs/MANUAL-echelon.md): Lütkepohl and Poskitt's (1996)
+  furnace is runnable in [`examples/tiao_box/`](https://github.com/davidesg/sima-python/tree/main/examples/tiao_box/), and the
+  flour prices in [`examples/flour_prices/`](https://github.com/davidesg/sima-python/tree/main/examples/flour_prices/).
+* [The echelon form](https://github.com/davidesg/sima-python/blob/main/docs/MANUAL-echelon.md): Lütkepohl and Poskitt's (1996)
   identified VARMA: the Kronecker indices from the data (`identify_echelon`),
   the fit (`estimate(indices=...)`), and their flour prices worked through,
-  runnable in [`examples/lutkepohl_poskitt/`](examples/lutkepohl_poskitt/).
+  runnable in [`examples/lutkepohl_poskitt/`](https://github.com/davidesg/sima-python/tree/main/examples/lutkepohl_poskitt/).
 
 Each worked example runs node by node in a conversation with
 `load_example(<name>)` (`examples` lists them).
