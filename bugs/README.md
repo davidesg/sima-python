@@ -4,10 +4,11 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**5 report(s), 0 open.**
+**6 report(s), 1 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
+| [BUG-0006](BUG-0006-un-ma-propio-se-para-en-el-pliegue-y-estimate-lo-da-por-convergido.md) | open | medium | evidence | Un MA(1) propio se para en θ = −1, el pliegue del cast, y estimate lo da por convergido, con t significativas y «Next: evaluate» | — |
 | [BUG-0001](BUG-0001-load-pre-muestra-un-paseo-aleatorio-como-ar1.md) | fixed | low | server | load_pre muestra un paseo aleatorio (0,1,0) como «AR 1» en la tabla de los modelos | 0.1.0 |
 | [BUG-0002](BUG-0002-el-lr-dice-contra-los-univariantes-y-es-contra-el-modelo-sin-cruces.md) | fixed | low | evidence | El LR de estimate dice «against the diagonal system (the univariates)» y es contra el mismo modelo sin términos cruzados | 0.1.0 |
 | [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | fixed | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | 0.1.0 |
