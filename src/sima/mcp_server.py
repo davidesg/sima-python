@@ -621,6 +621,11 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
             session, os.path.join(dest, raw["data"]), int(raw.get("freq", 0)),
             str(raw.get("start", "")))
         what, nxt = "The data, loaded", f'characterize("{session}")'
+        import importlib.util
+        if importlib.util.find_spec("art") is None:
+            from .raw import RAW_EXTRA
+            nxt = ("install art first: this example starts from the data, and "
+                   f"characterize uses art's engine. {RAW_EXTRA}, then {nxt}")
     else:
         files = [os.path.join(dest, r) for r in m["files"]]
         loaded = _fn_load_pre(session, _json.dumps(files))

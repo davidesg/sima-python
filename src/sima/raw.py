@@ -23,6 +23,8 @@ import numpy as np
 
 DATE_HEADERS = {"date", "dates", "year", "years", "fecha", "periodo", "period", "time", "t"}
 REFACTOR = 100.0                     # fue's rescaling of the transformed series
+# The raw entry's dependencies are the `raw` extra (art-tseries, pandas, openpyxl).
+RAW_EXTRA = 'Install the raw entry with: pip install "sima-tseries[raw]"'
 
 
 class RawError(ValueError):
@@ -70,7 +72,11 @@ def read_table(path):
         raise RawError(f"no file {path}")
     low = path.lower()
     if low.endswith((".xlsx", ".xls")):
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise RawError(f"pandas is not installed ({e}): a spreadsheet needs it. "
+                           f"{RAW_EXTRA}") from e
         df = pd.read_excel(path, header=None, dtype=str)
         rows = df.fillna("").astype(str).values.tolist()
     else:
@@ -145,8 +151,8 @@ def characterize_one(y, name, freq, start):
     try:
         import art
     except ImportError as e:              # pragma: no cover
-        raise RawError(f"art is not installed ({e}): the raw entry uses art's engine "
-                       "(pip install art-tseries).") from e
+        raise RawError(f"art is not installed ({e}): the raw entry uses art's engine. "
+                       f"{RAW_EXTRA}") from e
     ts = _ts(y, name, freq, start)
     out = {"name": name, "n": len(y)}
     # lambda

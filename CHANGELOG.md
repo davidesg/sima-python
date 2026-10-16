@@ -1,5 +1,21 @@
 # Changelog — sima-tseries
 
+## 0.1.1 — unreleased
+
+**The PyPI page and the install.** The Homepage pointed at
+`github.com/davidesg/sima`, which does not exist; it is `sima-python`, with
+Repository, Issues and Changelog beside it. The README's links were relative
+and broke on PyPI; they are absolute now. Its protocol table was 0.1's first
+one: it now has the raw entry (routes U and V), the canonical analysis, the
+three identifications, the checking, the simplification, the structure,
+`study_estimation` and the examples.
+
+**The raw entry names its extra.** `pip install sima-tseries` does not bring
+art, and `characterize` said "pip install art-tseries"; now it, an Excel table
+without pandas, and `load_example` of an example that starts from the data
+(lutkepohl_poskitt, tiao_box) say `pip install "sima-tseries[raw]"`, which the
+README's Install section now shows (tests/test_raw_extra.py).
+
 ## 0.1.0 — 2026-10-15
 
 ### The worked examples of Tiao and Box and of the echelon form
