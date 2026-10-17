@@ -297,10 +297,16 @@ No tags and no uploads before the joint release.
 
 A and B can run in parallel with C1–C2. The C tools need A1 and, for jobs, C2.
 
-## E. Open, for the user
+## E. Decided by the user (2026-10-18)
 
-1. **The distribution of drvec C** (B4). Recommendation: `DRVEC_BIN` now;
-   drvec in the ATSW packages at the joint release.
-2. **The default engine for the bootstraps when the C is present.**
-   Recommendation: the C (`engine="auto"`), with the engine written in every
-   result. The port remains the reference for structure.
+1. **The distribution of drvec C** (B4): `DRVEC_BIN` now; drvec goes into
+   the ATSW packages at the joint release, which amends the 2026-10-04
+   decision recorded in atsw-gui `packaging/programas.sh`.
+2. **The default engine for the bootstraps when the C is present:** the C
+   (`engine="auto"`), with the engine written in every result. The port
+   remains the reference for structure.
+
+Why the C is worth it even with drvarma's compiled engine: the measurement in
+drvec-python's TODO ("Option (b)") was made with the compiled likelihood, and
+the port is still 6–12x slower. About half of an evaluation is drvec's cast in
+pure Python, and about a quarter is drvarma's optimiser, also pure Python.
