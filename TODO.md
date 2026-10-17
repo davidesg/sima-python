@@ -122,12 +122,18 @@ in 0.1.0, published with drvarma 0.2.0 on 2026-10-15 (atsw 2.0.0).
 
 ## drvec — its MCP is sima (decided 2026-10-13)
 
-drvec (the VARMA-VEC; Johansen by exact ML) lives only in atsw-gui
-(`engines/drvec`); its Python port has not started. The plan:
-`atsw-gui/docs/PROCESOS-drvec.md`, with the processes, the oracle
-`drvec-v0.12`, the MCP's tools in §5.2 and the port's scope in §6. Like
-drtran-python, it reuses drvarma's Ladder and AS 311 engine and fue's cast;
-only the VEC cast is new.
+drvec (the VARMA-VEC; Johansen by exact ML) has its Python port:
+`drvec-python`, package `drvec` 0.1.0 (packaged, not published),
+byte-identical to drvec C 0.13 on Linux x86_64. It does not reuse drvarma's
+Ladder: it carries the C's own ladder, on drvarma's compiled likelihood,
+optimiser and (0.3.0) GSL eigensolvers, and reads the files with fue's
+reader and cast (`fue>=0.1.18`, `drvarma>=0.3.0`).
+
+**The current study is `docs/STUDY-vec.md` (2026-10-17).** It revises
+PROCESOS-drvec.md §5.2–5.4 (atsw-gui, private), which was written before
+sima was published and before the port existed. It covers the routing node,
+the cointegration studies, the revised tools, the job runner, the public
+examples and the open questions. The implementation plan comes after it.
 
 - **Its MCP is sima**, not a fourth assistant (the user, 2026-10-13).
   PROCESOS §5.1 recommended a fourth one because drvec "starts from .pre, not
@@ -139,9 +145,14 @@ only the VEC cast is new.
   their examples. drvarma 0.2.0 and sima 0.1.0 are published, and the VEC
   comes in sima 0.2.0 with the port. The tools are added, nothing that
   exists changes.
-- [ ] In sima 0.2.0: the handover rule «≥ 2 I(1) series with feedback → test
-      the rank» after `canonical_analysis`, which today only names drvec;
-      the tools of PROCESOS §5.2, and a queue for the bootstrap tasks.
+- [ ] In sima 0.2.0, as `docs/STUDY-vec.md` proposes, to be decided with the
+      user (its §7):
+      - the cointegration question as node N1c, after `canonical_analysis`,
+        which today only names drvec. The study proposes "≥ 2 series with
+        d = 1", without PROCESOS's "with feedback";
+      - the tools of its §4.1;
+      - a job runner for the bootstraps (§5);
+      - the flour prices continuation as the worked example (§6.1).
 
 ## Later
 
