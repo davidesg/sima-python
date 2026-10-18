@@ -1,0 +1,33 @@
+{
+  "name": "johansen_juselius",
+  "title": "Johansen and Juselius (1990): Danish money demand",
+  "summary": "The published case for a restricted constant, restrictions and weak exogeneity, on public data: Danish log real money, log real income, the bond and the deposit rate, quarterly 1974-1987, 55 observations, four univariate models built by sima's raw entry (deterministic seasonality where it was found). With n = 55 the asymptotic table is least trustworthy: the rank by parametric bootstrap (drvec, B = 499, shipped in the example's cache) does NOT reject r = 0, where Johansen and Juselius, with the asymptotic trace test, found one relation. The C nodes follow on their theory, written as such.",
+  "files": [
+    "art/LRM_u.pre",
+    "art/LRY_u.pre",
+    "art/IBO_u.pre",
+    "art/IDE_u.pre"
+  ],
+  "also": [
+    "art/LRM_u.out",
+    "art/LRY_u.out",
+    "art/IBO_u.out",
+    "art/IDE_u.out",
+    "data/denmark.csv",
+    "README.md"
+  ],
+  "jobs": [
+    "art/sima_jobs/08c28188dd1f54f8"
+  ],
+  "tutorial": "TUTORIAL.md",
+  "manual": "STUDY-vec",
+  "plan": [
+    "N1 run_gate — four models built by sima's raw entry (not reviewed in art)",
+    "N1b canonical_analysis — two components near 1 of four",
+    "N1c prepare_vec — purpose \"long run\", p = 2, case 2 (the restricted constant)",
+    "C1 rank_test (B = 499, cached) — no comparison rejected at 5 % (r = 0: LR 25.91 against 29.78, p 0.12); the asymptotic table would reject at 10 %",
+    "C2 estimate_vec r = 1 ON THEORY, normalised on LRM — the money-demand relation",
+    "C3 test_restriction — weak exogeneity of income and the rates, by LR",
+    "C5 long_run — the income and interest elasticities, the half-lives"
+  ]
+}

@@ -97,7 +97,9 @@ See [`docs/DESIGN.md`](https://github.com/davidesg/sima-python/blob/main/docs/DE
   Worked in [`examples/flour_prices/`](https://github.com/davidesg/sima-python/tree/main/examples/flour_prices/) (the flagship: where
   the ladder's analysis leads into the rank), [`examples/jenkins_alavi/`](https://github.com/davidesg/sima-python/tree/main/examples/jenkins_alavi/)
   (the mixed case) and [`examples/lutkepohl_e1/`](https://github.com/davidesg/sima-python/tree/main/examples/lutkepohl_e1/) (Lütkepohl's
-  E1: one relation, who corrects, an ill-defined fit declared). Each ships its
+  E1: one relation, who corrects, an ill-defined fit declared) and
+  [`examples/johansen_juselius/`](https://github.com/davidesg/sima-python/tree/main/examples/johansen_juselius/) (the Danish money
+  demand: the bootstrap against the asymptotic table at n = 55). Each ships its
   bootstraps' cache, so the tutorial's jobs return at once.
 * [The echelon form](https://github.com/davidesg/sima-python/blob/main/docs/MANUAL-echelon.md): Lütkepohl and Poskitt's (1996)
   identified VARMA: the Kronecker indices from the data (`identify_echelon`),

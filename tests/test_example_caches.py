@@ -2,7 +2,7 @@
 load_example copies them, and the tutorial's bootstraps return at once on
 the platform they were computed on (Linux x86_64, drvec C: the key holds the
 tier and the engine). Rerunning a job reproduces its files byte for byte
-there: that is a test too (the flour prices and E1 take minutes on drvec C;
+there: that is a test too (the flour prices, E1 and the Danish data take minutes on drvec C;
 they run with SIMA_SLOW=1)."""
 import json
 import os
@@ -19,7 +19,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EX = os.path.join(ROOT, "examples")
 SPEC = {"flour_prices": dict(purpose="long run", p=2, case="pre"),
         "jenkins_alavi": dict(purpose="long run", p=2, case="2", mixed=True),
-        "lutkepohl_e1": dict(purpose="long run", p=2, case="2")}
+        "lutkepohl_e1": dict(purpose="long run", p=2, case="2"),
+        "johansen_juselius": dict(purpose="long run", p=2, case="2")}
 
 HERE = platform_tier() == "exact" and jobs.resolve_engine()[0] == "c"
 needs_here = pytest.mark.skipif(not HERE, reason="the caches are Linux x86_64's with drvec C "
@@ -97,6 +98,6 @@ def test_rerunning_the_mixed_case_reproduces_its_bytes(tmp_path, monkeypatch):
 
 @needs_here
 @pytest.mark.skipif(not os.environ.get("SIMA_SLOW"), reason="minutes on drvec C: SIMA_SLOW=1")
-@pytest.mark.parametrize("name", ["flour_prices", "lutkepohl_e1"])
+@pytest.mark.parametrize("name", ["flour_prices", "lutkepohl_e1", "johansen_juselius"])
 def test_rerunning_the_long_ones_reproduces_their_bytes(name, tmp_path, monkeypatch):
     _rerun(name, tmp_path, monkeypatch)

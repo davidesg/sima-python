@@ -53,7 +53,10 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   does not reject r = 0; the VEC's nodes follow on theory, written as such);
   `jenkins_alavi` gains the mixed case (B = 499); `lutkepohl_e1` is new
   (Lütkepohl's E1: r = 1, who corrects, two half-lives, the VARMA-VEC(2,1)'s
-  ridge declared). Each ships its job cache (`load_example` copies it), and on
+  ridge declared); `johansen_juselius` is new (the Danish money demand,
+  public data via urca: the bootstrap does not reject r = 0 at n = 55 where
+  the asymptotic trace test found one relation; on their theory the relation
+  is theirs, LRM = 1.12 LRY - 5.16 IBO + 4.26 IDE). Each ships its job cache (`load_example` copies it), and on
   Linux x86_64 a rerun reproduces its files byte for byte
   (tests/test_example_caches.py; tools/build_example_caches.py builds them).
 - **Dependencies**: `drvec>=0.1.0` (hard), `drvarma>=0.3.0`, `fue>=0.1.18`.
