@@ -24,8 +24,13 @@ from . import evidence, session as _sess
 
 _INSTRUCTIONS = """
 You are sima — the assistant for SIMULTANEOUS multivariate models: VARMA by
-exact maximum likelihood (engine: drvarma). You are the third rung of the ATSW
-ladder: art (one series) → mtram (transfer networks) → sima (systems).
+exact maximum likelihood (engine: drvarma) and, when the series are
+COINTEGRATED, the VARMA-VEC in levels (engine: drvec, the port of drvec C).
+You are the third rung of the ATSW ladder: art (one series) → mtram (transfer
+networks) → sima (systems). One session and one guion hold both: each fit
+carries a KIND, VARMA or VEC, and the final-stage tools (forecast,
+impulse_response, variance_decomposition, evaluate, the plots, reorder) act
+on the current one.
 
 ══════════════════════════════════════════════════════
 LANGUAGE
@@ -45,6 +50,8 @@ You arrive here in one of three ways:
   • from art, with several univariate models the analyst wants to model jointly;
   • from mtram, when its network identification found a CYCLE: two series that
     feed each other. A cycle is where mtram ends. Load the SAME .pre files here.
+    With two or more of them I(1), the routing is yours, at N1c (below): the
+    cointegration question comes before any VARMA in differences.
   • from RAW DATA, with no univariate models: load_data (the table) and
     characterize (each series' lambda, d and seasonality, with art's engine;
     each series keeps its own). Then a route (docs/STUDY-raw-entry.md):
@@ -92,8 +99,45 @@ N1b canonical_analysis  when two or more series are differenced: Box and
                       Tiao's (1977) canonical analysis of the LEVELS. Fewer
                       near non-stationary components than differenced series
                       = stationary combinations: the joint model may not need
-                      every difference (cointegration, drvec's). A reading;
-                      sima never changes a d.
+                      every difference (cointegration). A reading, not a
+                      test; sima never changes a d.
+N1c prepare_vec       THE COINTEGRATION QUESTION, offered whenever TWO OR MORE
+                      series have d = 1, whatever the canonical count (the count
+                      sets the emphasis, not whether it is asked). It is the
+                      analyst's; in the autonomous lane yours, with the reason
+                      written down. Feedback is NOT a precondition: it is
+                      tested inside the VEC. First record the PURPOSE,
+                      "forecast" or "long run" (it decides C8). Declined:
+                      N2, the VARMA in differences. The MIXED case (I(0) and
+                      I(1) series) is an option (mixed=True), never the default.
+    C0 (same tool)    the checks (d >= 2, D > 0, drvec's refusals, a moved
+                      file, the window), p (the AR rule or Tiao and Box's M(l)
+                      on the levels), the deterministic case (default "pre").
+    C1 rank_test      THE RANK, by PARAMETRIC BOOTSTRAP (a JOB): the only way
+                      to a rank. Outcomes:
+                        r = 0       — the differences are right: back to N2
+                                      (drvarma's VARMA in differences, this
+                                      session);
+                        0 < r < M   — the VEC: C2 onwards;
+                        all reject  — "at least M - 1": the last step is a
+                                      unit-root question (canonical analysis,
+                                      art's table, a VARMA in levels or art);
+                        a tie       — estimate both ranks and compare.
+    C2 estimate_vec   the adopted VEC: the ROLES (normalise_on), drvec's .out
+                      blocks, alpha from the matrix, the canonical weights
+                      beside beta; a fit on a ridge is declared, never an
+                      optimum.
+    C3 test_restriction  alpha and beta by LR (weak exogeneity: who corrects).
+    C4 add_exogenous  inputs, dispatched by their order of integration.
+    C5 long_run       theta, both half-lives, Gonzalo and Ng.
+    C6 impulse_response / variance_decomposition on the VEC: the LEVELS; bands
+                      only from irf_bands (a JOB, the bootstrap).
+    C7 sweep          robustness: p, case, subsamples (one cached job a cell).
+    C8 evaluate       the yardstick for the VEC (see rule 9).
+    JOBS              rank_test, irf_bands and sweep run as detached jobs that
+                      survive the conversation: job_status, job_result,
+                      job_cancel, jobs. A job tool waits ~20 s, then returns the
+                      job id. NOTHING PARTIAL IS EVER A RESULT.
 N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
                       what the univariate models do NOT carry. It proposes
                       cross orders and whether the innovations correlate.
@@ -172,6 +216,15 @@ writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
                       specification, not an optimum), decide whether to go on
                       and write it down: its univariate model has not been
                       validated here.
+  N1c prepare_vec     with two or more I(1) series: decide whether to test the
+                      rank, and the PURPOSE ("forecast" or "long run"), and
+                      record both. Then rank_test, and DO NOT DECIDE THE RANK
+                      until job_result has the final table (poll job_status).
+                      The rank is the bootstrap's; adopting another one is a
+                      claim on theory, written as such (estimate_vec theory=).
+  C2-C8               one node at a time, as below: the roles, each
+                      restriction, each input, the long run, the yardstick —
+                      each with its record_decision.
   N2 identify_cross   read the CCFs of the diagonal system: which pairs, at
                       which lags, and whether the innovations correlate
                       (full or diagonal covariance). Choose the candidates to
@@ -227,7 +280,30 @@ RULES THAT ARE NOT NEGOTIATED
 6. Do not prune a link or drop a series to make a number look better. That is
    the analyst's judgement, stated as such.
 7. Present the tables as the tools return them. Do not rebuild them.
-8. Resources to ASK for when needed: sima://protocol (this text),
+8. NO COINTEGRATION CLAIM WITHOUT A FINISHED BOOTSTRAP. The rank is decided
+   by rank_test's parametric bootstrap; the asymptotic table is orientation,
+   never the verdict; read the critical values, not the p-value. No rank, no
+   beta, no equilibrium is reported without a finished bootstrap behind it,
+   unless the analyst adopts r on THEORY — then estimate_vec(theory=...) writes
+   it in the guion as such, beside the bootstrap's numbers.
+9. THE YARDSTICK FOR A VEC is always computed and reported (C8). It is a VETO
+   when the purpose recorded at N1c is "forecast" (rule 1 as it stands); a
+   CAVEAT, not a veto, beside a "long run" claim (an equilibrium, who
+   corrects): imposing cointegration often helps little at short horizons.
+10. LR, not Wald, for every restriction on a VEC: the .out's Wald depends on
+   the normalisation and is not citable. drvec's free model in those LRs can
+   be weaker than the adopted VEC: test_restriction uses the best free fit
+   known and shows both.
+11. In a VEC the order of the series IS the normalisation (beta on the last r)
+   and the Cholesky order: another order is ANOTHER FIT (estimate_vec with
+   normalise_on), never a reorder. The bands of a VEC's responses come only
+   from the bootstrap (irf_bands).
+12. drvec's refused options are never offered: -warma, -mawarma, -specs,
+   -matest, -artest, the rank test's combinations, -m 2, -rankadm, the
+   instruments and the writers. No .pre is written for the system.
+13. A VEC is forecast by drvarma's forecaster (the VEC written in levels): one
+   forecaster for every system.
+14. Resources to ASK for when needed: sima://protocol (this text),
    sima://defects (sima's and the engine's defect registers; one report with
    sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
    user manual: sima://doc/MANUAL-jenkins-alavi and
@@ -615,6 +691,14 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
             kept += 1
         else:
             shutil.copy2(o, d)
+    # the example's job cache (its bootstraps, already run): found by content
+    # key, so the tutorial's long jobs return at once (PLAN-vec C6)
+    cached = 0
+    for rel in m.get("jobs", []):
+        o, d = os.path.join(src, rel), os.path.join(dest, rel)
+        if os.path.isdir(o) and not os.path.exists(os.path.join(d, "result.json")):
+            shutil.copytree(o, d, dirs_exist_ok=True)
+        cached += os.path.isdir(o)
     session = session or name
     if raw:
         loaded = getattr(load_data, "fn", load_data)(
@@ -632,7 +716,9 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
         what, nxt = "The univariate models, loaded", f'run_gate("{session}")'
     out = [f"# Worked example — {m['title']}", "", m["summary"], "",
            f"Files in `{dest}`" + (f" ({kept} already there, kept as they were)" if kept else "")
-           + f"; session `{session}`.", "",
+           + f"; session `{session}`."
+           + (f" The example's job cache ({cached} finished job(s): its bootstraps) came "
+              "with it: on this platform's tier they return at once." if cached else ""), "",
            "## The plan", ""] + [f"- {p}" for p in m.get("plan", [])] + [
            "", "## For the assistant", "",
            f"Read the tutorial now: `sima://example/{name}`. Lead it in the guided "
@@ -852,7 +938,12 @@ def load_pre(name: str, paths_json: str) -> str:
     txt = evidence.series_table(s.series)
     s.guion.add("N0", "load_pre", {"files": len(paths)},
                 f"{len(paths)} series: {', '.join(_names(s))}")
-    return (txt + "\n\nNext: run_gate — the univariate base has to be certified "
+    nd = sum(int(x.model.d or 0) == 1 for x in s.series)
+    coint = ("\n\nTwo or more series have d = 1: after the gate and the canonical "
+             "analysis sima asks the COINTEGRATION QUESTION (N1c: the rank by drvec's "
+             "parametric bootstrap) before any VARMA in differences — the same files "
+             "mtram hands over with a cycle." if nd >= 2 else "")
+    return (txt + coint + "\n\nNext: run_gate — the univariate base has to be certified "
             "before anything is built on it.")
 
 
@@ -901,7 +992,9 @@ def run_gate(name: str) -> str:
     nd = sum(int(x.model.d or 0) >= 1 for x in s.series)
     nxt = ("Next: canonical_analysis — "
            f"{nd} series are differenced, and Box and Tiao's reading of the levels "
-           "says whether they need every difference jointly; then identify_cross."
+           "says whether they need every difference jointly; then N1c, the "
+           "cointegration question (prepare_vec: the rank by drvec's bootstrap), or "
+           "identify_cross."
            if nd >= 2 else "Next: identify_cross.")
     if s.route == "V":
         prov = ("\n\nRoute V: the files are specifications with no ARMA. The gate "
@@ -958,10 +1051,11 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
     d = [int(x.model.d or 0) for x in s.series]
     txt, facts = evidence.canonical_report(X, _names(s), d, s.series[0].freq,
                                            int(p), float(near), call=name)
+    s.canonical = facts                 # for prepare_vec (p) and estimate_vec (beta)
     s.guion.add("N1b", "canonical_analysis", {"p": facts["p"], "near": near},
                 f"lam {', '.join(f'{v:.3f}' for v in facts['lam'])}; "
                 f"{facts['near_one']} near 1 of {facts['differenced']} differenced"
-                + ("; stationary combinations possible (drvec)" if facts["question"] else ""))
+                + ("; stationary combinations possible (N1c)" if facts["question"] else ""))
     return txt
 
 
@@ -1222,6 +1316,7 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
         return f"Estimation failed: {e}"
     s.fits[key] = L
     s.current = key
+    s.kind = "VARMA"
     freq = s.series[0].freq
     txt = evidence.estimation_text(L, max(8, 2 * freq))
     if ech:
@@ -1250,7 +1345,8 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
                                    "start": L.start_used, "cross": cross,
                                    "zeros": ", ".join(zs),
                                    "indices": ", ".join(map(str, ech))},
-                f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason)
+                f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason,
+                kind="VARMA")
     nxt = "Next: evaluate — the candidate against the univariates."
     if getattr(L.result, "ma_boundary", 0):
         nxt = ("The fit stopped on the MA invertibility wall: study it before "
@@ -1307,8 +1403,8 @@ def simplify(name: str, t: float = 1.0) -> str:
     s = _sess.get(name)
     try:
         L = _current(s)
-    except KeyError:
-        return "Estimate a model first (estimate)."
+    except KeyError as e:
+        return str(e) if s.current_kind() == "VEC" else "Estimate a model first (estimate)."
     key = s.current
     r = L.result
     x, se = np.asarray(r.x, float), np.asarray(r.std_errors, float)
@@ -1356,8 +1452,8 @@ def structure(name: str, alpha: float = 0.05) -> str:
     s = _sess.get(name)
     try:
         L = _current(s)
-    except KeyError:
-        return "Estimate a model first (estimate)."
+    except KeyError as e:
+        return str(e) if s.current_kind() == "VEC" else "Estimate a model first (estimate)."
     key = s.current
     p, q, dc, lk, cr, zs, ech = key
     if p == 0 and q == 0:
@@ -1540,6 +1636,9 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
     import copy
     from drvarma.ladder import Ladder
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        return ("The current model is a VEC: study_estimation reads a VARMA. For a VEC that "
+                "stopped on a ridge, estimate_vec declares it and offers multistart.")
     if s.current is None or s.current not in s.fits:
         return "Estimate a model first (estimate)."
     p, q, diagcov, lk, cross, zs, ech = s.current
@@ -1630,6 +1729,14 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
     (at least a few dozen origins) or the comparison says little. `links`,
     `zeros` and `indices`: as in estimate, the same candidate.
 
+    ON A VEC (the current model is one, estimate_vec): the VEC's rolling-origin
+    forecasts (drvec's -estwin/-f: the fit on the first rows, parameters held,
+    errors in each series' own units) against the univariates on the same
+    origins, and against the VARMA in differences when one was estimated. THE
+    RULE depends on the purpose recorded at N1c: a VETO when it is "forecast",
+    a CAVEAT (always reported) for a "long run" claim. p, q and the VARMA
+    arguments are then ignored.
+
     `yardstick` (route V): the analyst's univariate models, one fue file per
     series (a JSON list or comma-separated paths), e.g. their `.pre` from art.
     Without it the yardstick is route U's light builder, which takes the first
@@ -1640,6 +1747,9 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
+    if s.current_kind() == "VEC":
+        from .mcp_vec import evaluate_vec
+        return evaluate_vec(s, int(estwin), int(horizon))
     if yardstick.strip():
         if s.route != "V":
             return ("On route U the yardstick is the univariate models loaded with "
@@ -1690,6 +1800,11 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
 # --------------------------------------------------------------------------- #
 
 def _current(s):
+    if s.current_kind() == "VEC":
+        raise KeyError("the current model is a VEC (estimate_vec): this tool reads a VARMA "
+                       "on drvarma's ladder. The VEC's evidence is in estimate_vec, "
+                       "test_restriction and long_run; to go back to a VARMA, estimate it "
+                       "(a fit already made is cached)")
     if s.current is None or s.current not in s.fits:
         raise KeyError("no model estimated yet: run estimate")
     return s.fits[s.current]
@@ -1702,15 +1817,22 @@ def forecast(name: str, horizon: int = 12) -> str:
     Each series goes back to its level with its own univariate model:
     deterministic terms (known in the future), its differencing, its Box-Cox.
     The 95% band is built on the transformed scale and mapped back.
+    On a VEC (the current model is one): the VEC written in levels
+    (drvec.to_levels_varma) and forecast by drvarma's forecaster — one
+    forecaster for every system — with each file's deterministic path and
+    Box-Cox; drvec's band multiplier.
     """
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import forecast_vec
+        return forecast_vec(s, int(horizon))
     try:
         L = _current(s)
         fcs = L.forecast(int(horizon))
     except Exception as e:
         return f"Cannot forecast: {e}"
     s.guion.add("N6", "forecast", {"horizon": horizon, "model": str(s.current)},
-                f"{horizon} steps")
+                f"{horizon} steps", kind="VARMA")
     return evidence.forecast_text(fcs)
 
 
@@ -1774,15 +1896,22 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
+    On a VEC: the responses of the LEVELS (drvec), in drvec's order — the
+    VEC's normalisation order — and their permanent effect; the bands come
+    only from the parametric bootstrap (irf_bands, a job), never from the
+    covariance.
     """
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import irf_vec
+        return irf_vec(s, int(horizon), bands)
     try:
         r = _current(s).result
     except Exception as e:
         return f"{e}"
     b, why = _bands(s, int(horizon), bands, ndraws)
     s.guion.add("N6", "impulse_response", {"horizon": horizon, "bands": b is not None},
-                "Cholesky, files order")
+                "Cholesky, files order", kind="VARMA")
     return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
 
 
@@ -1797,10 +1926,19 @@ def reorder(name: str, order_json: str, horizon: int = 12) -> str:
     size with the order is an assumption, not a finding. With a diagonal
     covariance the order does not matter at all, and the tool says so.
     `order_json`: the series names in the new order, e.g. '["WTI", "IPC_ES"]'.
+    On a VEC it REFUSES: there the order is also the normalisation, so another
+    order is another fit (estimate_vec with normalise_on).
     """
     import numpy as np
     from drvarma.irf import oirf
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        vf = s.vec_fits[s.vec_current]
+        return ("REFUSED on a VEC: drvec's file order is both the normalisation (beta on the "
+                "last r series) and the Cholesky order, so another order is ANOTHER FIT, "
+                "not a permutation of this one. Estimate it: "
+                f'estimate_vec(name="{name}", r={vf.r}, normalise_on="...") — and, for its '
+                "bands, a new irf_bands job.")
     try:
         r = _current(s).result
     except Exception as e:
@@ -1858,15 +1996,20 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
     impulse_response, and the same caveat: with correlated innovations the
     shares of the first series in the order are inflated by construction.
     With `bands` (default): 95% Monte-Carlo bands at the last horizon.
+    On a VEC: the decomposition of the LEVELS' forecast errors (drvec), with
+    the bootstrap's bands when irf_bands has run.
     """
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import fevd_vec
+        return fevd_vec(s, int(horizon), bands)
     try:
         r = _current(s).result
     except Exception as e:
         return f"{e}"
     b, why = _bands(s, int(horizon), bands, ndraws)
     s.guion.add("N6", "variance_decomposition", {"horizon": horizon, "bands": b is not None},
-                "Cholesky, files order")
+                "Cholesky, files order", kind="VARMA")
     return evidence.fevd_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
 
 
@@ -1881,11 +2024,13 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
 def kind_tool(kind):
     if kind.startswith("ident"):
         return "plot_identification"
+    if kind == "rankboot":
+        return "plot_rank_bootstrap"
     return {"irf": "plot_impulse_response", "fevd": "plot_variance_decomposition",
             "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
 
 
-def _figure(s, fig, kind, path, note, report=None):
+def _figure(s, fig, kind, path, note, report=None, node=None):
     """The figure INSIDE the answer (as art and mtram), and a PNG on disk.
     `note` is the guion's one line; `report` (default: the note) is what the
     analyst reads."""
@@ -1904,8 +2049,8 @@ def _figure(s, fig, kind, path, note, report=None):
     # the node the figure belongs to: the identification is N2; the residual
     # CCFs are in-sample evidence (N4); the IRF, the FEVD and the forecasts are
     # the use of the model (N6)
-    node = "N2" if kind.startswith("ident") else "N4" if kind == "ccf" else "N6"
-    s.guion.add(node, kind_tool(kind), {"png": [p]}, note)
+    node = node or ("N2" if kind.startswith("ident") else "N4" if kind == "ccf" else "N6")
+    s.guion.add(node, kind_tool(kind), {"png": [p]}, note, kind=s.current_kind())
     text = f"{report or note}\nPNG: {p}"
     try:
         from mcp.types import ImageContent, TextContent
@@ -1956,9 +2101,14 @@ def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
     one panel per (response, shock), thick impulses at h = 0..H, the seasonal
     grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
     order of the files, as impulse_response. The numbers are impulse_response's.
+    On a VEC: the level responses (drvec), with the bootstrap's 90 % band
+    from irf_bands when it has run.
     """
     from . import figures
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import plot_irf_vec
+        return plot_irf_vec(s, int(horizon), bands, path, fevd=False)
     try:
         L = _current(s)
     except KeyError as e:
@@ -1976,10 +2126,14 @@ def plot_variance_decomposition(name: str, horizon: int = 24, bands: bool = True
 
     Panel (i, j): the % of the h-step forecast-error variance of i due to the
     shock of j, h = 1..H, as impulses on a 0-100 axis with the 95 % band
-    dashed. A row reads the same as in plot_impulse_response.
+    dashed. A row reads the same as in plot_impulse_response. On a VEC: the
+    levels' decomposition (drvec), the bootstrap's band from irf_bands.
     """
     from . import figures
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import plot_irf_vec
+        return plot_irf_vec(s, int(horizon), bands, path, fevd=True)
     try:
         L = _current(s)
     except KeyError as e:
@@ -1997,9 +2151,13 @@ def plot_residual_ccf(name: str, nlags: int = 0, path: str = "") -> list:
     reference), titled "A - B" with A leading at k > 0, and Hosking's
     portmanteau below as GraphMaker labels it, P (not Ljung-Box's Q). What is
     left beyond the band is what the model does not carry.
-    `nlags` defaults to twice the frequency."""
+    `nlags` defaults to twice the frequency. On a VEC: the residuals of its
+    stationary form (nabla Y2 and the equilibrium errors, drvec's)."""
     from . import figures
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import plot_ccf_vec
+        return plot_ccf_vec(s, int(nlags), path)
     try:
         L = _current(s)
     except KeyError as e:
@@ -2145,11 +2303,15 @@ def plot_forecast(name: str, horizon: int = 24, series: str = "", path: str = ""
     forecast report can go series by series: `series` empty (default) returns
     one figure for each; a series' name, only that one; "all", every series
     in a single grid. `path` (optional) is a directory, or with one series a
-    file.
+    file. On a VEC: the levels and the 95 % band of forecast (drvarma's
+    forecaster on the VEC in levels), with ERR the level innovations.
     """
     import tempfile
     from . import figures
     s = _sess.get(name)
+    if s.current_kind() == "VEC":
+        from .mcp_vec import plot_forecast_vec
+        return plot_forecast_vec(s, int(horizon), series, path)
     try:
         L = _current(s)
         fcs = L.forecast(int(horizon))
@@ -2271,6 +2433,13 @@ def _cli_flags():
 def main():
     _cli_flags()
     mcp.run()
+
+
+# the cointegration tools (N1c and the C nodes) register on the same server
+from . import mcp_vec as _mcp_vec          # noqa: E402,F401
+from .mcp_vec import (add_exogenous, estimate_vec, irf_bands, job_cancel,  # noqa: E402,F401
+                      job_result, job_status, jobs_list, long_run, plot_rank_bootstrap,
+                      prepare_vec, rank_test, sweep, test_restriction)
 
 
 if __name__ == "__main__":

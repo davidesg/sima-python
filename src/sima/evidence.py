@@ -941,7 +941,8 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
                      "Then differencing every series is more than the system needs "
                      "(Box and Tiao 1977, §4.4: the differenced model carries a "
                      "non-invertible MA and leaves the autoregressive form), which is "
-                     "cointegration — drvec's ground, where Johansen's test decides.")
+                     "cointegration: the rank test decides it (N1c, drvec's bootstrap "
+                     "in this session).")
     else:
         lines.append(f"As many near non-stationary components ({len(unit)}) as "
                      f"differenced series ({len(diffd)}): the levels show no stationary "
@@ -960,13 +961,36 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
     else:
         opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
                  "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
-    if question:
-        opts.insert(1, ("take the series to drvec: Johansen's reduced-rank test, a model "
-                        "in levels with the error correction", "drvec (outside sima)"))
-        opts.insert(2, ("change a series' d with this reading in hand",
-                        f'characterize(name="{call}", set="SERIES: d=0")') if raw else
-                    ("back to art: reconsider a series' d with this reading in hand",
-                     "art (outside sima)"))
+    i0 = [nm for nm, dd in zip(names, d) if dd == 0]
+    if len(diffd) >= 2 and not raw:
+        # N1c, the cointegration question (docs/PLAN-vec.md, decision 2): offered
+        # whenever two or more series have d = 1, whatever the count; the count
+        # sets the emphasis, not whether it is asked
+        n1c = ("N1c — the cointegration question: test the rank by parametric bootstrap "
+               "(drvec, in this session); first record the model's PURPOSE, "
+               "\"forecast\" or \"long run\"",
+               f'prepare_vec(name="{call}", purpose="...")')
+        if question:
+            opts.insert(0, n1c)
+        else:
+            opts.insert(1, n1c)
+        if i0:
+            opts.append(("the MIXED case (an option, never the default): the I(0) series "
+                         f"({', '.join(i0)}) in the Y1 block, r >= {len(i0)}",
+                         f'prepare_vec(name="{call}", purpose="...", mixed=True)'))
+        opts.insert(2, ("back to art: reconsider a series' d with this reading in hand",
+                        "art (outside sima)"))
+    elif not raw and len(diffd) == 1 and i0:
+        opts.append(("the MIXED case (an option, never the default): one I(1) and "
+                     f"{len(i0)} I(0) series, a VEC with the I(0) series in Y1 "
+                     f"(r >= {len(i0)}); drvec's VEC holds the ladder as B2 = 0",
+                     f'prepare_vec(name="{call}", purpose="...", mixed=True)'))
+    elif question:
+        opts.insert(1, ("change a series' d with this reading in hand",
+                        f'characterize(name="{call}", set="SERIES: d=0")'))
+        opts.insert(2, ("build the files (route U or V), then ask the cointegration "
+                        "question at N1c: the rank by drvec's bootstrap", "prepare_vec, "
+                        "after build_univariate or write_specs and run_gate"))
     if p_used != max(1, p_tb) or p_tb != 1:
         opts.append(("the same reading at another VAR order",
                      f'canonical_analysis(name="{call}", p=1)'))
@@ -977,7 +1001,8 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
               "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
     facts = {"lam": [float(v) for v in lam], "p": p_used, "p_tb": p_tb,
              "near_one": len(unit), "near_zero": len(white), "differenced": len(diffd),
-             "question": bool(question)}
+             "question": bool(question), "names": list(names),
+             "weights": [[float(v) for v in row] for row in W]}
     return "\n".join(lines), facts
 
 

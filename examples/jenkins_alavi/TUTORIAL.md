@@ -152,6 +152,39 @@ for both models. sima runs it and says why they were cautious. The rule of
 sima: the univariate models are the yardstick; B stays as the structural
 description. *Manual 3.5.*
 
+## Step 8 · N1c — the mixed case, an option
+
+    prepare_vec("jenkins_alavi", purpose="long run", p=2, case="2", mixed=True)
+
+Muskrat has d = 1 and mink d = 0, so canonical_analysis says the question of
+joint differencing "does not arise", and N1c is not offered by default. The
+MIXED case is an option, never the default: drvec's VEC with mink in the Y1
+block (an I(0) series is a stationary relation by itself, so r >= 1) and the
+ladder's mixed-d model inside it as B2 = 0. p = 2 and case 2 are Mauricio's
+(2006, §4), the paper drvec replicates.
+
+## Step 9 · C1 — the rank, by bootstrap
+
+    rank_test("jenkins_alavi", B=499)          (cached)
+
+r = 0 → 1: LR 8.42 against the bootstrap's 95 % value 14.04 (the asymptotic
+5 %, 15.67, is orientation only), p 0.23: r = 0 is NOT rejected. That
+CONFLICTS with mink's own model (d = 0 implies r >= 1). The lesson: at n = 61
+the test has little power, and the other evidence — the univariate unit-root
+table, theory — weighs. B = 20 in drvec's oracle gave p 0.29; with B = 499 the
+verdict is the same.
+
+## Step 10 · C2-C3 — r = 1 on theory, and the ladder's model as a restriction
+
+    estimate_vec("jenkins_alavi", r=1, theory="mink is I(0) in its own model: r >= 1")
+    test_restriction("jenkins_alavi", fixb2="0")
+
+beta is normalised on mink: mink = 0.26 muskrat + a stationary error. alpha:
+−0.25 (t −0.8) on muskrat, −0.34 (t −2.7) on mink. B2 = 0 — the relation
+involves mink alone, which is the ladder's model with each series' own d — is
+not rejected: LR 0.29, chi2(1), p 0.59. drvec's VEC and the ladder tell the
+same story here: the mixed-d system of steps 1-7 stands.
+
 ## Closing
 
     export_guion("jenkins_alavi")

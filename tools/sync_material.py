@@ -35,12 +35,13 @@ def _copy(src, dst, keep):
     return len(names), copied
 
 
-EXAMPLE_KEEP = (".pre", ".out", ".csv", ".md", ".json")
+EXAMPLE_KEEP = (".pre", ".out", ".csv", ".md", ".json", ".boot", ".irfboot")
 
 
 def example_files(src):
     """The files of the worked examples that travel with the package: the
-    manifest, the tutorial, the univariate models and the data — not the
+    manifest, the tutorial, the univariate models, the data and the job caches
+    (sima_jobs/<id>/: job.json, result.json, the engine's files) — not the
     walkthrough's outputs (out/, figs/), the guion it writes, nor route V's
     specifications (<data>_sima/)."""
     out = []

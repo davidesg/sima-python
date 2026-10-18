@@ -1,0 +1,29 @@
+{
+  "name": "lutkepohl_e1",
+  "title": "Lutkepohl's E1: investment, income and consumption (West Germany)",
+  "summary": "The textbook three-variable cointegrated system (Lutkepohl 2005, data set E1): West German fixed investment, disposable income and consumption, quarterly 1960-1982, in logs. The rank by parametric bootstrap (drvec, B = 499, shipped in the example's cache) finds one relation; the VEC, who corrects, the two half-lives and the yardstick follow. And an ill-defined fit, the VARMA-VEC(2,1), whose search stops on a ridge: sima declares it, it does not present it as an optimum.",
+  "files": [
+    "art/e1invest.pre",
+    "art/e1income.pre",
+    "art/e1cons.pre"
+  ],
+  "also": [
+    "README.md"
+  ],
+  "jobs": [
+    "art/sima_jobs/30a1ae1f6936fd01"
+  ],
+  "tutorial": "TUTORIAL.md",
+  "manual": "STUDY-vec",
+  "plan": [
+    "N1 run_gate — the three files (random walks with drift in logs, fue)",
+    "N1b canonical_analysis — two components near 1 of three",
+    "N1c prepare_vec — purpose \"long run\", p = 2, case 2 (a restricted constant)",
+    "C1 rank_test (B = 499, cached) — r = 0 rejected (LR 58.65, p 0.002), r = 1 not (6.02 against 13.22): r = 1",
+    "C2 estimate_vec r = 1 — consumption on income, alpha on income and consumption",
+    "C3 test_restriction — investment is weakly exogenous (LR 0.06, p 0.80)",
+    "C5 long_run — the textbook half-life 1.9 quarters, the model's 52",
+    "C8 evaluate — the yardstick, a caveat",
+    "C2 again, q = 1 — the ridge: declared, not an optimum"
+  ]
+}

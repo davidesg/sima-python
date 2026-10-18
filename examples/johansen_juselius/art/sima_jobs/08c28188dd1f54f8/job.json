@@ -1,0 +1,70 @@
+{
+ "args": {
+  "B": 499,
+  "case": "2",
+  "multistart": 0,
+  "names": [
+   "LRM",
+   "LRY",
+   "IBO",
+   "IDE"
+  ],
+  "nodrift": [],
+  "p": 2,
+  "q": 0
+ },
+ "engine": [
+  "c",
+  "0.13",
+  "bundled"
+ ],
+ "extra_files": [],
+ "files": [
+  "LRM_u.pre",
+  "LRY_u.pre",
+  "IBO_u.pre",
+  "IDE_u.pre"
+ ],
+ "id": "08c28188dd1f54f8",
+ "key": "08c28188dd1f54f807a905e5c8bc2c8b40d309f109fcc106b4a3ea443f728cd6",
+ "label": "rank test B=499 p=2 case 2",
+ "payload": {
+  "args": {
+   "B": 499,
+   "case": "2",
+   "multistart": 0,
+   "names": [
+    "LRM",
+    "LRY",
+    "IBO",
+    "IDE"
+   ],
+   "nodrift": [],
+   "p": 2,
+   "q": 0
+  },
+  "backend": "c",
+  "engine": "c 0.13",
+  "extra_files": [],
+  "files": [
+   "7712b3314f8ca6e2696b350085a36c86edb54bc1b3947a29449462985ac5acf7",
+   "e89d4cb7b0cd78191b825a5896c327191cd7bdab8a01abd0c34401da02945200",
+   "8ff8217c3d17ecfd2a986a430a0068a65831e71c9265830e8e7b9e3938137db6",
+   "91f1ffd2230637ebc0c540fdc319646e3fbab75b1335f860da5fd15bba90960c"
+  ],
+  "seed": null,
+  "tier": "exact",
+  "tool": "rank_test",
+  "versions": {
+   "drvarma": "0.3.0",
+   "drvec": "0.1.0",
+   "fue": "0.1.18"
+  }
+ },
+ "seed": null,
+ "shipped": "a worked example's cache (tools/build_example_caches.py)",
+ "slots": 1,
+ "status": "done",
+ "tool": "rank_test",
+ "workers": 1
+}

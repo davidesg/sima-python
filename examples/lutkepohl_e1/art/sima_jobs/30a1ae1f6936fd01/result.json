@@ -1,0 +1,96 @@
+{
+ "B": 499,
+ "M": 3,
+ "case": "2",
+ "comparisons": [
+  {
+   "B": 499,
+   "asym_cv": [
+    19.77,
+    22.0,
+    26.81
+   ],
+   "asym_verdict": "reject H0 at 1%",
+   "cv": [
+    19.838196069759306,
+    22.587035615666082,
+    30.069737137041102
+   ],
+   "fitfail": 0,
+   "h0": 0,
+   "lr": 58.651800971451166,
+   "ok": 499,
+   "pvalue": 0.002,
+   "simfail": 0
+  },
+  {
+   "B": 499,
+   "asym_cv": [
+    13.75,
+    15.67,
+    20.2
+   ],
+   "asym_verdict": "H0 not rejected",
+   "cv": [
+    10.493315652891397,
+    13.220319130369262,
+    18.520432788812514
+   ],
+   "fitfail": 1,
+   "h0": 1,
+   "lr": 6.021348513064595,
+   "ok": 498,
+   "pvalue": 0.34468937875751504,
+   "simfail": 0
+  }
+ ],
+ "drift_how": null,
+ "files": [
+  "rank.out",
+  "rank.boot"
+ ],
+ "multistart": 0,
+ "names": [
+  "invest",
+  "income",
+  "cons"
+ ],
+ "nobs": 91,
+ "nodrift": [],
+ "p": 2,
+ "provenance": {
+  "backend": "c",
+  "engine": "c",
+  "extra": {
+   "source": "bundled"
+  },
+  "note": "engine='c'",
+  "platform": "linux x86_64",
+  "seed": null,
+  "tier": "exact",
+  "version": "0.13",
+  "workers": 1
+ },
+ "q": 0,
+ "ranks": [
+  {
+   "logL": 721.1988081448386,
+   "ma_boundary": false,
+   "npar": 14,
+   "r": 0
+  },
+  {
+   "logL": 750.5247086305642,
+   "ma_boundary": false,
+   "npar": 20,
+   "r": 1
+  },
+  {
+   "logL": 753.5353828870965,
+   "ma_boundary": false,
+   "npar": 24,
+   "r": 2
+  }
+ ],
+ "tool": "rank_test"
+}

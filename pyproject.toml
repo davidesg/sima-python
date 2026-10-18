@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "sima-tseries"
-version         = "0.1.1"
-description     = "sima — the MCP assistant for simultaneous VARMA models on the ATSW ladder (engine: drvarma)"
+version         = "0.2.0"
+description     = "sima — the MCP assistant for simultaneous VARMA and cointegrated VARMA-VEC models on the ATSW ladder (engines: drvarma, drvec)"
 readme          = "README.md"
 license         = { text = "GPL-2.0-or-later" }
 requires-python = ">=3.10"
 authors         = [
     { name = "David E. Guerrero", email = "davidesg@ucm.es" },
 ]
-keywords        = ["time series", "VARMA", "multivariate", "Box-Jenkins", "MCP", "forecasting"]
+keywords        = ["time series", "VARMA", "VEC", "cointegration", "multivariate", "Box-Jenkins", "MCP", "forecasting"]
 classifiers     = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -29,9 +29,16 @@ dependencies = [
     # calls (diagnostics.ccf/qccf/hosking_q, irf.oirf/fevd), declared there.
     # Its binary wheels carry the compiled likelihood the ladder needs for
     # speed: without it the ladder warns and runs ~250x slower.
-    "drvarma>=0.2.0",
+    # >=0.3.0: GSL's eigensolvers, and forecast_given (the VEC in levels is
+    # forecast by drvarma's forecaster: one forecaster, PLAN-vec decision 5)
+    "drvarma>=0.3.0",
+    # the cointegrated systems (VARMA-VEC by exact ML, the port of drvec C
+    # 0.13): a hard dependency (PLAN-vec Q11); its wheels carry drvec C for
+    # the long bootstraps
+    "drvec>=0.1.0",
     # the reference parser of the univariate files, and the univariate cast
-    "fue>=0.1.16",
+    # (>=0.1.18: the deterministic component by lib/fuedet, which drvec needs)
+    "fue>=0.1.18",
     # the one graphics engine of the ladder: residual panels and the forecast
     "pyfug>=2.0.1",
     "numpy>=1.24",
@@ -68,7 +75,9 @@ where = ["src"]
 sima = ["material/bugs/*.md", "material/docs/*.md",
         "material/examples/*/*.md", "material/examples/*/*.json",
         "material/examples/*/*/*.pre", "material/examples/*/*/*.out",
-        "material/examples/*/*/*.csv"]
+        "material/examples/*/*/*.csv",
+        "material/examples/*/*/sima_jobs/*/*.json", "material/examples/*/*/sima_jobs/*/*.out",
+        "material/examples/*/*/sima_jobs/*/*.boot", "material/examples/*/*/sima_jobs/*/*.irfboot"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

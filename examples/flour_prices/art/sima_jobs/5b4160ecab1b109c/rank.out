@@ -1,0 +1,198 @@
+Program          : DRVEC 0.1.0 (python)
+Input Data File  : the .pre files
+Output File      : rank.out
+Model            : VARMA-VECM(2,0), M = 3 series, cointegration rank r = 0..2 (sequential test)
+Estimation       : Exact Unconditional Maximum Likelihood, Algorithm AS 311 (Mauricio 1997), xi sequence truncated at 1e-3
+Transformation   : VECM to stationary VARMA (Mauricio 2006)
+Deterministic    : case 3 -- E[nabla Y2] free, E[W] free (drifts as in the .pre files)
+Structure        : F free, Theta absent (q = 0), Sigma free
+Series           : BUFFALO MINNEAPOLIS KANSASCITY   (2 in the nabla Y2 block, 1 in Y1)
+Sample           : 99 observations from 1972/9, monthly (raw 100)
+
+=== Sequential LR test for the cointegration rank ===
+
+=== The ladder below the rank: r = 0, from the gate up ===
+  rung 0  (F diag, Theta diag, Sigma diag)   logL = -901.0562829728
+
+=== Entry gate: the factorisation contract ===
+
+At r = 0 with diagonal Phi, Theta and Sigma the likelihood factorises,
+so the joint fit must equal the sum of the univariate fits exactly.
+
+  univariate 1 (p=2, q=0)   logL =    -296.5756786209
+  univariate 2 (p=2, q=0)   logL =    -299.8033848238
+  univariate 3 (p=2, q=0)   logL =    -304.6772195273
+                                 sum  =    -901.0562829721
+                                 joint=    -901.0562829728
+  (both sides untruncated; the fit's own logL, xi truncated at 1e-03, is -901.0562829728)
+
+  crossing identity (joint - sum) = -6.987e-10   (tolerance 1.0e-06)   VERIFIED
+  rung 1  (F diag, Theta diag, Sigma free)   logL = -684.9987531938
+  rung 2  (F free, Theta free, Sigma free)   logL = -667.6772449102
+
+--- rank r = 0 ---
+
+Search: 2 starting points, 2 converged; logL from -667.677245 to -667.677245.  The best is `seed'.
+  start        logL            stop  iters  admissible start
+  seed           -667.677245     grad      0  as given
+  cold           -667.677245     grad     23  as given
+  The SPREAD is the diagnostic: on a well-behaved surface every start lands in the same place.
+
+=============================================================
+  OPTIMIZER CONVERGED after 0 iterations
+  Objective function = 1.000000000000
+  Convergence criterion: norm of scaled gradient <= gradtol
+=============================================================
+
+
+=============================================================
+  OPTIMIZER CONVERGED after 30 iterations
+  Objective function = 0.980176946628
+  Convergence criterion: norm of scaled gradient <= gradtol
+=============================================================
+
+
+=== -seedgate: the VEC block profiled on the rung below ===
+
+  r = 0 optimum (F, Theta, Sigma)        logL =    -667.6772449102
+  admissible entry, Lambda x 1.00          logL =    -663.0275488774
+  + Lambda and B2 profiled on it         logL =    -662.0364516686
+
+  The starting point for the free fit below is that second value, not
+  a conditional regression.  Holding the rung below and estimating only
+  Lambda and B2 lands in the INTERIOR by construction: at Lambda = 0 the
+  transformed system has an AR root of modulus exactly one, so the rung
+  below cannot be carried up unchanged, and the step off that boundary
+  is chosen here by the likelihood rather than by a constant.
+
+  the pre-estimates the conditional step produced
+    Lambda (3 x 1):
+         -0.252896
+         -0.263528
+         -0.303757
+    B2 (2 x 1):
+          0.585269
+         -1.687143
+    mean block (1):     -47.662466
+
+--- rank r = 1 ---
+
+Search: 3 starting points, 3 converged; logL from -660.500278 to -660.500278.  The best is `seed'.
+  start        logL            stop  iters  admissible start
+  seed           -660.500278     grad     49  as given
+  cold           -660.500278     grad     47  as given
+  johansen       -660.500278     grad     48  as given
+  The SPREAD is the diagnostic: on a well-behaved surface every start lands in the same place.
+
+=============================================================
+  OPTIMIZER CONVERGED after 49 iterations
+  Objective function = 0.969442796311
+  Convergence criterion: norm of scaled gradient <= gradtol
+=============================================================
+
+
+=============================================================
+  OPTIMIZER CONVERGED after 59 iterations
+  Objective function = 0.940685154055
+  Convergence criterion: norm of scaled gradient <= gradtol
+=============================================================
+
+
+=== -seedgate: the VEC block profiled on the rung below ===
+
+  r = 0 optimum (F, Theta, Sigma)        logL =    -667.6772449102
+  admissible entry, Lambda x 1.00          logL =    -663.6644383905
+  + Lambda and B2 profiled on it         logL =    -660.6376726847
+
+  The starting point for the free fit below is that second value, not
+  a conditional regression.  Holding the rung below and estimating only
+  Lambda and B2 lands in the INTERIOR by construction: at Lambda = 0 the
+  transformed system has an AR root of modulus exactly one, so the rung
+  below cannot be carried up unchanged, and the step off that boundary
+  is chosen here by the likelihood rather than by a constant.
+
+  the pre-estimates the conditional step produced
+    Lambda (3 x 2):
+          0.560376    -0.285301
+          0.538600    -0.201545
+          0.468523    -0.253329
+    B2 (1 x 2):
+         -0.898228    -0.919693
+    mean block (2):      48.212201    38.902543
+
+--- rank r = 2 ---
+
+Search: 3 starting points, 3 converged; logL from -658.998953 to -658.998953.  The best is `seed'.
+  start        logL            stop  iters  admissible start
+  seed           -658.998953     grad     64  as given
+  cold           -658.998953     grad     70  as given
+  johansen       -658.998953     grad     87  as given
+  The SPREAD is the diagnostic: on a well-behaved surface every start lands in the same place.
+
+=============================================================
+  OPTIMIZER CONVERGED after 64 iterations
+  Objective function = 0.967436545206
+  Convergence criterion: norm of scaled gradient <= gradtol
+=============================================================
+
+
+  r    npar        logL         AIC         BIC
+  ---------------------------------------------------
+  0      14    -667.6772     13.7713     14.1382
+  1      20    -660.5003     13.7475     14.2717
+  2      24    -658.9990     13.7980     14.4271
+
+  H0: P = r   vs   H1: P = r+1        LR = 2*[L(r+1) - L(r)]
+  (asymptotic critical values: case 3 — NOT TABULATED HERE)
+
+  r    M-r        LR      10%      5%      1%
+  ---------------------------------------------------
+  0       3    14.3539        -        -        -   (no values)
+  1       2     3.0026        -        -        -   (no values)
+
+  Distribution is the non-standard Johansen one.  That MA terms do
+  not affect it (Yap and Reinsel 1995, Thm. 3; Mauricio 2006, Remark 5)
+  is proven for the CONDITIONAL likelihood, a trace test and a strictly
+  invertible MA -- not for this exact lambda-max, nor at an MA root on
+  the unit circle (BUG-27).
+  Values: case 1, MacKinnon-Haug-Michelis (1999) with no deterministic
+  term; case 2, urca 1.3.4 ca.jo(ecdet="const"), Osterwald-Lenum (1992).
+  CAUTION: the tables are for Johansen's CONDITIONAL LR.  This one is
+  the EXACT likelihood, which carries W's stationary initial state and
+  is not nested at Lambda = 0: under H0 it sits about log T below
+  Johansen's and can be negative, so against these tables the test is
+  UNDERSIZED (case 1, T = 500: 3.5% at a nominal 5%).  -bootstrap N
+  calibrates the statistic that is actually computed (BUG-26).
+  r = 0 is the no-cointegration null (Pi = 0, a plain VARMA on
+  nabla Y); r = M would be a stationary process in levels and is not
+  expressible here, so the sequence ends at r = M-1.  Read it with
+  AIC/BIC, and check the optimizer banner of every rank before
+  trusting a statistic.
+
+  === Parametric bootstrap under H0 (499 replications) ===
+  The asymptotic values above are known to be optimistic at these
+  sample sizes: measured, the sequential test over-rejects about
+  SIX times its nominal level at n = 120, and these percentiles cut
+  that to four without closing it.  They are empirical
+  percentiles of the statistic simulated FROM THE FITTED MODEL at
+  rank r, so they carry the sample size, the deterministic case and
+  the MA component that the tables cannot.
+
+  r    M-r        LR      10%      5%      1%   p-value  reps
+  -----------------------------------------------------------------
+  0       3    14.3539    17.63    20.06    26.03   0.1940   499   H0 not rejected
+  1       2     3.0026    11.17    13.39    16.93   0.7840   499   H0 not rejected
+
+  Every replication, with its LR*, is in rank.boot.
+
+  Monte Carlo error, said rather than hidden:
+   - a bootstrap p-value from B replications has standard error
+     sqrt(p(1-p)/B); at p = 0.05 and B = 499 that is 0.0098, so read a
+     p-value near a threshold as undecided, not as a decision;
+   - and it has a FLOOR of 1/(B+1) = 0.0020 -- with this B the p-value
+     cannot go below that however extreme the statistic is, which is
+     why the verdict above is read from the critical values.  For a
+     p-value that can resolve 1%, B >= 999.
+   - replications where either fit failed are discarded and
+     counted in the reps column; a NEGATIVE LR is kept, since the
+     observed statistic can be negative too (BUG-26).

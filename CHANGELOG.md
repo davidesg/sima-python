@@ -1,5 +1,70 @@
 # Changelog — sima-tseries
 
+## 0.2.0 — unreleased
+
+**Cointegrated systems: sima takes in drvec** (docs/STUDY-vec.md, the study;
+docs/PLAN-vec.md, the plan and the user's decisions of 2026-10-17/18). One
+session and one guion hold the VARMA and the VEC: each fit carries a kind
+tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
+
+- **N1c, the cointegration question** (`prepare_vec`): offered after
+  `canonical_analysis` whenever two or more series have d = 1, whatever the
+  canonical count (the count sets the menu's emphasis). It records the model's
+  PURPOSE, "forecast" or "long run", and runs the checks before the rank (d >= 2,
+  D > 0, drvec's refusals, a moved file, the window). The mixed I(0)/I(1) case
+  is an option (`mixed=True`), never the default. `canonical_analysis`'s menu
+  calls it instead of "drvec (outside sima)"; `run_gate` and `load_pre` name it.
+- **The rank by parametric bootstrap** (`rank_test`, C1), the only way to a
+  rank: drvec's sequential exact LR, the bootstrap's critical values, the
+  Monte Carlo error, a proposed r-hat that the analyst adopts or not; the
+  asymptotic table shown as orientation only. `estimate_vec` (C2) refuses
+  without a finished rank test for the same specification, unless the rank
+  is adopted on theory (`theory=`, written in the guion as such).
+- **The C nodes**: `estimate_vec` (the roles asked for: `normalise_on`; drvec's
+  .out blocks verbatim; the canonical weights beside beta; a fit on a ridge
+  declared, never an optimum), `test_restriction` (LR with its df and p,
+  against the best free fit known as well as drvec's), `add_exogenous`
+  (-xsys or -xpre/-xlink by the input's order), `long_run` (theta, the
+  textbook and the model's half-lives, Gonzalo and Ng, computed in sima),
+  `irf_bands` (the bootstrap's bands), `sweep` (robustness, one cached job a
+  cell), `plot_rank_bootstrap`.
+- **Extended, by the kind tag**: `forecast` (the VEC in levels through
+  drvarma's forecaster, `drvec.to_levels_varma`: one forecaster),
+  `impulse_response`, `variance_decomposition` and their plots (the levels;
+  bands only from the bootstrap), `evaluate` (the yardstick for the VEC on
+  drvec's origins: a veto when the purpose is to forecast, a caveat for a
+  long-run claim), `plot_forecast`, `plot_residual_ccf`; `reorder` refuses on
+  a VEC (another order is another fit); the VARMA-only tools say so.
+- **Jobs** (`sima.jobs`): detached processes (`python -m sima.jobs run
+  <folder>`) that survive the server and the client; at most cores - 1 slots,
+  counted with drvec's workers; one folder per run (`sima_jobs/<id>/` next
+  to the first file); a cache keyed by content (the files' bytes, the
+  arguments, the engines' versions, the backend, the bootstrap engine, the
+  platform tier, the seed); progress as "replication k of B, comparison
+  r -> r + 1"; cancellation of the whole process tree; never a partial result
+  as final; a ~20 s inline wait. Tools: `job_status`, `job_result`,
+  `job_cancel`, `jobs`. The bootstraps run on drvec C when its binary is there
+  (drvec's engine="auto"), with the engine in the result's provenance.
+- **Provenance on every result**: each guion entry carries the versions of
+  sima, drvarma, fue and drvec, the numerical backend, the platform tier and,
+  for a job, its engine, seed, cache key and run folder; the HTML guion
+  shows it.
+- **The examples**: `flour_prices` continues into the rank (the bootstrap
+  does not reject r = 0; the VEC's nodes follow on theory, written as such);
+  `jenkins_alavi` gains the mixed case (B = 499); `lutkepohl_e1` is new
+  (Lütkepohl's E1: r = 1, who corrects, two half-lives, the VARMA-VEC(2,1)'s
+  ridge declared); `johansen_juselius` is new (the Danish money demand,
+  public data via urca: the bootstrap does not reject r = 0 at n = 55 where
+  the asymptotic trace test found one relation; on their theory the relation
+  is theirs, LRM = 1.12 LRY - 5.16 IBO + 4.26 IDE). Each ships its job cache (`load_example` copies it), and on
+  Linux x86_64 a rerun reproduces its files byte for byte
+  (tests/test_example_caches.py; tools/build_example_caches.py builds them).
+- **Dependencies**: `drvec>=0.1.0` (hard), `drvarma>=0.3.0`, `fue>=0.1.18`.
+- The protocol and the rules in the server's instructions: N1c and the C
+  nodes; no cointegration claim without a finished bootstrap; the yardstick's
+  role by purpose; LR, not Wald; the order of a VEC is its normalisation.
+
+
 ## 0.1.1 — unreleased
 
 **The PyPI page and the install.** The Homepage pointed at

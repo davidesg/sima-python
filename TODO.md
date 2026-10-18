@@ -122,12 +122,18 @@ in 0.1.0, published with drvarma 0.2.0 on 2026-10-15 (atsw 2.0.0).
 
 ## drvec — its MCP is sima (decided 2026-10-13)
 
-drvec (the VARMA-VEC; Johansen by exact ML) lives only in atsw-gui
-(`engines/drvec`); its Python port has not started. The plan:
-`atsw-gui/docs/PROCESOS-drvec.md`, with the processes, the oracle
-`drvec-v0.12`, the MCP's tools in §5.2 and the port's scope in §6. Like
-drtran-python, it reuses drvarma's Ladder and AS 311 engine and fue's cast;
-only the VEC cast is new.
+drvec (the VARMA-VEC; Johansen by exact ML) has its Python port:
+`drvec-python`, package `drvec` 0.1.0 (packaged, not published),
+byte-identical to drvec C 0.13 on Linux x86_64. It does not reuse drvarma's
+Ladder: it carries the C's own ladder, on drvarma's compiled likelihood,
+optimiser and (0.3.0) GSL eigensolvers, and reads the files with fue's
+reader and cast (`fue>=0.1.18`, `drvarma>=0.3.0`).
+
+**The current study is `docs/STUDY-vec.md` (2026-10-17).** It revises
+PROCESOS-drvec.md §5.2–5.4 (atsw-gui, private), which was written before
+sima was published and before the port existed. It covers the routing node,
+the cointegration studies, the revised tools, the job runner, the public
+examples and the open questions. The implementation plan comes after it.
 
 - **Its MCP is sima**, not a fourth assistant (the user, 2026-10-13).
   PROCESOS §5.1 recommended a fourth one because drvec "starts from .pre, not
@@ -139,9 +145,35 @@ only the VEC cast is new.
   their examples. drvarma 0.2.0 and sima 0.1.0 are published, and the VEC
   comes in sima 0.2.0 with the port. The tools are added, nothing that
   exists changes.
-- [ ] In sima 0.2.0: the handover rule «≥ 2 I(1) series with feedback → test
-      the rank» after `canonical_analysis`, which today only names drvec;
-      the tools of PROCESOS §5.2, and a queue for the bootstrap tasks.
+- [x] **sima 0.2.0, phase C of `docs/PLAN-vec.md`** (2026-10-18, branch
+      `sima-vec`): the kind tag, the purpose and the provenance (C1); the job
+      runner `sima.jobs` (C2); N1c (C3); the tools of STUDY-vec §4.1 as the
+      plan revised them (C4); the protocol, the rules and the docs (C5); the
+      examples with their caches — `flour_prices`, `jenkins_alavi` (B = 499),
+      `lutkepohl_e1`, `johansen_juselius` (C6); the tests (C7).
+- [ ] **`study_estimation` for a VEC** (STUDY-vec Q12, later): 0.2.0 has the
+      declaration ("not a demonstrated maximum") and `multistart`; the study
+      along the ridge (E1's VARMA-VEC(2,1)) waits for drvec's own item.
+- [ ] **Progress of the IRF bootstrap on drvec C**: drvec reports it at the
+      end only (the C writes the bands file once); the job shows the elapsed
+      time until then.
+- [ ] **`export_tables`** (STUDY-vec Q8): deferred; the job folders and the
+      guion JSON are the registry.
+- [ ] **The free model of the restriction LRs** (STUDY-vec Q7): sima uses the
+      best free fit it knows. If the gap ever changes a verdict, register the
+      C's behaviour in atsw-gui `engines/drvec/docs/BUGS.md` with a repro.
+- [ ] **The other public VECMs** (STUDY-vec §6.5): UK PPP/UIP, Finland,
+      `vars`' Canada — not needed for 0.2.0.
+- [ ] **The examples' caches off Linux x86_64**: the key holds the platform
+      tier, so on macOS, Windows and aarch64 the tutorial's bootstraps run
+      (minutes) instead of returning at once. Shipping a cache per tier would
+      need those platforms' runs. The tier stays in the key (decided
+      2026-10-18): a cache per tier, built on CI, is the way, not dropping it.
+- [ ] **The yardstick through drvarma** (decided 2026-10-18, after 0.2.0):
+      `evaluate` on a VEC reads drvec's own rolling `-estwin/-f` errors, while
+      a forecast at one origin goes through `to_levels_varma`. They agree to
+      1e-12, but it is two forecasters: route the rolling evaluation through
+      `to_levels_varma` too.
 
 ## Later
 

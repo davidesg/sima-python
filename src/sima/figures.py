@@ -383,3 +383,110 @@ def save(fig, path, dpi=130):
     fig.savefig(path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     return path
+
+
+# --------------------------------------------------------------------------- #
+#  The VEC's figures (drvec's numbers; docs/PLAN-vec.md C4)                    #
+# --------------------------------------------------------------------------- #
+
+def vec_irf_figure(G, names, freq=12, lo=None, hi=None, nboot=0, fevd=False):
+    """The level responses (or the FEVD, `fevd`) of a VEC in the IRF's grid:
+    row = response, column = shock, in drvec's order (its Cholesky order).
+    `lo`/`hi` are the bootstrap's percentiles (irf_bands), never a covariance
+    band. In a cointegrated system a response converges to the permanent
+    effect: it does not die out."""
+    plt = _plt()
+    G = np.asarray(G, float)
+    m = len(names)
+    h = np.arange(1, G.shape[0] + 1) if fevd else np.arange(G.shape[0])
+    fig, axes = plt.subplots(m, m, figsize=(2.9 * m + 0.6, 2.1 * m + 0.6), squeeze=False)
+    for i in range(m):
+        if fevd:
+            lim, ticks = (0.0, 100.0), [0, 25, 50, 75, 100]
+        else:
+            row = [np.abs(G[:, i, :])] + ([np.abs(np.asarray(lo)[:, i, :]),
+                                           np.abs(np.asarray(hi)[:, i, :])] if lo is not None else [])
+            c = _nice(max(float(np.max(x)) for x in row))
+            lim, ticks = (-c, c), [-c, -c / 2, 0.0, c / 2, c]
+        for j in range(m):
+            kb = 0 if lo is None else min(len(lo), len(h))
+            lj = None if lo is None else np.r_[np.asarray(lo)[:kb, i, j], [np.nan] * (len(h) - kb)]
+            hj = None if hi is None else np.r_[np.asarray(hi)[:kb, i, j], [np.nan] * (len(h) - kb)]
+            _impulse_panel(axes[i, j], h, G[:, i, j], lj, hj, lim, ticks, freq,
+                           f"{names[i]} <- {names[j]}" + ("  (%)" if fevd else ""),
+                           zero=True, shade=fevd)
+    sub = (f"dashed: 90 % parametric-bootstrap band, {nboot} replications refitted"
+           if lo is not None else "no band (irf_bands gives the bootstrap's)")
+    what = ("Forecast-error variance decomposition of the levels, % by shock" if fevd
+            else "Impulse responses of the levels (VEC)")
+    fig.suptitle(f"{what} (Cholesky order: {', '.join(names)})\n{sub}", fontsize=10)
+    fig.tight_layout()
+    return fig
+
+
+def rank_bootstrap_figure(comparisons, boot, names):
+    """The bootstrap distribution of LR* per comparison r -> r + 1, the
+    observed LR (solid), the bootstrap's 90/95/99 % values (dashed) and, where
+    a table exists, the asymptotic 5 % value (dotted: orientation only)."""
+    plt = _plt()
+    k = len(comparisons)
+    fig, axes = plt.subplots(1, max(k, 1), figsize=(4.6 * max(k, 1), 3.4), squeeze=False)
+    for t, c in enumerate(comparisons):
+        ax = axes[0, t]
+        v = np.array([x.lr for x in boot.get(c["h0"], []) if x.status == "ok"], float)
+        if len(v):
+            ax.hist(v, bins=min(40, max(10, len(v) // 12)), color="0.75", edgecolor="0.4",
+                    lw=0.5)
+        ax.axvline(c["lr"], color="k", lw=2.2)
+        for cv, lab in zip(c["cv"] or [], ("90", "95", "99")):
+            ax.axvline(cv, color="k", lw=1.0, ls="--")
+            ax.text(cv, ax.get_ylim()[1] * 0.95, f" {lab}%", fontsize=7, va="top")
+        if c.get("asym_cv"):
+            ax.axvline(c["asym_cv"][1], color="0.3", lw=1.0, ls=":")
+        ax.set_title(f"H0: r = {c['h0']} vs {c['h0'] + 1}   LR = {c['lr']:.2f}, "
+                     f"p = {c['pvalue']:.3f}" if c["pvalue"] is not None else
+                     f"H0: r = {c['h0']} vs {c['h0'] + 1}", fontsize=9, loc="left")
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        ax.tick_params(labelsize=8)
+    fig.suptitle(f"Rank test by parametric bootstrap ({', '.join(names)}): LR* "
+                 "(histogram), the observed LR (solid), the bootstrap's critical values "
+                 "(dashed), the asymptotic 5 % (dotted, orientation)", fontsize=9)
+    fig.tight_layout()
+    return fig
+
+
+def vec_forecast_figure(name, hist, level, low, high, err, sigma, freq, first, title=None):
+    """A VEC's forecast of one series in FUF's format, drawn by pyfug: the
+    LEVEL of the last observations and the forecasts with the 95 % band, and
+    ERR, the level innovations of those observations."""
+    from pyfug.graphics import plot_forecast
+    H = len(level)
+    z = np.zeros(len(hist))
+    return plot_forecast(y=np.r_[hist, level], band=np.r_[z, high], band2=np.r_[z, low],
+                         err=np.asarray(err, float), L=H, sigma=float(sigma), freq=int(freq),
+                         first_year=int(first[0]), first_season=int(first[1]),
+                         title=title or f"{name}  LEVEL (VEC)")
+
+
+def residual_ccf_arrays(a, names, nlags, freq, npq):
+    """residual_ccf_figure on given residuals (a VEC's, drvec's Ybar), in
+    GraphMaker's panel with Hosking's P."""
+    from drvarma.diagnostics import ccf, qccf
+    from drvarma.plots import _draw_ccf_panel
+    plt = _plt()
+    a = np.asarray(a, float)
+    n, m = a.shape
+    pairs = [(i, j) for i in range(m) for j in range(i + 1, m)]
+    ncol = min(2, len(pairs))
+    nrow = math.ceil(len(pairs) / ncol)
+    fig, axes = plt.subplots(nrow, ncol, figsize=(7.5 * ncol, 3.2 * nrow), squeeze=False)
+    for k, (i, j) in enumerate(pairs):
+        rho = ccf(a[:, i], a[:, j], nlags)
+        Q, _df, _p = qccf(a[:, i], a[:, j], nlags)
+        _draw_ccf_panel(axes[k // ncol, k % ncol], rho, nlags, n, freq,
+                        f"{names[j]} - {names[i]}", _p_label(Q, nlags, npq))
+    for k in range(len(pairs), nrow * ncol):
+        axes[k // ncol, k % ncol].set_visible(False)
+    fig.tight_layout()
+    return fig

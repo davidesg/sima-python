@@ -76,7 +76,7 @@ def main():
                 with open(p, "wb") as fh:
                     fh.write(base64.b64decode(c.data))
         path = os.path.join(OUT, f"{n:02d}_{tool.__name__}.md")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write(f"# {n}. {title}\n\n" + "\n".join(text) + "\n")
         print(f"{n:2d}. {title:<62} -> out/{os.path.basename(path)}"
               + (f" (+{imgs} figure{'s' if imgs > 1 else ''})" if imgs else ""))

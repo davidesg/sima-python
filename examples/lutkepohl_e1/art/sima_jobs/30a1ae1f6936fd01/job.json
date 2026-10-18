@@ -1,0 +1,66 @@
+{
+ "args": {
+  "B": 499,
+  "case": "2",
+  "multistart": 0,
+  "names": [
+   "invest",
+   "income",
+   "cons"
+  ],
+  "nodrift": [],
+  "p": 2,
+  "q": 0
+ },
+ "engine": [
+  "c",
+  "0.13",
+  "bundled"
+ ],
+ "extra_files": [],
+ "files": [
+  "e1invest.pre",
+  "e1income.pre",
+  "e1cons.pre"
+ ],
+ "id": "30a1ae1f6936fd01",
+ "key": "30a1ae1f6936fd013cb518a9d2ff77e7e0f2e0c9d2f95696142d2010587c0270",
+ "label": "rank test B=499 p=2 case 2",
+ "payload": {
+  "args": {
+   "B": 499,
+   "case": "2",
+   "multistart": 0,
+   "names": [
+    "invest",
+    "income",
+    "cons"
+   ],
+   "nodrift": [],
+   "p": 2,
+   "q": 0
+  },
+  "backend": "c",
+  "engine": "c 0.13",
+  "extra_files": [],
+  "files": [
+   "b6eda29e7063a661663a5b7d780cabee29ef637879920288a2fd751e3bc801be",
+   "3ebec8652b851626a0265432570b9c8a6fc1d756ef0bcd7959c0b3fad575a357",
+   "3ce042729843684a3aca42ec67750d45e0685aa87d1b6a8d65682a226d53c78c"
+  ],
+  "seed": null,
+  "tier": "exact",
+  "tool": "rank_test",
+  "versions": {
+   "drvarma": "0.3.0",
+   "drvec": "0.1.0",
+   "fue": "0.1.18"
+  }
+ },
+ "seed": null,
+ "shipped": "a worked example's cache (tools/build_example_caches.py)",
+ "slots": 1,
+ "status": "done",
+ "tool": "rank_test",
+ "workers": 1
+}
