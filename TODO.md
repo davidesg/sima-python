@@ -145,14 +145,29 @@ examples and the open questions. The implementation plan comes after it.
   their examples. drvarma 0.2.0 and sima 0.1.0 are published, and the VEC
   comes in sima 0.2.0 with the port. The tools are added, nothing that
   exists changes.
-- [ ] In sima 0.2.0, as `docs/STUDY-vec.md` proposes, to be decided with the
-      user (its §7):
-      - the cointegration question as node N1c, after `canonical_analysis`,
-        which today only names drvec. The study proposes "≥ 2 series with
-        d = 1", without PROCESOS's "with feedback";
-      - the tools of its §4.1;
-      - a job runner for the bootstraps (§5);
-      - the flour prices continuation as the worked example (§6.1).
+- [x] **sima 0.2.0, phase C of `docs/PLAN-vec.md`** (2026-10-18, branch
+      `sima-vec`): the kind tag, the purpose and the provenance (C1); the job
+      runner `sima.jobs` (C2); N1c (C3); the tools of STUDY-vec §4.1 as the
+      plan revised them (C4); the protocol, the rules and the docs (C5); the
+      examples with their caches — `flour_prices`, `jenkins_alavi` (B = 499),
+      `lutkepohl_e1`, `johansen_juselius` (C6); the tests (C7).
+- [ ] **`study_estimation` for a VEC** (STUDY-vec Q12, later): 0.2.0 has the
+      declaration ("not a demonstrated maximum") and `multistart`; the study
+      along the ridge (E1's VARMA-VEC(2,1)) waits for drvec's own item.
+- [ ] **Progress of the IRF bootstrap on drvec C**: drvec reports it at the
+      end only (the C writes the bands file once); the job shows the elapsed
+      time until then.
+- [ ] **`export_tables`** (STUDY-vec Q8): deferred; the job folders and the
+      guion JSON are the registry.
+- [ ] **The free model of the restriction LRs** (STUDY-vec Q7): sima uses the
+      best free fit it knows. If the gap ever changes a verdict, register the
+      C's behaviour in atsw-gui `engines/drvec/docs/BUGS.md` with a repro.
+- [ ] **The other public VECMs** (STUDY-vec §6.5): UK PPP/UIP, Finland,
+      `vars`' Canada — not needed for 0.2.0.
+- [ ] **The examples' caches off Linux x86_64**: the key holds the platform
+      tier, so on macOS, Windows and aarch64 the tutorial's bootstraps run
+      (minutes) instead of returning at once. Shipping a cache per tier would
+      need those platforms' runs.
 
 ## Later
 

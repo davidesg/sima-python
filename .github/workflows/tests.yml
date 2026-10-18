@@ -1,46 +1,113 @@
 name: Tests
 
-# The assistant's battery against the engine it declares (drvarma >= 0.2.0).
-# Until drvarma 0.2.0 is on PyPI, `DRVARMA_SPEC` points at its repository,
-# built with GSL so the compiled likelihood is there, as in the wheels.
-# art (the raw entry's engine), fue (art's estimator) and pyfug (the figures)
-# come from their code,
-# the latest version, not from PyPI: the published releases lag behind what
-# sima calls (pyfug's plot_forecast, art's characterization, fue's fits).
+# The assistant's battery against the engines it declares: drvarma >= 0.3.0,
+# drvec >= 0.1.0 and fue >= 0.1.18, on the three platforms (Linux, macOS,
+# Windows). Until they are on PyPI (the release is joint: fue 0.1.18 ->
+# drvarma 0.3.0 -> drvec 0.1.0 -> sima 0.2.0), they are built from their
+# repositories at the refs below, as drvec-python's own CI builds them:
+# drvarma with GSL from each platform's package manager (apt, Homebrew,
+# vcpkg) and its compiled engine REQUIRED; drvec with drvec C 0.13 built into
+# the package (DRVEC_REQUIRE_C; on Windows with MinGW-w64 gcc and MSYS2's
+# GSL), so the bootstraps run on the C, as the wheels will carry it.
+# art (the raw entry's engine) and pyfug (the figures) come from their code,
+# the latest version: the published releases lag behind what sima calls.
+# The manual run (workflow_dispatch) takes other refs.
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, sima-vec]
   pull_request:
   workflow_dispatch:
+    inputs:
+      fue_ref:
+        description: "fue (davidesg/fue-python) at this ref"
+        required: false
+        default: "master"
+      drvarma_ref:
+        description: "drvarma (davidesg/drvarma-python) at this ref"
+        required: false
+        default: "gsl-gensymmv"
+      drvec_ref:
+        description: "drvec (davidesg/drvec-python) at this ref"
+        required: false
+        default: "main"
 
 env:
-  DRVARMA_SPEC: "drvarma @ git+https://github.com/davidesg/drvarma-python@ladder"
-  FUE_SPEC: "fue @ git+https://github.com/davidesg/fue-python@master"
+  FUE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.fue_ref || 'master' }}
+  DRVARMA_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.drvarma_ref || 'gsl-gensymmv' }}
+  DRVEC_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.drvec_ref || 'main' }}
   PYFUG_SPEC: "pyfug @ git+https://github.com/davidesg/pyfug@master"
   ART_SPEC: "art-tseries @ git+https://github.com/davidesg/art-python@master"
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.12", "3.13"]
+        os: [ubuntu-latest, macos-14, windows-latest]
+        python: ["3.10", "3.13"]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: GSL, for drvarma's compiled engine
-        run: sudo apt-get update && sudo apt-get install -y libgsl-dev
-      - name: Install
+
+      - name: GSL (drvarma's engine; drvec C on Linux and macOS)
+        run: |
+          case "${{ runner.os }}" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y -q libgsl-dev ;;
+            macOS)   brew list gsl >/dev/null 2>&1 || brew install gsl ;;
+            Windows) vcpkg install gsl:x64-windows-static-md ;;
+          esac
+      - name: MinGW-w64 gcc and GSL, for drvec C (Windows)
+        if: runner.os == 'Windows'
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-gsl
+      - name: Point drvec's build at them (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          U=$(cygpath -m "${{ steps.msys2.outputs.msys2-location }}/ucrt64")
+          echo "DRVEC_CC=$U/bin/gcc.exe" >> "$GITHUB_ENV"
+          echo "DRVEC_GSL_PREFIX=$U" >> "$GITHUB_ENV"
+          echo "DRVEC_GSL_STATIC=1" >> "$GITHUB_ENV"
+
+      - name: fue, drvarma and drvec from git
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "$DRVARMA_SPEC" "$FUE_SPEC" "$PYFUG_SPEC" cffi
+          python -m pip install "fue @ git+https://github.com/davidesg/fue-python@$FUE_REF"
+          if [ "${{ runner.os }}" = Windows ]; then
+            # where drvarma's build looks first (its cibuildwheel table sets it)
+            export GSL_ROOT="$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static-md"
+          fi
+          DRVARMA_REQUIRE_ENGINE=1 python -m pip install -v \
+            "drvarma @ git+https://github.com/davidesg/drvarma-python@$DRVARMA_REF" \
+            > "$RUNNER_TEMP/drvarma.log" 2>&1 || { tail -80 "$RUNNER_TEMP/drvarma.log"; exit 1; }
+          unset GSL_ROOT
+          DRVEC_REQUIRE_C=1 python -m pip install -v \
+            "drvec @ git+https://github.com/davidesg/drvec-python@$DRVEC_REF" \
+            > "$RUNNER_TEMP/drvec.log" 2>&1 || { tail -80 "$RUNNER_TEMP/drvec.log"; exit 1; }
+          python -c "import fue, drvarma, drvec; print('fue', fue.__version__, '| drvarma', drvarma.__version__, '| drvec', drvec.__version__)"
+      - name: pyfug, art and sima
+        run: |
+          python -m pip install "$PYFUG_SPEC" cffi
           python -m pip install "$ART_SPEC"
           python -m pip install -e ".[dev,raw]"
-      - name: The compiled engine is there (the ladder is ~250x slower without it)
-        run: python -c "import drvarma._drvarma_engine"
+      - name: The compiled engines are there
+        run: |
+          python -c "import drvarma._engine as E; b = E.engine_backend(); print('drvarma engine:', b); assert b == 'c', E.engine_load_error()"
+          python -c "from drvec import c_engine; print(c_engine.find())"
+          python -c "from drvec._gsl import backend; print('drvec eigensolver:', backend())"
       - name: Tests
+        timeout-minutes: 75
         run: python -m pytest -q
