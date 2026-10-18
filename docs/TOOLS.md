@@ -2,17 +2,19 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**31 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**44 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
 | tool | what it answers |
 |---|---|
+| [`add_exogenous`](#add-exogenous) | C4 — Exogenous inputs to the current VEC, dispatched by their order of |
 | [`build_univariate`](#build-univariate) | N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each |
 | [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
 | [`characterize`](#characterize) | N0c — Each raw series' transformation, with art's engine and in art's |
 | [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
 | [`estimate`](#estimate) | N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance. |
+| [`estimate_vec`](#estimate-vec) | C2 — The adopted VEC at rank r (drvec.fit with -fdhess: the standard |
 | [`evaluate`](#evaluate) | N5 — The yardstick: does the candidate forecast better than the univariates? |
 | [`examples`](#examples) | The worked examples that come with sima, to see how it works in real |
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
@@ -22,14 +24,23 @@
 | [`identify_echelon`](#identify-echelon) | N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996), |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
 | [`impulse_response`](#impulse-response) | N6 — Orthogonalised impulse responses of the last estimated model. |
+| [`irf_bands`](#irf-bands) | C6 — Bands for the level responses and the FEVD of the current VEC, by |
+| [`job_cancel`](#job-cancel) | Cancel a job: a queued one leaves the queue; a running one has its whole |
+| [`job_result`](#job-result) | The FINAL result of a finished job, with its report: a rank test's table |
+| [`job_status`](#job-status) | A job's state — queued, running, done, failed or cancelled — its progress |
+| [`jobs`](#jobs) | Every job sima knows on this machine (the registry, ~/.sima/jobs or |
 | [`load_data`](#load-data) | N0r — RAW DATA: an analyst with series and no univariate models |
 | [`load_example`](#load-example) | N0 for a worked example: copy its files to a working folder (`dest`, |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
+| [`long_run`](#long-run) | C5 — The long run of the current VEC, read: theta (beta normalised, with |
 | [`plot_forecast`](#plot-forecast) | FIGURE — The forecasts of the last estimated model in the format of FUF |
 | [`plot_identification`](#plot-identification) | FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the |
 | [`plot_impulse_response`](#plot-impulse-response) | FIGURE — The orthogonalised impulse responses of the last estimated model. |
+| [`plot_rank_bootstrap`](#plot-rank-bootstrap) | FIGURE — The rank test's bootstrap: for each comparison r -> r + 1, the |
 | [`plot_residual_ccf`](#plot-residual-ccf) | FIGURE — The residual cross-correlations of the last estimated model, |
 | [`plot_variance_decomposition`](#plot-variance-decomposition) | FIGURE — The forecast-error variance decomposition, in the IRF's layout. |
+| [`prepare_vec`](#prepare-vec) | N1c/C0 — The cointegration question, and the VEC's specification with its |
+| [`rank_test`](#rank-test) | C1 — The cointegration rank, by PARAMETRIC BOOTSTRAP (drvec's sequential |
 | [`record_decision`](#record-decision) | Record a decision, WHY, on WHAT evidence, and what was set aside. |
 | [`reorder`](#reorder) | N6 — The impulse responses under ANOTHER Cholesky order, against the files'. |
 | [`run_gate`](#run-gate) | N1 — The diagonal gate: does the joint cast reproduce the univariate models? |
@@ -37,8 +48,42 @@
 | [`split_inp`](#split-inp) | Convert a multivariate drvarma .inp (deprecated) into one fue .inp per series. |
 | [`structure`](#structure) | N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
+| [`sweep`](#sweep) | C7 — Robustness: a grid of fits over the same files, one CACHED JOB per |
+| [`test_restriction`](#test-restriction) | C3 — A restriction on alpha or beta of the current VEC, tested by |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
 | [`write_specs`](#write-specs) | N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector |
+
+---
+
+## `add_exogenous`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `series` | string | no | `` |
+| `inputs` | string | no | `` |
+| `links` | string | no | `` |
+| `adopt` | boolean | no | `False` |
+
+C4 — Exogenous inputs to the current VEC, dispatched by their order of
+    integration, as in drtran. The VEC without inputs is the base, and the
+    LR against it is the test.
+
+    An input of the SAME order (I(1), a series of the system): `series`
+    names it; it stays in the system with its alpha row at zero and none of
+    the others' short run (drvec -xsys: STRONG exogeneity, the LR against the
+    free VEC). It cannot be in the Y1 block, and drvec needs q = 0.
+
+    An input of ANOTHER order (an I(0) input on I(1) outputs): `inputs` are
+    its fue files (a JSON list or comma-separated; their .pre stays frozen)
+    and `links` the network, "OUT <- IN b r s; OUT2 <- IN b r s" (r <= 2): it
+    is subtracted in levels (drvec -xpre/-xlink). drvec fits the VEC without
+    the inputs first; with omega = 0 the bridge must reproduce it. Refused by
+    drvec (inherited): a rank test with inputs (the rank is C1's, without
+    them), -xlink with forecasts or bootstraps, -xsys with q > 0 or with a
+    restriction on alpha. `adopt` makes the fit with inputs current.
 
 ---
 
@@ -220,6 +265,43 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
 
 ---
 
+## `estimate_vec`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `r` | integer | yes | — |
+| `normalise_on` | string | no | `` |
+| `theory` | string | no | `` |
+| `multistart` | integer | no | `0` |
+
+C2 — The adopted VEC at rank r (drvec.fit with -fdhess: the standard
+    errors from the Hessian at the optimum). REFUSES without a FINISHED
+    rank_test for the same specification (p, q, case, drifts, files), unless
+    the analyst adopts r on THEORY: `theory` says why, and it is written in
+    the guion as such, with the bootstrap's numbers beside it when they exist.
+    A rank other than the bootstrap's proposal needs `theory` too. r = 0 is
+    the VARMA in differences (drvarma, N2); r = M is not a VEC.
+
+    THE ROLES are asked for: `normalise_on` names the r series beta is
+    normalised on (the Y1 block); drvec's order is the others in the
+    session's order, then these. That order is also the Cholesky order of the
+    level responses, so another normalisation is ANOTHER FIT (this tool
+    again), never a reorder. Default: the last r of prepare_vec's order (the
+    I(0) series in the mixed case).
+
+    Reports drvec's .out blocks verbatim (parameters, the VEC's matrices, the
+    normalisation share, the residual diagnostics), alpha read from the matrix
+    (Johansen's sign), the canonical weights beside beta-hat, and the
+    optimiser's stopping criterion: a fit that stopped on a ridge (E1's
+    2 1 1 -case 2) is declared NOT A DEMONSTRATED MAXIMUM, with `multistart`
+    and a lower q offered. The .out's Wald tests are not citable (they depend
+    on the normalisation): restrictions go by LR (test_restriction).
+
+---
+
 ## `evaluate`
 
 **Arguments**
@@ -249,6 +331,14 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     `estwin` counts observations of the FIRST series; leave enough data after it
     (at least a few dozen origins) or the comparison says little. `links`,
     `zeros` and `indices`: as in estimate, the same candidate.
+
+    ON A VEC (the current model is one, estimate_vec): the VEC's rolling-origin
+    forecasts (drvec's -estwin/-f: the fit on the first rows, parameters held,
+    errors in each series' own units) against the univariates on the same
+    origins, and against the VARMA in differences when one was estimated. THE
+    RULE depends on the purpose recorded at N1c: a VETO when it is "forecast",
+    a CAVEAT (always reported) for a "long run" claim. p, q and the VARMA
+    arguments are then ignored.
 
     `yardstick` (route V): the analyst's univariate models, one fue file per
     series (a JSON list or comma-separated paths), e.g. their `.pre` from art.
@@ -304,6 +394,10 @@ N6 — Forecast every series in its level with the last estimated model.
     Each series goes back to its level with its own univariate model:
     deterministic terms (known in the future), its differencing, its Box-Cox.
     The 95% band is built on the transformed scale and mapped back.
+    On a VEC (the current model is one): the VEC written in levels
+    (drvec.to_levels_varma) and forecast by drvarma's forecaster — one
+    forecaster for every system — with each file's deterministic path and
+    Box-Cox; drvec's band multiplier.
 
 ---
 
@@ -437,6 +531,105 @@ N6 — Orthogonalised impulse responses of the last estimated model.
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
+    On a VEC: the responses of the LEVELS (drvec), in drvec's order — the
+    VEC's normalisation order — and their permanent effect; the bands come
+    only from the parametric bootstrap (irf_bands, a job), never from the
+    covariance.
+
+---
+
+## `irf_bands`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `N` | integer | no | `499` |
+| `seed` | integer | no | `0` |
+| `wait` | number | no | `20.0` |
+
+C6 — Bands for the level responses and the FEVD of the current VEC, by
+    PARAMETRIC BOOTSTRAP (drvec -irfboot N): N simulations of the fitted
+    model, each REFITTED as the data were — same r, same restrictions, same
+    ladder — and Efron's percentiles (90 % and 95 %). No delta method and no
+    covariance Monte Carlo: the level responses are a long non-linear chain
+    to the permanent effect, and a linearisation is what not to trust here.
+
+    A JOB, like rank_test: detached, cached by content, on drvec C when its
+    binary is there (the engine in the provenance); a short wait (`wait`
+    seconds), then the job id. Once finished, impulse_response,
+    variance_decomposition and their plots draw the bands. The bands are
+    conditional on r, the restrictions and the orthogonalisation order (drvec's
+    file order): reordering is a refit and a new job. The horizon is drvec's
+    (10 lags when n < 40, else 20). `seed`: 0 is the C's; another is a Monte
+    Carlo check (Python engine).
+
+---
+
+## `job_cancel`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `job_id` | string | yes | — |
+
+Cancel a job: a queued one leaves the queue; a running one has its whole
+    process tree killed (the runner, drvec C or the Python pool) and its folder
+    marked cancelled, with no result written. A finished job is not touched.
+    The same call later starts it again from the beginning (a cancelled run
+    leaves nothing to resume).
+
+---
+
+## `job_result`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `job_id` | string | yes | — |
+
+The FINAL result of a finished job, with its report: a rank test's table
+    and proposed rank (recorded at C1), the IRF bands (then used by
+    impulse_response and the plots), a sweep cell. A job that is not finished
+    has no result: this tool says so and returns nothing partial — a decision
+    waits for it (the autonomous lane does not decide a node before).
+
+---
+
+## `job_status`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `job_id` | string | yes | — |
+
+A job's state — queued, running, done, failed or cancelled — its progress
+    ("replication k of B, comparison r -> r + 1, ok/simfail/fitfail so far"
+    for a rank test; the replications for the IRF bands; the cells for a sweep),
+    the elapsed time and the rate. Never a provisional number: a finished
+    comparison is said finished, an unfinished one shows its counts only. The
+    result itself comes from job_result once the job is done. Jobs survive the
+    server: an id from an earlier conversation still answers here.
+
+---
+
+## `jobs`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | no | `` |
+
+Every job sima knows on this machine (the registry, ~/.sima/jobs or
+    SIMA_JOBS_HOME): id, tool, status, label and progress, the running and
+    queued first. `name` keeps only one session's. Jobs outlive the server
+    and the conversation; their folders (sima_jobs/<id>/, next to the first
+    file) hold the engine's files and the result.
 
 ---
 
@@ -511,6 +704,32 @@ N0 — Start a session from the univariate models: one fue file per series.
 
 ---
 
+## `long_run`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `horizon` | integer | no | `0` |
+
+C5 — The long run of the current VEC, read: theta (beta normalised, with
+    its sign: Y1 = theta' Y2 + a stationary error), and two half-lives, both
+    computed by sima because drvec computes neither — the TEXTBOOK one,
+    ln 0.5 / ln(1 - |alpha|) on the variable the relation is solved for
+    (orientation: exact only for one relation with no short-run dynamics),
+    and the MODEL's, the half-life of the equilibrium error beta'Y in the
+    fitted model's own response (the same weights as the level IRF; its norm
+    over the shocks, which does not depend on the Cholesky order). Then
+    Gonzalo and Ng's permanent/transitory decomposition: alpha_perp (the
+    common trends), the share of each level's forecast-error variance due to
+    the permanent shocks, and the self-check that a transitory shock has no
+    long-run effect. Point values: bands only through the bootstrap
+    (irf_bands). `horizon`: how far the responses go (0: 60 periods, or 8
+    years of seasonal data).
+
+---
+
 ## `plot_forecast`
 
 **Arguments**
@@ -532,7 +751,8 @@ FIGURE — The forecasts of the last estimated model in the format of FUF
     forecast report can go series by series: `series` empty (default) returns
     one figure for each; a series' name, only that one; "all", every series
     in a single grid. `path` (optional) is a directory, or with one series a
-    file.
+    file. On a VEC: the levels and the 95 % band of forecast (drvarma's
+    forecaster on the VEC in levels), with ERR the level innovations.
 
 ---
 
@@ -590,6 +810,27 @@ FIGURE — The orthogonalised impulse responses of the last estimated model.
     one panel per (response, shock), thick impulses at h = 0..H, the seasonal
     grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
     order of the files, as impulse_response. The numbers are impulse_response's.
+    On a VEC: the level responses (drvec), with the bootstrap's 90 % band
+    from irf_bands when it has run.
+
+---
+
+## `plot_rank_bootstrap`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `job_id` | string | no | `` |
+| `path` | string | no | `` |
+
+FIGURE — The rank test's bootstrap: for each comparison r -> r + 1, the
+    histogram of the B bootstrap statistics LR*, the OBSERVED LR (solid), the
+    bootstrap's 90/95/99 % critical values (dashed) and, for cases 1 and 2,
+    the asymptotic 5 % value (dotted: orientation only). From the finished
+    rank test of the current specification (the one with the largest B), or
+    `job_id`'s. Read from the job's .boot file with drvec's own reader.
 
 ---
 
@@ -608,7 +849,8 @@ FIGURE — The residual cross-correlations of the last estimated model,
     reference), titled "A - B" with A leading at k > 0, and Hosking's
     portmanteau below as GraphMaker labels it, P (not Ljung-Box's Q). What is
     left beyond the band is what the model does not carry.
-    `nlags` defaults to twice the frequency.
+    `nlags` defaults to twice the frequency. On a VEC: the residuals of its
+    stationary form (nabla Y2 and the equilibrium errors, drvec's).
 
 ---
 
@@ -628,7 +870,85 @@ FIGURE — The forecast-error variance decomposition, in the IRF's layout.
 
     Panel (i, j): the % of the h-step forecast-error variance of i due to the
     shock of j, h = 1..H, as impulses on a 0-100 axis with the 95 % band
-    dashed. A row reads the same as in plot_impulse_response.
+    dashed. A row reads the same as in plot_impulse_response. On a VEC: the
+    levels' decomposition (drvec), the bootstrap's band from irf_bands.
+
+---
+
+## `prepare_vec`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `purpose` | string | no | `` |
+| `p` | integer | no | `0` |
+| `q` | integer | no | `0` |
+| `case` | string | no | `pre` |
+| `nodrift` | string | no | `` |
+| `mixed` | boolean | no | `False` |
+
+N1c/C0 — The cointegration question, and the VEC's specification with its
+    checks (docs/STUDY-vec.md §2.3-2.4, §3.1-3.2). Offered after
+    canonical_analysis when TWO OR MORE series have d = 1, whatever its count:
+    the question is the analyst's (in the autonomous lane, yours, with the
+    reason written down). Feedback is not a precondition: it is tested inside
+    the VEC (weak exogeneity).
+
+    `purpose` is REQUIRED and recorded at N1c: "forecast" or "long run". It
+    decides the yardstick's role later (C8): a VETO when the purpose is to
+    forecast, a CAVEAT beside a long-run claim (an equilibrium, who corrects).
+
+    The checks, each a refusal with its reason or a warning: d >= 2 (drvec
+    models I(1) systems; back to art), D > 0 (drvec refuses a seasonal
+    difference: deterministic seasonality in art, objective "multivariante"),
+    a deterministic variable drvec refuses (its message), d = 0 series (the
+    MIXED case: an option, `mixed=True`, never the default; they go in the Y1
+    block and r >= their number), a file that moved at the gate, and the
+    sample (drvec's window against the gate's).
+
+    `p`: drvec's AR order on (nabla Y2, W) (0: proposed — the univariate AR
+    order in nabla plus 1, or Tiao and Box's M(l) on the levels when
+    canonical_analysis ran). `q`: the MA order (0 by default). `case`: 1, 2, 3
+    or "pre" (default: each drift as its file's mean says). `nodrift`: series
+    whose drift is held at 0 (case 3/pre). Never offered: drvec's refused
+    options (-warma, -mawarma, -specs, -matest, -artest, -m 2, -rankadm, the
+    instruments and the writers). Next: rank_test, the only way to a rank.
+
+---
+
+## `rank_test`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `B` | integer | no | `499` |
+| `multistart` | integer | no | `0` |
+| `seed` | integer | no | `0` |
+| `wait` | number | no | `20.0` |
+
+C1 — The cointegration rank, by PARAMETRIC BOOTSTRAP (drvec's sequential
+    exact-LR test r -> r + 1, r = 0..M-2): THE ONLY WAY TO A RANK in sima. The
+    bootstrap decides; the asymptotic table (cases 1 and 2 only) is shown as
+    orientation and is never the verdict. Reads the critical values, not the
+    p-value; proposes r-hat and never adopts it.
+
+    A JOB (sima.jobs): it runs detached, at most cores - 1 at once, on drvec C
+    when its binary is there (drvec's engine="auto"; the engine is in the
+    result's provenance), cached by content: the same files, spec, B, engine
+    and versions return the stored result at once. It waits up to `wait`
+    seconds (about 20) and then returns the job id with its progress
+    ("replication k of B, comparison r -> r + 1"); job_status/job_result
+    follow it. Never a partial result as final.
+
+    Uses prepare_vec's specification. `B`: 499 by default, 999 when a 1 %
+    verdict matters; below 199 the result is labelled an exploration.
+    `multistart`: more starts in every fit. `seed`: 0 is the C's (987654321);
+    another seed is a MONTE CARLO CHECK of an edge-of-5 % verdict (always on
+    the Python engine), never the default.
 
 ---
 
@@ -678,6 +998,8 @@ N6 — The impulse responses under ANOTHER Cholesky order, against the files'.
     size with the order is an assumption, not a finding. With a diagonal
     covariance the order does not matter at all, and the tool says so.
     `order_json`: the series names in the new order, e.g. '["WTI", "IPC_ES"]'.
+    On a VEC it REFUSES: there the order is also the normalisation, so another
+    order is another fit (estimate_vec with normalise_on).
 
 ---
 
@@ -793,6 +1115,70 @@ N4b — Study the current fit when the estimation may be ill-defined.
 
 ---
 
+## `sweep`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `p` | string | no | `` |
+| `case` | string | no | `` |
+| `estwin` | string | no | `` |
+| `B` | integer | no | `0` |
+| `wait` | number | no | `20.0` |
+
+C7 — Robustness: a grid of fits over the same files, one CACHED JOB per
+    cell, around the current VEC (its r, restrictions and normalisation).
+    `p`: AR orders, e.g. "1,2,3"; `case`: "2, 3, pre, trend" (trend, case
+    4, for a single fit only); `estwin`: subsamples, rows 1..E of nabla Y
+    ("60, 70, 80"; the recursive estimate). Empty: the current one.
+    `B` > 0 adds a rank test per (p, case) cell, with its bootstrap (jobs
+    too). The table — logL, parameters, the stopping criterion, theta and
+    alpha per cell; r-hat for the rank cells — fills as the cells finish:
+    call it again with the same grid (the cells are cached). It claims
+    nothing beyond its cells: what it preserves is the list of what was run,
+    and why, in the guion.
+
+---
+
+## `test_restriction`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `weakex` | string | no | `` |
+| `alpha` | string | no | `` |
+| `fixb2` | string | no | `` |
+| `fixb2row` | string | no | `` |
+| `adopt` | boolean | no | `False` |
+
+C3 — A restriction on alpha or beta of the current VEC, tested by
+    LIKELIHOOD RATIO (never by the .out's Wald, which depends on the
+    normalisation): LR, its degrees of freedom and chi2 p-value, both logLs.
+
+    `weakex`: a series' name — weak exogeneity, its row of alpha at zero ("who
+    corrects": it does not adjust to the equilibrium). `alpha`: alpha = A psi,
+    A as a JSON matrix (rows in drvec's order, as estimate_vec prints it) or a
+    file in drvec's format ("M sa", then M rows) — jointly for several
+    series. `fixb2`: every entry of B2 held at this VALUE (required: without
+    one drvec holds B2 at its static OLS value, which is not a test); fixb2=0
+    in the mixed case is the ladder's model. `fixb2row`: rows of B2 held,
+    "NAME=value, NAME2=value". weakex/alpha combine with fixb2row (the joint
+    LR).
+
+    drvec fits the free model of these LRs as the C does (one est() from a
+    cold start for alpha and weakex; no ladder for fixb2row), so its free logL
+    can be below the adopted VEC's and the LR understated: sima takes the BEST
+    FREE FIT it knows, says which, and shows both when they differ. `adopt`:
+    the restricted VEC becomes the current model. Not available (drvec):
+    restrictions on one cointegrating vector, a bootstrap of this LR, a rank
+    under a restriction.
+
+---
+
 ## `variance_decomposition`
 
 **Arguments**
@@ -812,6 +1198,8 @@ N6 — Forecast-error variance decomposition of the last estimated model.
     impulse_response, and the same caveat: with correlated innovations the
     shares of the first series in the order are inflated by construction.
     With `bands` (default): 95% Monte-Carlo bands at the last horizon.
+    On a VEC: the decomposition of the LEVELS' forecast errors (drvec), with
+    the bootstrap's bands when irf_bands has run.
 
 ---
 

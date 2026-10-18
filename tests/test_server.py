@@ -41,3 +41,19 @@ def test_the_instructions_carry_the_protocol_and_its_rules():
     assert "NEVER DECIDE NODES IN BATCH" in ins
     assert 'decided_by="LLM"' in ins
     assert "WHAT YOU HAND OVER" in ins
+
+
+def test_the_instructions_carry_the_cointegration_nodes_and_rules():
+    """docs/PLAN-vec.md C5: N1c and the C nodes in the protocol, decisions 3
+    and 6 stated as rules, the jobs, the kind tag."""
+    ins = M._INSTRUCTIONS
+    for node in ("N1c", "C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"):
+        assert node in ins, node
+    assert "NO COINTEGRATION CLAIM WITHOUT A FINISHED BOOTSTRAP" in ins
+    assert "VETO" in ins and "CAVEAT" in ins and '"long run"' in ins
+    assert "TWO OR MORE" in ins and "Feedback is NOT a precondition" in ins
+    assert "MIXED case" in ins and "never the default" in ins
+    assert "job_status" in ins and "NOTHING PARTIAL IS EVER A RESULT" in ins
+    assert "KIND" in ins and "ANOTHER FIT" in ins
+    assert "-warma" in ins and "-rankadm" in ins          # named as never offered
+    assert "DO NOT DECIDE THE RANK" in ins

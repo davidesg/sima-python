@@ -53,12 +53,14 @@ def _cointegrated(n=300, seed=3):
 
 def test_the_question_of_joint_differencing_is_asked():
     """Three I(1) series, one common trend: one component near 1, two nearly
-    white — so 2 stationary combinations, and the menu names drvec."""
+    white — so 2 stationary combinations, and the menu leads with N1c, the
+    cointegration question (prepare_vec: the rank by drvec's bootstrap)."""
     t, f = evidence.canonical_report(_cointegrated(), ["A", "B", "C"], [1, 1, 1], 1,
                                      call="x")
     assert f["near_one"] == 1 and f["near_zero"] == 2 and f["question"]
     assert "there may be 2 stationary combination(s) of the levels" in t
-    assert "drvec" in t and "Johansen" in t
+    assert "N1c" in t and 'prepare_vec(name="x", purpose="...")' in t
+    assert t.index("prepare_vec") < t.index("identify_matrices")
 
 
 def test_independent_random_walks_raise_no_question():
