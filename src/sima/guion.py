@@ -223,7 +223,7 @@ def render_html(g, base_dir=None):
                 if base_dir:
                     ap = os.path.abspath(p)
                     if ap.startswith(os.path.abspath(base_dir) + os.sep):
-                        src = os.path.relpath(ap, base_dir)
+                        src = os.path.relpath(ap, base_dir).replace(os.sep, "/")
                 L.append(f"<img src='{_esc(src)}' alt='{_esc(e.tool)}'>")
             L.append("</div>")
         L.append("</details>")
