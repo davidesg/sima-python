@@ -21,8 +21,18 @@ NODES = {
     "N0c": "raw data: each series' transformation",
     "N0u": "route U: the univariate models built by sima",
     "N0": "entry: the univariate models (fue files)",
-    "N1b": "canonical analysis of the levels",
     "N1": "the diagonal gate",
+    "N1b": "canonical analysis of the levels",
+    "N1c": "the cointegration question (and the model's purpose)",
+    "C0": "the VEC's specification and its checks",
+    "C1": "the cointegration rank, by parametric bootstrap",
+    "C2": "the adopted VEC and its normalisation",
+    "C3": "restrictions on alpha and beta, by LR",
+    "C4": "exogenous inputs",
+    "C5": "the long run, read",
+    "C6": "impulse responses and FEVD in levels",
+    "C7": "robustness: the sweep",
+    "C8": "the yardstick for the VEC",
     "N2": "cross identification (residual CCFs)",
     "N3": "estimation of a candidate",
     "N4": "in-sample evidence (LR, residuals)",
@@ -43,6 +53,10 @@ class Entry:
     evidence: str
     decision: str = ""
     when: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    # who computed it (sima.provenance): versions, backend, platform tier and,
+    # for a job, its engine, seed, cache key and run folder (PLAN-vec C1)
+    prov: dict = field(default_factory=dict)
+    kind: str = ""                     # the model's kind when it is a fit: VARMA or VEC
 
 
 @dataclass
@@ -51,8 +65,12 @@ class Guion:
     files: list
     entries: list = field(default_factory=list)
 
-    def add(self, node, tool, args, evidence, decision=""):
-        e = Entry(len(self.entries) + 1, node, tool, dict(args), evidence, decision)
+    def add(self, node, tool, args, evidence, decision="", prov=None, kind=""):
+        from .provenance import base
+        p = base()
+        p.update(prov or {})
+        e = Entry(len(self.entries) + 1, node, tool, dict(args), evidence, decision,
+                  prov=p, kind=kind)
         self.entries.append(e)
         return e
 
@@ -92,6 +110,10 @@ class Guion:
             out.append(f"    evidence: {e.evidence}")
             if e.decision:
                 out.append(f"    decision: {e.decision}")
+            extra = {k: e.prov[k] for k in ("engine", "seed", "key", "folder")
+                     if e.prov and k in e.prov}
+            if extra:
+                out.append("    provenance: " + ", ".join(f"{k} {v}" for k, v in extra.items()))
         return "\n".join(out)
 
 
@@ -183,6 +205,10 @@ def render_html(g, base_dir=None):
             L += [f"<div class='step' id='s{e.n}'>",
                   f"<p class='meta'>step {e.n} &nbsp;·&nbsp; {_esc(e.when)}</p>",
                   f"<div class='tool'>{_esc(e.tool)}({_esc(_args(e.args))})</div>"]
+            if e.prov:
+                from .provenance import line
+                L.append(f"<p class='meta'>{_esc(line(e.prov))}"
+                         + (f" &nbsp;·&nbsp; model: {_esc(e.kind)}" if e.kind else "") + "</p>")
             if e.evidence:
                 L.append(f"<div class='evidence'>{_esc(e.evidence)}</div>")
             if e.decision:

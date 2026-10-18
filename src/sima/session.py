@@ -19,6 +19,21 @@ class Session:
     evaluations: dict = field(default_factory=dict)  # (p, q, diagcov, estwin, H) -> summary
     route: str = "U"                   # "U": univariate models on the diagonal; "V": the vector first
     v: dict = None                     # route V: {"dir", "raw"} (docs/STUDY-raw-entry.md)
+    # --- cointegration (docs/PLAN-vec.md C1): one session, one guion; each fit
+    # carries a kind tag, and the final-stage tools dispatch on the current one
+    kind: str = "VARMA"                # the kind of the CURRENT model: "VARMA" or "VEC"
+    purpose: str = None                # recorded at N1c: "forecast" or "long run"
+    canonical: dict = None             # canonical_analysis' facts (lam, weights, p)
+    vec_spec: dict = None              # prepare_vec's: p, q, case, nodrift, order, mixed
+    rank_jobs: dict = field(default_factory=dict)   # rank-spec key -> job id
+    vec_fits: dict = field(default_factory=dict)    # VEC key -> sima.vec.VecFit
+    vec_current: tuple = None          # the key of the current VEC
+    irf_jobs: dict = field(default_factory=dict)    # VEC key -> irf_bands job id
+
+    def current_kind(self):
+        """VEC when the current model is a VEC, VARMA otherwise (the default:
+        estimate makes a VARMA current, estimate_vec a VEC)."""
+        return "VEC" if self.kind == "VEC" and self.vec_current in self.vec_fits else "VARMA"
 
 
 _SESSIONS: dict = {}
