@@ -180,8 +180,11 @@ def mc_error(p, n):
 def propose_rank(res):
     """r-hat read from the bootstrap's critical values at 5 %, sequentially;
     -> (r_hat or None, text, tie). r_hat = M - 1 with "at least" when every
-    comparison rejects."""
+    comparison rejects. Below B_EXPLORE no tie is flagged: the result is
+    already an exploration, and at small B almost every p-value is within two
+    Monte Carlo errors of 5 % (decided 2026-10-18)."""
     M = res["M"]
+    flag_ties = res["B"] >= B_EXPLORE
     by = {c["h0"]: c for c in res["comparisons"]}
     tie = []
     for h in range(M - 1):
@@ -192,7 +195,7 @@ def propose_rank(res):
         if c["cv"] is None:
             return None, (f"r = {h} -> {h + 1}: fewer than 10 replications ok, no critical "
                           "value"), tie
-        if c["pvalue"] is not None and abs(c["pvalue"] - 0.05) <= 2 * mc_error(c["pvalue"], c["ok"]):
+        if flag_ties and c["pvalue"] is not None and abs(c["pvalue"] - 0.05) <= 2 * mc_error(c["pvalue"], c["ok"]):
             tie.append(h)
         if c["lr"] <= c["cv"][1]:
             return h, f"r = {h}: the first comparison not rejected at 5 % (LR {c['lr']:.2f} " \

@@ -167,7 +167,13 @@ examples and the open questions. The implementation plan comes after it.
 - [ ] **The examples' caches off Linux x86_64**: the key holds the platform
       tier, so on macOS, Windows and aarch64 the tutorial's bootstraps run
       (minutes) instead of returning at once. Shipping a cache per tier would
-      need those platforms' runs.
+      need those platforms' runs. The tier stays in the key (decided
+      2026-10-18): a cache per tier, built on CI, is the way, not dropping it.
+- [ ] **The yardstick through drvarma** (decided 2026-10-18, after 0.2.0):
+      `evaluate` on a VEC reads drvec's own rolling `-estwin/-f` errors, while
+      a forecast at one origin goes through `to_levels_varma`. They agree to
+      1e-12, but it is two forecasters: route the rolling evaluation through
+      `to_levels_varma` too.
 
 ## Later
 

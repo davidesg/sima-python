@@ -338,3 +338,18 @@ Why the C is worth it even with drvarma's compiled engine: the measurement in
 drvec-python's TODO ("Option (b)") was made with the compiled likelihood, and
 the port is still 6–12x slower. About half of an evaluation is drvec's cast in
 pure Python, and about a quarter is drvarma's optimiser, also pure Python.
+
+## F. Decided by the user on phase C's questions (2026-10-18)
+
+1. **The yardstick's forecaster.** In 0.2.0 `evaluate` on a VEC keeps drvec's
+   own rolling forecaster (it agrees with drvarma's to 1e-12). After 0.2.0 the
+   rolling evaluation goes through `to_levels_varma` too (TODO).
+2. **The cache key keeps the platform tier.** Off Linux x86_64 the tutorials'
+   bootstraps run; caches per tier, built on CI, are the later route.
+3. **Flour and the Danish data.** The bootstrap does not reject r = 0 where the
+   published reading has r = 1. The tutorials say so and go on with r = 1
+   adopted on theory, recorded as such: that is decision 2 of §0 at work.
+4. **The tie rule is silent below B = 199**, where the result is already
+   labelled an exploration.
+5. **The default p in `prepare_vec`** is M(l) on the levels when
+   `canonical_analysis` has run, and the AR rule otherwise (flour: 2, not 1).

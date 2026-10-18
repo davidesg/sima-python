@@ -285,3 +285,14 @@ def test_the_refused_options_are_never_offered():
     assert {"prepare_vec", "rank_test", "estimate_vec", "test_restriction", "add_exogenous",
             "long_run", "irf_bands", "sweep", "plot_rank_bootstrap", "job_status",
             "job_result", "job_cancel", "jobs"} <= set(tools)
+
+
+def test_no_tie_flagged_below_the_exploration_threshold():
+    """At B < 199 the rank is an exploration and the tie rule is silent; from
+    B = 199 a p-value within two Monte Carlo errors of 5 % is a tie
+    (decided 2026-10-18)."""
+    def res(b):
+        return {"M": 2, "B": b, "comparisons": [
+            {"h0": 0, "cv": [3.0, 4.0, 6.0], "lr": 4.1, "pvalue": 0.06, "ok": b, "B": b}]}
+    assert vec.propose_rank(res(19))[2] == []
+    assert vec.propose_rank(res(199))[2] == [0]
