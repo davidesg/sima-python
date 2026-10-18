@@ -121,9 +121,98 @@ model; the example leaves it as a caveat.
 RMSE ratios 0.93–1.01: no gain worth a model. The significant cross terms in
 sample do not forecast better out of sample.
 
-**Closing reading.** In the differences, the joint model adds little: the
+**Reading so far.** In the differences, the joint model adds little: the
 univariates with a full covariance carry the forecasts. What ties the three
-markets lives in the levels, which is the canonical analysis's message and
-Tiao and Tsay's model. The next step is a test of the stationary combination,
-drvec's. That is where this example ends, and it is the honest answer of the
-ladder to these data.
+markets would live in the levels, which is the canonical analysis's message and
+Tiao and Tsay's model. That is a question for a TEST, and sima asks it here.
+
+## Step 7 · N1c — the cointegration question
+
+    prepare_vec("flour_prices", purpose="long run")
+
+Three series have d = 1, so the question is offered whatever the canonical
+count (decision of 2026-10-18). The PURPOSE is recorded first: here "long run"
+(is there an equilibrium between markets, and who restores it?), which makes
+the yardstick a caveat at C8, not a veto. Look at: p = 2, from Tiao and Box's
+M(l) on the levels (the AR rule alone gives 1: the univariate models are
+MA(1)); case pre: no file has a mean, so every drift is held at zero; the
+window is the gate's.
+
+## Step 8 · C1 — the rank, by parametric bootstrap
+
+    rank_test("flour_prices", B=499)
+
+It returns at once: the example ships this job's cache (drvec C, Linux x86_64;
+on another platform it runs, a few minutes). Look at:
+
+* r = 0 → 1: LR 14.35 against the bootstrap's 95 % value 20.06 (90 % 17.63),
+  p 0.19: NOT rejected;
+* r = 1 → 2: LR 3.00 against 13.39, p 0.78;
+* case pre has no asymptotic table: the bootstrap is the only calibration.
+
+**The bootstrap proposes r = 0**: no stationary combination at p = 2. The
+univariates' differences hold jointly, and the ladder's VARMA in differences
+(steps 3-6) was the right model. The canonical reading (one component at
+root 0.87, "not very stable" in Tiao and Tsay) is not confirmed by the test:
+a reading is not a test, and with n = 99 the contrast's root of 0.87 is hard to
+tell from 1. Say it plainly; it is the finding.
+
+`plot_rank_bootstrap("flour_prices")` draws the LR* distributions with the
+observed LR.
+
+**In the papers:** Tiao and Tsay (1989) fit an ARMA(1,1) in LEVELS, with the
+contrast's φ = 0.88 estimated, not tested against 1. sima's test does not
+reject the unit root in that contrast.
+
+## Step 9 · C2 — one rank further, ON THEORY
+
+    estimate_vec("flour_prices", r=1, theory="the law of one price between markets: r = 1 against the bootstrap, to read the contrast")
+
+Only to show the VEC's nodes: the rank is adopted on theory AGAINST the
+bootstrap, and estimate_vec writes it in the guion as such, with the
+bootstrap's numbers beside it (without `theory` it refuses). Look at:
+
+* the roles: beta normalised on Kansas City (the last series): the relation is
+  0.55 Buffalo − 1.65 Minneapolis + Kansas City — Buffalo and Kansas City
+  against Minneapolis, Tiao and Tsay's contrast between markets;
+* beside it, the canonical weights of the least predictable component,
+  normalised the same way: Buffalo +2.19, Minneapolis −3.10, Kansas City +1:
+  the same contrast, other weights;
+* alpha (Johansen's sign): +0.31, +0.35, +0.29, all |t| > 2. Who corrects is
+  read with beta's sign: Minneapolis (beta −1.65, alpha > 0) moves towards the
+  equilibrium; the relation as a whole decays, eig(I + beta'alpha) = 0.88.
+
+## Step 10 · C3 — who corrects, by LR
+
+    test_restriction("flour_prices", weakex="BUFFALO")
+
+LR 9.83, chi2(1), p 0.002: Buffalo is not weakly exogenous. drvec's free model
+and the adopted VEC agree here (one LR). The Wald tests of the .out are not
+citable.
+
+## Step 11 · C5 and C6 — the long run, and the responses with their bands
+
+    long_run("flour_prices")
+    irf_bands("flour_prices", N=499)          (cached)
+    impulse_response("flour_prices")
+
+theta: Kansas City = −0.55 Buffalo + 1.65 Minneapolis + a stationary error.
+The textbook half-life is undefined (Kansas City's alpha is positive: it does
+not correct); the model's, the response of the equilibrium error itself, halves
+within about 6 months. The level responses converge to their permanent effect
+(rank M − r = 2); their bands come from the parametric bootstrap, 499 refits.
+
+## Step 12 · C8 — the yardstick
+
+    evaluate("flour_prices", estwin=72, horizon=6)
+
+The VEC forecasts WORSE than the univariates in every cell (ratios 1.03-1.38),
+and worse than the VARMA in differences. The purpose being the long run, this
+is a caveat, reported beside the claim — and here there is no claim: the
+bootstrap did not find the relation.
+
+**Closing reading.** The ladder's answer to these data: the differenced
+univariates carry the forecasts; the levels suggest a contrast between
+markets, but the rank test by bootstrap does not find it stationary at
+n = 99. Everything after step 8 rests on a rank adopted on theory, and the
+guion says so.

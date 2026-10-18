@@ -1,0 +1,69 @@
+{
+ "B": 499,
+ "M": 2,
+ "case": "2",
+ "comparisons": [
+  {
+   "B": 499,
+   "asym_cv": [
+    13.75,
+    15.67,
+    20.2
+   ],
+   "asym_verdict": "H0 not rejected",
+   "cv": [
+    11.16378077925151,
+    14.04088295688075,
+    18.936992986548603
+   ],
+   "fitfail": 0,
+   "h0": 0,
+   "lr": 8.417134841848565,
+   "ok": 499,
+   "pvalue": 0.226,
+   "simfail": 0
+  }
+ ],
+ "drift_how": null,
+ "files": [
+  "rank.out",
+  "rank.boot"
+ ],
+ "multistart": 0,
+ "names": [
+  "MUSKRAT",
+  "MINK"
+ ],
+ "nobs": 61,
+ "nodrift": [],
+ "p": 2,
+ "provenance": {
+  "backend": "c",
+  "engine": "c",
+  "extra": {
+   "source": "bundled"
+  },
+  "note": "engine='c'",
+  "platform": "linux x86_64",
+  "seed": null,
+  "tier": "exact",
+  "version": "0.13",
+  "workers": 1
+ },
+ "q": 0,
+ "ranks": [
+  {
+   "logL": -574.7207881378043,
+   "ma_boundary": false,
+   "npar": 6,
+   "r": 0
+  },
+  {
+   "logL": -570.51222071688,
+   "ma_boundary": false,
+   "npar": 10,
+   "r": 1
+  }
+ ],
+ "tool": "rank_test"
+}

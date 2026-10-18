@@ -1,0 +1,88 @@
+{
+ "B": 499,
+ "M": 3,
+ "case": "pre",
+ "comparisons": [
+  {
+   "B": 499,
+   "asym_cv": null,
+   "asym_verdict": null,
+   "cv": [
+    17.629261045944077,
+    20.062243126768863,
+    26.030928835688428
+   ],
+   "fitfail": 0,
+   "h0": 0,
+   "lr": 14.353933606686951,
+   "ok": 499,
+   "pvalue": 0.194,
+   "simfail": 0
+  },
+  {
+   "B": 499,
+   "asym_cv": null,
+   "asym_verdict": null,
+   "cv": [
+    11.171445046611552,
+    13.38792765692051,
+    16.92560732473521
+   ],
+   "fitfail": 0,
+   "h0": 1,
+   "lr": 3.002649659585586,
+   "ok": 499,
+   "pvalue": 0.784,
+   "simfail": 0
+  }
+ ],
+ "drift_how": "pre",
+ "files": [
+  "rank.out",
+  "rank.boot"
+ ],
+ "multistart": 0,
+ "names": [
+  "BUFFALO",
+  "MINNEAPOLIS",
+  "KANSASCITY"
+ ],
+ "nobs": 99,
+ "nodrift": [],
+ "p": 2,
+ "provenance": {
+  "backend": "c",
+  "engine": "c",
+  "extra": {
+   "source": "bundled"
+  },
+  "note": "engine='c'",
+  "platform": "linux x86_64",
+  "seed": null,
+  "tier": "exact",
+  "version": "0.13",
+  "workers": 1
+ },
+ "q": 0,
+ "ranks": [
+  {
+   "logL": -667.6772449101841,
+   "ma_boundary": false,
+   "npar": 14,
+   "r": 0
+  },
+  {
+   "logL": -660.5002781068406,
+   "ma_boundary": false,
+   "npar": 20,
+   "r": 1
+  },
+  {
+   "logL": -658.9989532770478,
+   "ma_boundary": false,
+   "npar": 24,
+   "r": 2
+  }
+ ],
+ "tool": "rank_test"
+}

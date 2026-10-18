@@ -1,0 +1,70 @@
+{
+ "args": {
+  "N": 499,
+  "case": "pre",
+  "multistart": 0,
+  "nodrift": [],
+  "order": [
+   "BUFFALO",
+   "MINNEAPOLIS",
+   "KANSASCITY"
+  ],
+  "p": 2,
+  "q": 0,
+  "r": 1,
+  "restriction": {}
+ },
+ "engine": [
+  "c",
+  "0.13",
+  "bundled"
+ ],
+ "extra_files": [],
+ "files": [
+  "BUFFALO_m01.pre",
+  "MINNEAPOLIS_m01.pre",
+  "KANSASCITY_m01.pre"
+ ],
+ "id": "4a354f44fbb144f4",
+ "key": "4a354f44fbb144f40609492523c15a5a47849f26fce4d8369da28d99943eb750",
+ "label": "IRF bands N=499 r=1",
+ "payload": {
+  "args": {
+   "N": 499,
+   "case": "pre",
+   "multistart": 0,
+   "nodrift": [],
+   "order": [
+    "BUFFALO",
+    "MINNEAPOLIS",
+    "KANSASCITY"
+   ],
+   "p": 2,
+   "q": 0,
+   "r": 1,
+   "restriction": {}
+  },
+  "backend": "c",
+  "engine": "c 0.13",
+  "extra_files": [],
+  "files": [
+   "075adbe949f3f7756f5a1d8df304b3923ffcd20441f8f8bf3a0e4609de668190",
+   "2775ad18cca32a6a1617e6b789d964d662f3762969dd1fe6a7407f17072ae7d5",
+   "03c38f15a84587d8057f2f67090fba6cdc1ff129768f749781f7b81e86b68b77"
+  ],
+  "seed": null,
+  "tier": "exact",
+  "tool": "irf_bands",
+  "versions": {
+   "drvarma": "0.3.0",
+   "drvec": "0.1.0",
+   "fue": "0.1.18"
+  }
+ },
+ "seed": null,
+ "shipped": "a worked example's cache (tools/build_example_caches.py)",
+ "slots": 1,
+ "status": "done",
+ "tool": "irf_bands",
+ "workers": 1
+}

@@ -1,10 +1,19 @@
 {
   "name": "flour_prices",
   "title": "Tiao and Box's tools: flour prices in three cities",
-  "summary": "The Wisconsin tools on the data Tiao and Tsay (1989) analysed: monthly flour price indices in Buffalo, Minneapolis and Kansas City, 1972-1980, from three univariate models built with art's identification. Box and Tiao's (1977) canonical analysis of the levels and Tiao and Box's (1981) stepwise M(l) say what the univariates' differences hide: the prices move together, and the joint model may not need every difference.",
-  "files": ["art/BUFFALO_m01.pre", "art/MINNEAPOLIS_m01.pre", "art/KANSASCITY_m01.pre"],
-  "also": ["art/BUFFALO_m01.out", "art/MINNEAPOLIS_m01.out", "art/KANSASCITY_m01.out",
-           "data/flour_prices.csv", "README.md"],
+  "summary": "The Wisconsin tools on the data Tiao and Tsay (1989) analysed: monthly flour price indices in Buffalo, Minneapolis and Kansas City, 1972-1980, from three univariate models built with art's identification. Box and Tiao's (1977) canonical analysis of the levels and Tiao and Box's (1981) stepwise M(l) say what the univariates' differences hide: the prices move together, and the joint model may not need every difference. Then the cointegration question (N1c): the rank by parametric bootstrap (drvec, B = 499, shipped in the example's cache) does NOT reject r = 0, and the example goes one rank further on theory, written as such, to show the VEC's nodes.",
+  "files": [
+    "art/BUFFALO_m01.pre",
+    "art/MINNEAPOLIS_m01.pre",
+    "art/KANSASCITY_m01.pre"
+  ],
+  "also": [
+    "art/BUFFALO_m01.out",
+    "art/MINNEAPOLIS_m01.out",
+    "art/KANSASCITY_m01.out",
+    "data/flour_prices.csv",
+    "README.md"
+  ],
   "tutorial": "TUTORIAL.md",
   "manual": "STUDY-tiao-box",
   "plan": [
@@ -13,6 +22,16 @@
     "N2 identify_cross — innovations correlated at 0.96: the same shocks",
     "N2 identify_matrices — Tiao and Box's stepwise M(l) beside Jenkins and Alavi's S_k, on the differences",
     "N3 estimate — the VAR(1) M(l) asks for",
-    "N5 evaluate — the yardstick: does it forecast better than the univariates?"
+    "N5 evaluate — the yardstick: does it forecast better than the univariates?",
+    "N1c prepare_vec — the cointegration question; purpose \"long run\"; p = 2 from M(l) on the levels, case pre",
+    "C1 rank_test (B = 499, cached) — r = 0 is not rejected (LR 14.35 against 20.06, p 0.19): the differences hold",
+    "C2 estimate_vec r = 1 ON THEORY — the contrast between markets, beside the canonical weights",
+    "C3 test_restriction — who corrects, by LR",
+    "C5 long_run, C6 the level responses with the bootstrap's bands (irf_bands, cached)",
+    "C8 evaluate — the yardstick for the VEC: a caveat, the purpose being the long run"
+  ],
+  "jobs": [
+    "art/sima_jobs/5b4160ecab1b109c",
+    "art/sima_jobs/4a354f44fbb144f4"
   ]
 }

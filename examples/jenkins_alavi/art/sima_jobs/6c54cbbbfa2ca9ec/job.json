@@ -1,0 +1,62 @@
+{
+ "args": {
+  "B": 499,
+  "case": "2",
+  "multistart": 0,
+  "names": [
+   "MUSKRAT",
+   "MINK"
+  ],
+  "nodrift": [],
+  "p": 2,
+  "q": 0
+ },
+ "engine": [
+  "c",
+  "0.13",
+  "bundled"
+ ],
+ "extra_files": [],
+ "files": [
+  "MUSKRAT_m03.pre",
+  "MINK_m02.pre"
+ ],
+ "id": "6c54cbbbfa2ca9ec",
+ "key": "6c54cbbbfa2ca9ec5a223941534773aea2f1b1df9fd11959ad7bce7fc4d7f072",
+ "label": "rank test B=499 p=2 case 2",
+ "payload": {
+  "args": {
+   "B": 499,
+   "case": "2",
+   "multistart": 0,
+   "names": [
+    "MUSKRAT",
+    "MINK"
+   ],
+   "nodrift": [],
+   "p": 2,
+   "q": 0
+  },
+  "backend": "c",
+  "engine": "c 0.13",
+  "extra_files": [],
+  "files": [
+   "5047b81b7303fd465e866c17e11a970be930a69f72aa41db77e7bf1c2d8e5eb3",
+   "18660336875a54756d6a712aa33a956d2967e9c3b4aa51b9686b384a3d003316"
+  ],
+  "seed": null,
+  "tier": "exact",
+  "tool": "rank_test",
+  "versions": {
+   "drvarma": "0.3.0",
+   "drvec": "0.1.0",
+   "fue": "0.1.18"
+  }
+ },
+ "seed": null,
+ "shipped": "a worked example's cache (tools/build_example_caches.py)",
+ "slots": 1,
+ "status": "done",
+ "tool": "rank_test",
+ "workers": 1
+}

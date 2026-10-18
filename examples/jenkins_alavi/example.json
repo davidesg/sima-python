@@ -1,9 +1,17 @@
 {
   "name": "jenkins_alavi",
   "title": "Jenkins and Alavi (1981): muskrat and mink",
-  "summary": "The multivariate method of Jenkins and Alavi on their own data: the skins of muskrat (prey) and mink (predator) traded by the Hudson's Bay Company, 62 years, from the two univariate models built in art to the forecasts.",
-  "files": ["art/MUSKRAT_m03.pre", "art/MINK_m02.pre"],
-  "also": ["art/MUSKRAT_m03.out", "art/MINK_m02.out", "data/mink_muskrat.csv", "README.md"],
+  "summary": "The multivariate method of Jenkins and Alavi on their own data: the skins of muskrat (prey) and mink (predator) traded by the Hudson's Bay Company, 62 years, from the two univariate models built in art to the forecasts. And the MIXED case of the cointegration question: one I(1) series and one I(0), drvec's VEC with mink in Y1, the rank by bootstrap (B = 499, shipped) and the ladder's model as B2 = 0.",
+  "files": [
+    "art/MUSKRAT_m03.pre",
+    "art/MINK_m02.pre"
+  ],
+  "also": [
+    "art/MUSKRAT_m03.out",
+    "art/MINK_m02.out",
+    "data/mink_muskrat.csv",
+    "README.md"
+  ],
   "tutorial": "TUTORIAL.md",
   "manual": "MANUAL-jenkins-alavi",
   "plan": [
@@ -12,6 +20,12 @@
     "N3 estimate — the two candidates they found: an MA(1) residual model and a cross AR(2)",
     "N4 check_residuals — their checking, with the large residual of 1906 (1908 here)",
     "N5 forecast_uncertainty — their Table VIII, on all the data and on 48 observations (§6.3)",
-    "N5 evaluate — the out-of-sample comparison they could not run"
+    "N5 evaluate — the out-of-sample comparison they could not run",
+    "N1c (the mixed case, an option) prepare_vec mixed=True, p = 2, case 2",
+    "C1 rank_test (B = 499, cached) — r = 0 not rejected (LR 8.42 against 14.04, p 0.23), against mink's d = 0: the test's power at n = 61",
+    "C2 estimate_vec r = 1 on theory (mink I(0)); C3 fixb2=0, the ladder's model, by LR"
+  ],
+  "jobs": [
+    "art/sima_jobs/6c54cbbbfa2ca9ec"
   ]
 }
