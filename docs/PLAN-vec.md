@@ -196,6 +196,31 @@ The options:
 what the ATSW packages already do. This is the user's decision, because it
 changes the 2026-10-04 one.
 
+### B5. drvec C inside drvec-python's wheels (decided 2026-10-18)
+
+sima's users install with pip and mostly have no ATSW, so the C must come with
+the wheel. Otherwise the bootstraps that need it are 6–12x slower for most of
+them. The C in the wheel is the oracle itself, so no new numerics are
+written.
+
+- **Vendor** drvec C's sources and the `lib/` pieces it links (fuedet,
+  fuepre, diagmv, prewhiten, and whatever else) into drvec-python's `csrc/`.
+  A test checks their sha256 against atsw-gui at the drvec 0.13 commit, as
+  fue does for fuedet.
+- **Build** the executable with cibuildwheel, with GSL static as in drvarma's
+  wheels, for Linux x86_64 and aarch64, macOS arm64 and Windows. It ships as
+  package data, `drvec/_bin/drvec[.exe]`.
+- A **pure-Python wheel** remains the fallback, as in drvarma.
+- **`c_engine`'s search order:** `DRVEC_BIN`, then the bundled binary, then
+  the PATH or the ATSW install.
+- **Tests:**
+  - in CI, the wheel's binary gives the same bytes as the oracle on Linux
+    x86_64;
+  - the smoke test of each wheel runs one small bootstrap through the C path.
+- It goes into **drvec 0.1.0**, so it costs no extra release.
+- drvec in the ATSW packages (B4) remains a separate matter, for the GUI's
+  users.
+
 ## C. sima 0.2.0
 
 The tools are added; nothing that exists changes, except the menus and texts
@@ -288,6 +313,7 @@ x86_64, rerunning the cache reproduces the same bytes, which is itself a test.
 | A1–A3 | drvec-python | byte identity holds; workers=1 ≡ workers=4; the accessors equal the `.out` |
 | A4 | drvec-python (+ drvarma 0.3.0 if needed) | drvarma's forecasts of the levels VARMA equal drvec's on every golden `.forecast` |
 | B1–B3 | drvec-python | C ≡ Python bytes on Linux x86_64 on the rank cases; the skip works without a binary |
+| B5 | drvec-python | wheels on 4 platforms carry the binary; the vendored sources pass the sha256 test; C ≡ oracle bytes on Linux x86_64 |
 | C1–C2 | sima | runner tests pass; jobs survive the client |
 | C3–C6 | sima | the examples run end to end in both lanes |
 | C7 | sima | CI green on the three platforms |
@@ -299,7 +325,9 @@ A and B can run in parallel with C1–C2. The C tools need A1 and, for jobs, C2.
 
 ## E. Decided by the user (2026-10-18)
 
-1. **The distribution of drvec C** (B4): `DRVEC_BIN` now; drvec goes into
+1. **The distribution of drvec C** (B4, B5): bundled in drvec-python's
+   wheels (B5, which supersedes "DRVEC_BIN now" as the main route;
+   `DRVEC_BIN` stays as an override); drvec also goes into
    the ATSW packages at the joint release, which amends the 2026-10-04
    decision recorded in atsw-gui `packaging/programas.sh`.
 2. **The default engine for the bootstraps when the C is present:** the C
