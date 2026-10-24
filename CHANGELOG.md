@@ -63,7 +63,11 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
 - The protocol and the rules in the server's instructions: N1c and the C
   nodes; no cointegration claim without a finished bootstrap; the yardstick's
   role by purpose; LR, not Wald; the order of a VEC is its normalisation.
-
+- **The C engine's progress moves at every replication.** drvec C wrote the
+  rank bootstrap's `.boot` through a 4 KB buffer, so a job's count jumped by
+  ~160 replications and `job_status` added a note saying so; atsw-gui BUG-63
+  flushes it line by line, and drvec-python bundles that C (csrc/ from
+  atsw-gui abe6602). The note is gone.
 
 ## 0.1.1 — unreleased
 
