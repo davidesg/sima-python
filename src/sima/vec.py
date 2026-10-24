@@ -369,6 +369,8 @@ def restriction_kw(restr, order, r):
         kw["fixb2"] = float(restr["fixb2"])
     if restr.get("fixb2row"):
         kw["fixb2row"] = {order.index(nm) + 1: float(v) for nm, v in restr["fixb2row"].items()}
+    if restr.get("gamma"):
+        kw["gzero"] = [(order.index(e) + 1, order.index(g) + 1) for e, g in restr["gamma"]]
     if restr.get("xsys"):
         kw["xsys"] = [order.index(nm) + 1 for nm in restr["xsys"]]
     if restr.get("xpre"):
@@ -562,6 +564,61 @@ def lr_from(ll_free, ll_restr, df):
     return lr, (float(chi2.sf(max(lr, 0.0), df)) if df > 0 else float("nan"))
 
 
+def parse_gamma(text, order):
+    """'R30,R3 <- R0T; ...' -> ((equation, regressor), ...): the entries of
+    Gamma(k) held at zero for every k, the equations first. Raises ValueError."""
+    pairs = []
+    for tok in re.split(r"[;\n]", text or ""):
+        t = tok.strip()
+        if not t:
+            continue
+        if "<-" not in t:
+            raise ValueError(f"gamma is 'EQUATIONS <- REGRESSORS' (e.g. \"R30,R3 <- R0T\"), "
+                             f"got: {t!r}")
+        lhs, rhs = (names_list(x) for x in t.split("<-", 1))
+        if not lhs or not rhs:
+            raise ValueError(f"gamma: name the equations and the regressors, got: {t!r}")
+        bad = [n for n in lhs + rhs if n not in order]
+        if bad:
+            raise ValueError(f"gamma: no series {', '.join(bad)} ({', '.join(order)})")
+        for e in lhs:
+            for g in rhs:
+                if e == g:
+                    raise ValueError(f"gamma: {e} <- {e} is the series' own short run (its "
+                                     "univariate model, the ladder's rung): never held")
+                if (e, g) not in pairs:
+                    pairs.append((e, g))
+    if not pairs:
+        raise ValueError("gamma: give 'EQUATIONS <- REGRESSORS', e.g. \"R30,R3 <- R0T\"")
+    return tuple(pairs)
+
+
+def alpha_zero_rows(restr, order):
+    """The series whose row of alpha the restriction holds at zero."""
+    if restr.get("weakex"):
+        return [restr["weakex"]]
+    A = restr.get("alpha")
+    if A is not None:
+        return [nm for nm, row in zip(order, A) if all(abs(float(v)) < 1e-12 for v in row)]
+    return []
+
+
+def conditional_roles(restr, order):
+    """(outputs, inputs) when the restriction is the conditional model's: the
+    inputs weakly exogenous (their alpha rows zero) and every output out of
+    every input's short run (Johansen 1992). None otherwise."""
+    gam = restr.get("gamma") or ()
+    if not gam:
+        return None
+    inputs = [nm for nm in order if nm in {e for e, _ in gam}]
+    outputs = [nm for nm in order if nm not in inputs]
+    if not outputs or sorted(alpha_zero_rows(restr, order)) != sorted(inputs):
+        return None
+    if any((e, g) not in gam for e in inputs for g in outputs):
+        return None
+    return outputs, inputs
+
+
 def restriction_report(base, rf, restr, call, label, prov_line=""):
     """The LR of a restriction against the free model: drvec's (its free fit is
     the C's: one est() for -alpha/-weakex, no ladder for -fixb2row) and, when it
@@ -608,20 +665,57 @@ def restriction_report(base, rf, restr, call, label, prov_line=""):
     L.append(f"The restriction ({label}) is {verdict}: LR {lr_b:.2f}, chi2({df}), p {p_b:.4f}"
              f" ({used} free fit). An asymptotic chi2 test given r: beta is superconsistent, "
              "alpha and the short run standard. No bootstrap of this LR exists in drvec.")
-    if restr.get("weakex"):
+    joint = bool(restr.get("gamma")) and bool(alpha_zero_rows(restr, base.order))
+    if restr.get("weakex") and not joint:
         L.append(f"Weak exogeneity of {restr['weakex']}: "
                  + ("it does NOT adjust to the equilibrium (it is not the one that corrects)."
                     if p_b >= 0.05 else "it adjusts: it takes part in the correction."))
-        L.append("If every series but one is weakly exogenous and the short run has no "
-                 "feedback, the system is a CONDITIONAL model, a transfer network on I(1) "
-                 "inputs: offer mtram (never go there yourself).")
+        if not restr.get("gamma"):
+            L.append("If every series but one is weakly exogenous and the short run has no "
+                     "feedback, the system is a CONDITIONAL model, a transfer network on "
+                     "I(1) inputs: test both at once, gamma= in the same call (the joint "
+                     "LR), before offering mtram.")
+    roles = conditional_roles(restr, base.order)
+    if restr.get("gamma"):
+        held = ", ".join(f"{e} <- {g}" for e, g in restr["gamma"])
+        if not joint:
+            L.append(f"No feedback in the short run ({held}, every lag k = 1..{base.p - 1}): "
+                     + ("the data do not reject it." if p_b >= 0.05 else
+                        "REJECTED: the regressors enter those equations' short run."))
+        elif p_b < 0.05:
+            L.append("A JOINT LR: its rejection does not say which part fails. Test each "
+                     "alone — the restriction on alpha (weakex/alpha) and gamma — before "
+                     "reading either.")
+        if roles and p_b >= 0.05:
+            out_, in_ = roles
+            L.append(f"The JOINT restriction is the CONDITIONAL model's: "
+                     f"{', '.join(in_)} weakly exogenous and not fed back by "
+                     f"{', '.join(out_)} (Johansen 1992). The system reads as "
+                     f"{', '.join(out_)} | {', '.join(in_)}: a transfer network on I(1) "
+                     "inputs, mtram's ground. Offer it (never go there yourself).")
+        elif roles:
+            L.append("The JOINT restriction is the conditional model's, and it is rejected: "
+                     "the system is not a transfer network; the VEC stays the model.")
+        elif not alpha_zero_rows(restr, base.order):
+            L.append("Alone it says nothing of the long run: with the same series weakly "
+                     "exogenous (weakex/alpha in the same call) it is the conditional "
+                     "model's joint test.")
     L += ["", "The Wald statistics of the .out are NOT CITABLE (they depend on the "
           "normalisation).", "", "## 4 · DECISION — alternatives", "",
           f"**A)** keep the restriction: the restricted VEC becomes the current model\n"
           f"   `test_restriction(name=\"{call}\", {restr.get('_call', '')}, adopt=True)`",
           "**B)** keep the free VEC and record the test as evidence\n"
-          f"   `record_decision(name=\"{call}\", node=\"C3\", ...)`",
-          "", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+          f"   `record_decision(name=\"{call}\", node=\"C3\", ...)`"]
+    if roles and p_b >= 0.05:
+        fl = dict(zip(base.order, base.files))
+        out_, in_ = roles
+        L.append(f"**C)** the conditional model in mtram: output {', '.join(out_)}, "
+                 f"inputs {', '.join(in_)}, the same files ("
+                 + ", ".join(os.path.basename(fl[n]) for n in out_ + in_)
+                 + "): a transfer network on I(1) inputs, its gain the long run, "
+                 "its lags the short run\n   `mtram: load_pre, then identify_link "
+                 f"(output {', '.join(out_)})` (outside sima)")
+    L += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
     if prov_line:
         L += ["", prov_line]
     return "\n".join(L), {"lr": lr_b, "df": df, "p": p_b, "ll_free": best, "ll_restricted": ll_r,

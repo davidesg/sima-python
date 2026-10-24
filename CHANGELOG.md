@@ -14,6 +14,14 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   D > 0, drvec's refusals, a moved file, the window). The mixed I(0)/I(1) case
   is an option (`mixed=True`), never the default. `canonical_analysis`'s menu
   calls it instead of "drvec (outside sima)"; `run_gate` and `load_pre` name it.
+- **No feedback in the short run, by LR** (`test_restriction(gamma="R30,R3 <-
+  R0T")`, drvec's `-gzero`): Gamma_k[equation][regressor] = 0 at every lag.
+  With weakex/alpha on the same series it is the conditional model's joint
+  test (weak exogeneity and no feedback, Johansen 1992); when it holds, the
+  report names the output and the inputs and offers mtram with the same
+  files. In two series weakex + gamma is `add_exogenous(series=...)` (-xsys):
+  the same model, checked. Shakedown, Martín Manjón and Treadway 1985-2008:
+  R0T | (R30, R3), LR 7.83, 8 df, p .45. Needs drvec-python with `-gzero`.
 - **The rank by parametric bootstrap** (`rank_test`, C1), the only way to a
   rank: drvec's sequential exact LR, the bootstrap's critical values, the
   Monte Carlo error, a proposed r-hat that the analyst adopts or not; the
