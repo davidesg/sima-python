@@ -905,16 +905,29 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
     alpha per cell; r-hat for the rank cells — fills as the cells finish:
     call it again with the same grid (the cells are cached). It claims
     nothing beyond its cells: what it preserves is the list of what was run,
-    and why, in the guion."""
+    and why, in the guion.
+
+    At C1, before any VEC (prepare_vec's specification, `B` required, no
+    `estwin`): the RANK over p, each order its own bootstrap — what rank_test
+    offers when n / (M p) is small and the verdict can flip with p."""
     s, err = _session(name)
     if err:
         return err
     try:
         vf = _need_vec(s)
     except KeyError as e:
-        return str(e)
-    ps = _ints(p) or [vf.p]
-    cases = vec.names_list(case) or [str(vf.case)]
+        # at C1, before any VEC: the rank only, over prepare_vec's specification
+        if not s.vec_spec:
+            return str(e)
+        if int(B) < 1 or _ints(estwin):
+            return ("Before a VEC is estimated the sweep reads the RANK only: give B "
+                    f'(e.g. sweep(name="{name}", p="{",".join(map(str, vec.sweep_orders(s.vec_spec["p"])))}", '
+                    f"B={vec.B_DEFAULT})) and no estwin. The fits' sweep (logL, theta, "
+                    "alpha per cell) needs estimate_vec first.")
+        vf = None
+    spec0 = s.vec_spec if vf is None else None
+    ps = _ints(p) or [vf.p if vf else spec0["p"]]
+    cases = vec.names_list(case) or [str(vf.case if vf else spec0["case"])]
     for c in cases:
         if c not in vec.CASES + ("trend",):
             return f"case: {c} is not one of 1, 2, 3, pre, trend."
@@ -922,9 +935,7 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
     cells = []
     for pp in ps:
         for c in cases:
-            if c == "trend" and str(vf.case) not in ("3", "pre"):
-                pass
-            for e in ews:
+            for e in (ews if vf else []):
                 args = vec.fit_args(vf, p=int(pp), case=c, estwin=int(e))
                 try:
                     jid, _st = jobs.submit("fit_cell", args, vf.files, bootstrap=False,
@@ -948,7 +959,9 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
         if all(jobs.status(c[4])["status"] in jobs.FINAL for c in cells):
             break
         time.sleep(0.5)
-    L = [f"# Sweep (C7) around the VEC r = {vf.r} — {len(cells)} cell(s), one job each", "",
+    L = [(f"# Sweep (C7) around the VEC r = {vf.r}" if vf else
+          "# Sweep of the rank over the order (C1), before any VEC")
+         + f" — {len(cells)} cell(s), one job each", "",
          "```", f"  {'cell':<26}{'status':<10}{'logL':>12}{'npar':>6}{'crit':>5}"
          "  theta / alpha  (or the rank)"]
     pend = []
@@ -961,9 +974,8 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
             continue
         res = jobs.result(jid)
         if kind == "rank":
-            r_hat, why, _t = vec.propose_rank(res)
-            L.append(f"  {lab:<26}{'done':<10}{'':>12}{'':>6}{'':>5}  r-hat {r_hat} (B = "
-                     f"{res['B']})")
+            L.append(f"  {lab:<26}{'done':<10}{res['ranks'][0]['logL']:>12.4f}"
+                     f"{res['ranks'][0]['npar']:>6}{'':>5}  {vec.rank_cell_text(res)}")
         else:
             th = np.asarray(res["theta"])
             al = np.asarray(res["alpha"])
@@ -974,13 +986,21 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
     if any(e for _k, _p, _c, e, _j in cells):
         L.append("The estwin cells are fitted on fewer rows: their logL is not comparable "
                  "with the full sample's; read theta and alpha's stability.")
-    L.append("Criterion: the optimiser's stopping rule (1, 2: the gradient or the step; "
-             "3 or more: not a demonstrated maximum).")
+    if vf:
+        L.append("Criterion: the optimiser's stopping rule (1, 2: the gradient or the step; "
+                 "3 or more: not a demonstrated maximum).")
+    if any(k == "rank" for k, *_r in cells):
+        L.append("RANK cells: logL and npar are those of r = 0; each comparison's LR against "
+                 "its bootstrap's 95 % value and p. Each p has its own bootstrap: a verdict "
+                 "that flips between orders is conditional on p, and the choice of p "
+                 "(the last Gamma of the fit, the residuals) is argued before the rank, "
+                 "not chosen for it.")
     if pend:
         L.append(f"{len(pend)} cell(s) still running: call sweep again with the same grid, "
                  "or job_status. Nothing is read from an unfinished cell.")
-    s.guion.add("C7", "sweep", {"p": ",".join(map(str, ps)), "case": ",".join(cases),
-                                "estwin": ",".join(map(str, ews)), "B": int(B)},
+    s.guion.add("C7" if vf else "C1", "sweep", {"p": ",".join(map(str, ps)),
+                                                "case": ",".join(cases),
+                                                "estwin": ",".join(map(str, ews)), "B": int(B)},
                 f"{len(cells)} cells, {len(cells) - len(pend)} finished", kind="VEC")
     return "\n".join(L)
 

@@ -20,6 +20,13 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   Martín Manjón and Treadway 1985-1995: (R0T, R0) proposed 15, now 4; the gas
   furnace's single gap at 5 keeps its 6). `canonical_analysis` names the
   isolated lags.
+- **C1 at small n: the rank is conditional on p.** When n / (M p) is below 15,
+  `rank_test`'s report says the verdict can flip with the order (shakedown,
+  Martín Manjón and Treadway: 2016-2020 and 2022-2026 reject r = 0 at p = 2
+  and not at p = 3 or 4) and offers first `sweep(name, p="p-1,p,p+1", B=...)`.
+  `sweep` now runs before any VEC: over prepare_vec's specification it reads
+  the RANK only, one cached rank job per order, with each comparison's LR,
+  95 % value and p per cell (also in the VEC's sweep).
 - **The rank by parametric bootstrap** (`rank_test`, C1), the only way to a
   rank: drvec's sequential exact LR, the bootstrap's critical values, the
   Monte Carlo error, a proposed r-hat that the analyst adopts or not; the

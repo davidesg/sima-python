@@ -30,6 +30,11 @@ CASE_TEXT = {"1": "case 1: E[nabla Y2] = 0, E[W] = 0 (no constant)",
              "pre": "case pre: each drift free or held as its file's mean says (case 3's mask)"}
 B_DEFAULT = 499
 B_EXPLORE = 199          # below it a bootstrap is an exploration
+# n / (M p) below it: the rank's verdict is conditional on p, and C1 offers the
+# sweep over p (shakedown of 0.2.0, Martín Manjón and Treadway: 1985-1995,
+# n / (M p) = 10.8, and 2016-2020 / 2022-2026, about 4-8, flip between p = 2 and
+# p = 3; 1985-2008, 23.8, does not). A convention, not a test.
+SMALL_N_PER_LAG = 15
 
 
 # --------------------------------------------------------------------------- #
@@ -204,6 +209,25 @@ def propose_rank(res):
                    "fits r <= M - 1; full rank is not tested here)"), tie
 
 
+def small_sample(res):
+    """n / (M p) when it is below SMALL_N_PER_LAG (the rank is then read at the
+    neighbouring orders too), else 0."""
+    v = res["nobs"] / max(1, res["M"] * int(res["p"]))
+    return v if v < SMALL_N_PER_LAG else 0.0
+
+
+def sweep_orders(p):
+    return [x for x in (int(p) - 1, int(p), int(p) + 1) if x >= 1]
+
+
+def rank_cell_text(res):
+    """A sweep's rank cell: r-hat and each comparison's LR and bootstrap p."""
+    r_hat, _why, _t = propose_rank(res)
+    return (f"r-hat {r_hat} (B = {res['B']}); "
+            + "; ".join(f"r={c['h0']}: LR {c['lr']:.2f}, 95% {c['cv'][1]:.2f}, p {c['pvalue']:.3f}"
+                        for c in res["comparisons"] if c["cv"]))
+
+
 def rank_report(res, call, folder=None, prov_line=""):
     M, B = res["M"], res["B"]
     names = res["names"]
@@ -267,6 +291,14 @@ def rank_report(res, call, folder=None, prov_line=""):
                  "check with another seed is the other tool.")
     L.append("Every claim from here is conditional on r, on p, q and the case, and on the "
              "files' transformations and deterministic terms.")
+    small = small_sample(res)
+    if small:
+        L.append(f"SMALL SAMPLE FOR THIS ORDER: n / (M p) = {small:.1f} (below "
+                 f"{SMALL_N_PER_LAG}). Here the bootstrap's verdict can flip with p, and the "
+                 "LR need not be monotone in it (beta and alpha at a given r hardly move; "
+                 "the rank's evidence does). The verdict is conditional on p = "
+                 f"{res['p']}: read the rank at the neighbouring orders before deciding "
+                 "(the autonomous lane runs the sweep first).")
     L += ["", "## 4 · DECISION — alternatives", ""]
     opts = []
     if r_hat == 0:
@@ -295,6 +327,11 @@ def rank_report(res, call, folder=None, prov_line=""):
         if h + 1 < M and not (r_hat == 0 and h == 0):    # (B) already offers r = 1
             opts.append((f"the tie: estimate r = {h + 1} as well and compare",
                          f'estimate_vec(name="{call}", r={h + 1}, theory="tie: ...")'))
+    if small:
+        opts.insert(0, (f"the rank at p = {', '.join(map(str, sweep_orders(res['p'])))} "
+                        "(the sweep over p, one cached rank job per order) before deciding",
+                        f'sweep(name="{call}", p="{",".join(map(str, sweep_orders(res["p"])))}", '
+                        f'B={B})'))
     opts.append(("the bootstrap distribution against the observed LR (the figure)",
                  f'plot_rank_bootstrap(name="{call}")'))
     if tie:
