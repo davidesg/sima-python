@@ -14,6 +14,12 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   D > 0, drvec's refusals, a moved file, the window). The mixed I(0)/I(1) case
   is an option (`mixed=True`), never the default. `canonical_analysis`'s menu
   calls it instead of "drvec (outside sima)"; `run_gate` and `load_pre` name it.
+  Its default p from Tiao and Box's M(l) on the levels is the contiguous
+  order: it stops at the first run of two non-significant M(l), and a lag
+  significant alone beyond it is reported and offered, not taken (shakedown,
+  Martín Manjón and Treadway 1985-1995: (R0T, R0) proposed 15, now 4; the gas
+  furnace's single gap at 5 keeps its 6). `canonical_analysis` names the
+  isolated lags.
 - **The rank by parametric bootstrap** (`rank_test`, C1), the only way to a
   rank: drvec's sequential exact LR, the bootstrap's critical values, the
   Monte Carlo error, a proposed r-hat that the analyst adopts or not; the

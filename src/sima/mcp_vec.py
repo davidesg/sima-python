@@ -112,7 +112,7 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
 
     `p`: drvec's AR order on (nabla Y2, W) (0: proposed — the univariate AR
     order in nabla plus 1, or Tiao and Box's M(l) on the levels when
-    canonical_analysis ran). `q`: the MA order (0 by default). `case`: 1, 2, 3
+    canonical_analysis ran, up to its first run of non-significant lags). `q`: the MA order (0 by default). `case`: 1, 2, 3
     or "pre" (default: each drift as its file's mean says). `nodrift`: series
     whose drift is held at 0 (case 3/pre). Never offered: drvec's refused
     options (-warma, -mawarma, -specs, -matest, -artest, -m 2, -rankadm, the
@@ -152,9 +152,14 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
     i0 = facts["i0"]
     order = [n for n in names if n not in i0] + i0
     p_ar, per = vec.p_rule(s.series)
-    p_ml = None
+    p_ml = p_tb = None
     if s.canonical:
-        p_ml = max(1, int(s.canonical.get("p_tb") or s.canonical.get("p") or 1))
+        # the contiguous order, not Tiao and Box's last significant M(l): a lag
+        # significant alone after a silence is not a VEC's p (evidence.contiguous_order)
+        p_tb = max(1, int(s.canonical.get("p_tb") or s.canonical.get("p") or 1))
+        p_ml = max(1, int(s.canonical.get("p_run") or 0)) if "p_run" in s.canonical else p_tb
+        if p_tb == p_ml:
+            p_tb = None
     p_use = int(p) or (p_ml if (s.route == "V" and p_ml) or (p_ml and p_ml > p_ar) else p_ar)
     s.purpose = pur
     s.vec_spec = {"p": p_use, "q": int(q), "case": str(cs), "nodrift": nd, "order": order,
@@ -180,6 +185,9 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
           f"  p = {p_use}" + (" (as given)" if p else
                               f" (proposed: the AR rule gives {p_ar}"
                               + (f", Tiao and Box's M(l) on the levels {p_ml}" if p_ml else "")
+                              + (f" (the last significant M(l) is {p_tb}, alone after "
+                                 f"a run of non-significant lags: p={p_tb} if you read it "
+                                 "as an order)" if p_tb else "")
                               + ")"),
           f"  q = {int(q)}; {vec.CASE_TEXT[str(cs)]}"
           + (f"; drift held at 0: {', '.join(nd)}" if nd else ""),
