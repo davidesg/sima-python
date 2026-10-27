@@ -540,8 +540,8 @@ def _matrix(text, M):
 
 @mcp.tool()
 def test_restriction(name: str, weakex: str = "", alpha: str = "", fixb2: str = "",
-                     fixb2row: str = "", adopt: bool = False) -> str:
-    """C3 — A restriction on alpha or beta of the current VEC, tested by
+                     fixb2row: str = "", gamma: str = "", adopt: bool = False) -> str:
+    """C3 — A restriction on alpha, beta or Gamma of the current VEC, tested by
     LIKELIHOOD RATIO (never by the .out's Wald, which depends on the
     normalisation): LR, its degrees of freedom and chi2 p-value, both logLs.
 
@@ -553,7 +553,12 @@ def test_restriction(name: str, weakex: str = "", alpha: str = "", fixb2: str = 
     one drvec holds B2 at its static OLS value, which is not a test); fixb2=0
     in the mixed case is the ladder's model. `fixb2row`: rows of B2 held,
     "NAME=value, NAME2=value". weakex/alpha combine with fixb2row (the joint
-    LR).
+    LR). `gamma`: NO FEEDBACK in the short run, "R30,R3 <- R0T" (the equations,
+    then the regressors; "A <- B; C <- D" for several): Gamma_k[eq][reg] = 0 at
+    every lag (drvec -gzero; p >= 2, q = 0). With weakex/alpha on the same
+    inputs it is the CONDITIONAL model's joint test (weak exogeneity and no
+    feedback, Johansen 1992): when it holds, the report offers mtram with the
+    same files and the roles. gamma does not combine with fixb2/fixb2row.
 
     drvec fits the free model of these LRs as the C does (one est() from a
     cold start for alpha and weakex; no ladder for fixb2row), so its free logL
@@ -617,8 +622,23 @@ def test_restriction(name: str, weakex: str = "", alpha: str = "", fixb2: str = 
         restr["fixb2row"] = rows
         calls.append(f'fixb2row="{fixb2row.strip()}"')
         labels.append("rows of B2 held: " + ", ".join(f"{k} = {v:g}" for k, v in rows.items()))
+    if gamma.strip():
+        if "fixb2" in restr or "fixb2row" in restr:
+            return ("gamma does not combine with fixb2/fixb2row (drvec refuses it): test "
+                    "them in separate calls.")
+        if base.p < 2:
+            return "gamma: at p = 1 there is no Gamma (drvec's p is the AR order on (nabla Y2, W))."
+        if base.q > 0:
+            return "gamma: drvec holds entries of Gamma only with q = 0 (the MA walks do not carry the mask yet)."
+        try:
+            restr["gamma"] = vec.parse_gamma(gamma, order)
+        except ValueError as e:
+            return str(e)
+        calls.append(f'gamma="{gamma.strip()}"')
+        labels.append("no feedback: " + ", ".join(f"{e} <- {g}" for e, g in restr["gamma"])
+                      + f" held at 0 for k = 1..{base.p - 1}")
     if not restr:
-        return "Give a restriction: weakex, alpha, fixb2 (a value) or fixb2row."
+        return "Give a restriction: weakex, alpha, fixb2 (a value), fixb2row or gamma."
     restr["_call"] = ", ".join(calls)
     clean = {k: v for k, v in restr.items() if not k.startswith("_")}
     key = vec.vec_key(order, base.p, base.q, base.r, base.case, base.nodrift, clean,

@@ -131,7 +131,11 @@ N1c prepare_vec       THE COINTEGRATION QUESTION, offered whenever TWO OR MORE
                       blocks, alpha from the matrix, the canonical weights
                       beside beta; a fit on a ridge is declared, never an
                       optimum.
-    C3 test_restriction  alpha and beta by LR (weak exogeneity: who corrects).
+    C3 test_restriction  alpha and beta by LR (weak exogeneity: who corrects);
+                      Gamma by LR too (gamma="X1,X2 <- Y": no feedback). With
+                      weakex/alpha on the same inputs it is the CONDITIONAL
+                      model's joint test; when it holds, offer mtram (output
+                      and inputs named in the report), never go there yourself.
     C4 add_exogenous  inputs, dispatched by their order of integration.
     C5 long_run       theta, both half-lives, Gonzalo and Ng.
     C6 impulse_response / variance_decomposition on the VEC: the LEVELS; bands
