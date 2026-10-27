@@ -6,6 +6,72 @@ missing, in order:
 
 ## Next
 
+- [x] **No feedback in a VEC: an LR on blocks of Gamma** (done 2026-10-24: drvec C 8626a2d -gzero, drvec-python 61cd4d8, sima 7da7dca test_restriction(gamma=); found in the shakedown
+      of 0.2.0, 2026-10-23, Martín Manjón and Treadway 1997 on 1985–2008;
+      the analyst calls it fundamental). With R30 and R3 weakly exogenous
+      (alpha = A psi, LR 1.70, 2 df, p .43), the trivariate (R0T, R30, R3) is a
+      CONDITIONAL model, R0T on I(1) inputs — a transfer network, mtram's
+      ground — only if R0T does not enter the R30 and R3 equations in the
+      short run either: Gamma(k)[R30, R0T] = Gamma(k)[R3, R0T] = 0 for every k.
+      Today it is read off the fitted Gamma(1) t's (0.1, -0.3), never tested:
+      `test_restriction` takes alpha and B2 only, and drvec offers no
+      restriction on Gamma (sima refuses `-artest`).
+      - *What:* `test_restriction(gamma="R30,R3 <- R0T")` (the equations,
+        then the regressors, every lag; a lag list as an option), the LR
+        against the adopted VEC, its df, and combined with weakex/alpha into the
+        JOINT LR of the conditional model (weak exogeneity + no feedback).
+        `adopt` makes the restricted VEC current.
+      - *Then:* when the joint restriction holds, the N1c/C3 menu offers mtram
+        with the same files and the roles (output R0T, inputs the
+        exogenous ones), as the docstring already promises in words.
+      - *Engine prerequisite in drvec:* fit with zero masks on Gamma(k)
+        entries (drvec-python and the C). Not the C's `-artest`: that is the
+        bootstrap of Gamma_i = m_i alpha' (warma against mawarma, drvec.c
+        `run_ma_ar_test`), another hypothesis.
+      - *Test:* (R0T, R30, R3) of Martín Manjón and Treadway (1997), 1985–2008, p=4, r=1 normalised on R3.
+
+- [x] **The rank depends on p when n is small: offer the sweep at C1** (done 2026-10-24, branch prepare-vec-p-isolated-lag: n / (M p) < 15; found
+      in the shakedown of 0.2.0, 2026-10-23, Martín Manjón and Treadway on 2016–2020 and 2022–2026,
+      n ≈ 50). The bootstrap verdict flips with the order, and the LR is not
+      monotone in p:
+
+      | system, sample | p=2 | p=3 | p=4 |
+      |---|---|---|---|
+      | (GS2, GS30, GS10), 2016–2020 | LR 30.85, p .004 | 16.10, p .348 | 21.28, p .230 |
+      | (R0T, R30, R3), 2022–2026 | LR 25.09, p .026 | 9.77, p .850 | 20.70, p .232 |
+
+      Not a local maximum (every start lands on the same logL), and beta and
+      alpha estimated at r=1 hardly move with p; what moves is the rank's
+      evidence (the bootstrap's 95 % value rises ~5 points from p=2 to p=4).
+      - *What:* when n / (M·p) is small, C1 says the verdict is conditional on
+        p and offers `sweep(name, p="p-1,p,p+1")` on the rank (jobs), with the
+        table above as its report; the autonomous lane runs it before deciding.
+
+- [x] **`prepare_vec`'s default p from M(l) takes an isolated lag** (done 2026-10-24, branch prepare-vec-p-isolated-lag: the contiguous order; found in
+      the shakedown of 0.2.0, Martín Manjón and Treadway, 1985–1995): after `canonical_analysis`,
+      the proposed p was 15 for (R0T, R0) and 7 for (R0T, R30), lags
+      significant alone after a gap (nothing from 5 to 14). The analyst took
+      p=4, the AR rule. M(l) should stop at the first run of non-significant
+      lags (or flag the gap and propose both), not jump to the last
+      significant one.
+
+- [x] **The C engine's progress during a rank bootstrap is coarse** (done 2026-10-24: drvec C BUG-63, atsw-gui be36006, the .boot flushed per replication; pending: re-vendor csrc/ in drvec-python after the merges, then drop the "count jumps" note in jobs.progress_text; shakedown
+      of 0.2.0): a trivariate rank test takes 60–90 minutes and `job_status`
+      shows almost nothing until the end. Raise the priority of the C's
+      progress lines (replication k of B, comparison r → r+1), as the Python
+      engine reports them.
+
+- [x] **drvec's residual block labels the Y1 row with the series' name, but it
+      is the innovation of W = beta'Y** (done 2026-10-24: drvec C BUG-62, atsw-gui e9304c6, drvec-python 95b6c6c; shakedown of 0.2.0, Martín Manjón and Treadway, 1985–2008,
+      (GS2, GS30, GS10), r=1 on GS10): "residual sd" of R10 is 4.41 =
+      sqrt(beta' Sigma beta) = sqrt(19.5), not sqrt(Sigma_33) = 21.8, and the
+      k=0 correlations with R10 (.28, .175) are not Sigma's (.88, .95); on
+      2008–2015 they even come out negative. Estimates and LRs are unaffected.
+      Belongs to drvec (to check whether the C's .out does the same, or only
+      the port's): to be filed in atsw-gui
+      `engines/drvec/docs/BUGS.md` with a BUG-NNNN-repro, then sima relays
+      the corrected label.
+
 - [x] **Studying an ill-defined estimation** (decided 2026-09-28; done the same day: `study_estimation`). When a fit
       stops on the MA invertibility wall, drvarma C 5.0 says so as a fact
       (`OPTIMIZER STOPPED at the MA invertibility boundary`,
