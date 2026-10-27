@@ -26,7 +26,7 @@ on:
       drvarma_ref:
         description: "drvarma (davidesg/drvarma-python) at this ref"
         required: false
-        default: "gsl-gensymmv"
+        default: "master"
       drvec_ref:
         description: "drvec (davidesg/drvec-python) at this ref"
         required: false
@@ -34,7 +34,7 @@ on:
 
 env:
   FUE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.fue_ref || 'master' }}
-  DRVARMA_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.drvarma_ref || 'gsl-gensymmv' }}
+  DRVARMA_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.drvarma_ref || 'master' }}
   DRVEC_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.drvec_ref || 'main' }}
   PYFUG_SPEC: "pyfug @ git+https://github.com/davidesg/pyfug@master"
   ART_SPEC: "art-tseries @ git+https://github.com/davidesg/art-python@master"
