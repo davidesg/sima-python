@@ -170,10 +170,11 @@ Search: 3 starting points, 3 converged; logL from 753.535383 to 753.535383.  The
   trusting a statistic.
 
   === Parametric bootstrap under H0 (499 replications) ===
-  The asymptotic values above are known to be optimistic at these
-  sample sizes: measured, the sequential test over-rejects about
-  SIX times its nominal level at n = 120, and these percentiles cut
-  that to four without closing it.  They are empirical
+  The asymptotic values above can be off in short samples:
+  measured on Cavaliere, Rahbek and Taylor's (2012) design (q = 0,
+  case 2), the test of the true rank rejects 11% at T = 50 against
+  a nominal 5%, and these percentiles bring it to 4%; at T = 100
+  the tables are already close to nominal.  They are empirical
   percentiles of the statistic simulated FROM THE FITTED MODEL at
   rank r, so they carry the sample size, the deterministic case and
   the MA component that the tables cannot.
@@ -181,7 +182,7 @@ Search: 3 starting points, 3 converged; logL from 753.535383 to 753.535383.  The
   r    M-r        LR      10%      5%      1%   p-value  reps
   -----------------------------------------------------------------
   0       3    58.6518    19.84    22.59    30.07   0.0020   499   reject H0 at 1%
-  1       2     6.0213    10.49    13.22    18.52   0.3447   498   H0 not rejected
+  1       2     6.0213    10.49    13.22    18.52   0.3460   499   H0 not rejected
 
   Every replication, with its LR*, is in rank.boot.
 
