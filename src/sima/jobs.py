@@ -547,9 +547,6 @@ def progress_text(st):
         if done_total and st["status"] == "running" and el > 0:
             left = el / done_total * (total - done_total)
             txt += f"\n  elapsed {el / 60:.1f} min; about {left / 60:.1f} min left at this rate"
-            if (st.get("engine") or ["?"])[0] == "c":
-                txt += (" (drvec C reports in its output buffer's steps: the count jumps, "
-                        "and an early rate overstates the time left)")
         return txt
     if "total" in p:
         el = st.get("elapsed") or 0.0
