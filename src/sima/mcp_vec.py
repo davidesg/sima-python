@@ -112,7 +112,7 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
 
     `p`: drvec's AR order on (nabla Y2, W) (0: proposed — the univariate AR
     order in nabla plus 1, or Tiao and Box's M(l) on the levels when
-    canonical_analysis ran). `q`: the MA order (0 by default). `case`: 1, 2, 3
+    canonical_analysis ran, up to its first run of non-significant lags). `q`: the MA order (0 by default). `case`: 1, 2, 3
     or "pre" (default: each drift as its file's mean says). `nodrift`: series
     whose drift is held at 0 (case 3/pre). Never offered: drvec's refused
     options (-warma, -mawarma, -specs, -matest, -artest, -m 2, -rankadm, the
@@ -152,9 +152,14 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
     i0 = facts["i0"]
     order = [n for n in names if n not in i0] + i0
     p_ar, per = vec.p_rule(s.series)
-    p_ml = None
+    p_ml = p_tb = None
     if s.canonical:
-        p_ml = max(1, int(s.canonical.get("p_tb") or s.canonical.get("p") or 1))
+        # the contiguous order, not Tiao and Box's last significant M(l): a lag
+        # significant alone after a silence is not a VEC's p (evidence.contiguous_order)
+        p_tb = max(1, int(s.canonical.get("p_tb") or s.canonical.get("p") or 1))
+        p_ml = max(1, int(s.canonical.get("p_run") or 0)) if "p_run" in s.canonical else p_tb
+        if p_tb == p_ml:
+            p_tb = None
     p_use = int(p) or (p_ml if (s.route == "V" and p_ml) or (p_ml and p_ml > p_ar) else p_ar)
     s.purpose = pur
     s.vec_spec = {"p": p_use, "q": int(q), "case": str(cs), "nodrift": nd, "order": order,
@@ -180,6 +185,9 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
           f"  p = {p_use}" + (" (as given)" if p else
                               f" (proposed: the AR rule gives {p_ar}"
                               + (f", Tiao and Box's M(l) on the levels {p_ml}" if p_ml else "")
+                              + (f" (the last significant M(l) is {p_tb}, alone after "
+                                 f"a run of non-significant lags: p={p_tb} if you read it "
+                                 "as an order)" if p_tb else "")
                               + ")"),
           f"  q = {int(q)}; {vec.CASE_TEXT[str(cs)]}"
           + (f"; drift held at 0: {', '.join(nd)}" if nd else ""),
@@ -917,16 +925,29 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
     alpha per cell; r-hat for the rank cells — fills as the cells finish:
     call it again with the same grid (the cells are cached). It claims
     nothing beyond its cells: what it preserves is the list of what was run,
-    and why, in the guion."""
+    and why, in the guion.
+
+    At C1, before any VEC (prepare_vec's specification, `B` required, no
+    `estwin`): the RANK over p, each order its own bootstrap — what rank_test
+    offers when n / (M p) is small and the verdict can flip with p."""
     s, err = _session(name)
     if err:
         return err
     try:
         vf = _need_vec(s)
     except KeyError as e:
-        return str(e)
-    ps = _ints(p) or [vf.p]
-    cases = vec.names_list(case) or [str(vf.case)]
+        # at C1, before any VEC: the rank only, over prepare_vec's specification
+        if not s.vec_spec:
+            return str(e)
+        if int(B) < 1 or _ints(estwin):
+            return ("Before a VEC is estimated the sweep reads the RANK only: give B "
+                    f'(e.g. sweep(name="{name}", p="{",".join(map(str, vec.sweep_orders(s.vec_spec["p"])))}", '
+                    f"B={vec.B_DEFAULT})) and no estwin. The fits' sweep (logL, theta, "
+                    "alpha per cell) needs estimate_vec first.")
+        vf = None
+    spec0 = s.vec_spec if vf is None else None
+    ps = _ints(p) or [vf.p if vf else spec0["p"]]
+    cases = vec.names_list(case) or [str(vf.case if vf else spec0["case"])]
     for c in cases:
         if c not in vec.CASES + ("trend",):
             return f"case: {c} is not one of 1, 2, 3, pre, trend."
@@ -934,9 +955,7 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
     cells = []
     for pp in ps:
         for c in cases:
-            if c == "trend" and str(vf.case) not in ("3", "pre"):
-                pass
-            for e in ews:
+            for e in (ews if vf else []):
                 args = vec.fit_args(vf, p=int(pp), case=c, estwin=int(e))
                 try:
                     jid, _st = jobs.submit("fit_cell", args, vf.files, bootstrap=False,
@@ -960,7 +979,9 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
         if all(jobs.status(c[4])["status"] in jobs.FINAL for c in cells):
             break
         time.sleep(0.5)
-    L = [f"# Sweep (C7) around the VEC r = {vf.r} — {len(cells)} cell(s), one job each", "",
+    L = [(f"# Sweep (C7) around the VEC r = {vf.r}" if vf else
+          "# Sweep of the rank over the order (C1), before any VEC")
+         + f" — {len(cells)} cell(s), one job each", "",
          "```", f"  {'cell':<26}{'status':<10}{'logL':>12}{'npar':>6}{'crit':>5}"
          "  theta / alpha  (or the rank)"]
     pend = []
@@ -973,9 +994,8 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
             continue
         res = jobs.result(jid)
         if kind == "rank":
-            r_hat, why, _t = vec.propose_rank(res)
-            L.append(f"  {lab:<26}{'done':<10}{'':>12}{'':>6}{'':>5}  r-hat {r_hat} (B = "
-                     f"{res['B']})")
+            L.append(f"  {lab:<26}{'done':<10}{res['ranks'][0]['logL']:>12.4f}"
+                     f"{res['ranks'][0]['npar']:>6}{'':>5}  {vec.rank_cell_text(res)}")
         else:
             th = np.asarray(res["theta"])
             al = np.asarray(res["alpha"])
@@ -986,13 +1006,21 @@ def sweep(name: str, p: str = "", case: str = "", estwin: str = "", B: int = 0,
     if any(e for _k, _p, _c, e, _j in cells):
         L.append("The estwin cells are fitted on fewer rows: their logL is not comparable "
                  "with the full sample's; read theta and alpha's stability.")
-    L.append("Criterion: the optimiser's stopping rule (1, 2: the gradient or the step; "
-             "3 or more: not a demonstrated maximum).")
+    if vf:
+        L.append("Criterion: the optimiser's stopping rule (1, 2: the gradient or the step; "
+                 "3 or more: not a demonstrated maximum).")
+    if any(k == "rank" for k, *_r in cells):
+        L.append("RANK cells: logL and npar are those of r = 0; each comparison's LR against "
+                 "its bootstrap's 95 % value and p. Each p has its own bootstrap: a verdict "
+                 "that flips between orders is conditional on p, and the choice of p "
+                 "(the last Gamma of the fit, the residuals) is argued before the rank, "
+                 "not chosen for it.")
     if pend:
         L.append(f"{len(pend)} cell(s) still running: call sweep again with the same grid, "
                  "or job_status. Nothing is read from an unfinished cell.")
-    s.guion.add("C7", "sweep", {"p": ",".join(map(str, ps)), "case": ",".join(cases),
-                                "estwin": ",".join(map(str, ews)), "B": int(B)},
+    s.guion.add("C7" if vf else "C1", "sweep", {"p": ",".join(map(str, ps)),
+                                                "case": ",".join(cases),
+                                                "estwin": ",".join(map(str, ews)), "B": int(B)},
                 f"{len(cells)} cells, {len(cells) - len(pend)} finished", kind="VEC")
     return "\n".join(L)
 

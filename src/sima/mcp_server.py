@@ -123,6 +123,10 @@ N1c prepare_vec       THE COINTEGRATION QUESTION, offered whenever TWO OR MORE
                                       unit-root question (canonical analysis,
                                       art's table, a VARMA in levels or art);
                         a tie       — estimate both ranks and compare.
+                      With n / (M p) small (C1 says so) the verdict can flip
+                      with p: sweep(name, p="p-1,p,p+1", B=...) reads the rank
+                      at the neighbouring orders (jobs); the autonomous lane
+                      runs it before deciding, and argues p, not the rank.
     C2 estimate_vec   the adopted VEC: the ROLES (normalise_on), drvec's .out
                       blocks, alpha from the matrix, the canonical weights
                       beside beta; a fit on a ridge is declared, never an

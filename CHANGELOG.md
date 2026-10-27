@@ -14,6 +14,19 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   D > 0, drvec's refusals, a moved file, the window). The mixed I(0)/I(1) case
   is an option (`mixed=True`), never the default. `canonical_analysis`'s menu
   calls it instead of "drvec (outside sima)"; `run_gate` and `load_pre` name it.
+  Its default p from Tiao and Box's M(l) on the levels is the contiguous
+  order: it stops at the first run of two non-significant M(l), and a lag
+  significant alone beyond it is reported and offered, not taken (shakedown,
+  Martín Manjón and Treadway 1985-1995: (R0T, R0) proposed 15, now 4; the gas
+  furnace's single gap at 5 keeps its 6). `canonical_analysis` names the
+  isolated lags.
+- **C1 at small n: the rank is conditional on p.** When n / (M p) is below 15,
+  `rank_test`'s report says the verdict can flip with the order (shakedown,
+  Martín Manjón and Treadway: 2016-2020 and 2022-2026 reject r = 0 at p = 2
+  and not at p = 3 or 4) and offers first `sweep(name, p="p-1,p,p+1", B=...)`.
+  `sweep` now runs before any VEC: over prepare_vec's specification it reads
+  the RANK only, one cached rank job per order, with each comparison's LR,
+  95 % value and p per cell (also in the VEC's sweep).
 - **No feedback in the short run, by LR** (`test_restriction(gamma="R30,R3 <-
   R0T")`, drvec's `-gzero`): Gamma_k[equation][regressor] = 0 at every lag.
   With weakex/alpha on the same series it is the conditional model's joint
@@ -71,7 +84,11 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
 - The protocol and the rules in the server's instructions: N1c and the C
   nodes; no cointegration claim without a finished bootstrap; the yardstick's
   role by purpose; LR, not Wald; the order of a VEC is its normalisation.
-
+- **The C engine's progress moves at every replication.** drvec C wrote the
+  rank bootstrap's `.boot` through a 4 KB buffer, so a job's count jumped by
+  ~160 replications and `job_status` added a note saying so; atsw-gui BUG-63
+  flushes it line by line, and drvec-python bundles that C (csrc/ from
+  atsw-gui abe6602). The note is gone.
 
 ## 0.1.1 — unreleased
 

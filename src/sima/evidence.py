@@ -867,6 +867,27 @@ def _combination(row, names):
     return ", ".join(f"{nm} {v:+.2f}" for nm, v in zip(names, row) if abs(v) >= 0.005)
 
 
+def contiguous_order(sw, alpha=0.05, run=2):
+    """The order for a VEC's default p from Tiao and Box's M(l) column: the
+    last significant l before the first `run` consecutive non-significant ones.
+    Tiao and Box's own reading (`stepwise_order`) goes to the last significant
+    l whatever the gap, and a single gap is theirs to keep (the gas furnace's
+    M(5)); a lag significant alone after a long silence is not an order (the
+    Martín Manjón and Treadway shakedown, 1985-1995: M(15) of (R0T, R0) after
+    nothing from 5 to 14). Returns (p, isolated): p (0 if M(1) is not
+    significant) and the significant l beyond it."""
+    pv = list(sw["pvalue"])
+    p, quiet = 0, 0
+    for l, v in enumerate(pv, 1):
+        if v < alpha:
+            p, quiet = l, 0
+        else:
+            quiet += 1
+            if quiet >= run:
+                break
+    return p, [l for l, v in enumerate(pv, 1) if l > p and v < alpha]
+
+
 def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
     """Box and Tiao's (1977) canonical analysis of the transformed LEVELS x
     (n x m: Box-Cox and seasonal differences, no regular ones), under a
@@ -879,6 +900,7 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
     L = max(1, min(2 * freq if freq > 1 else 6, n // (3 * m)))
     sw = stepwise_ar(x, L)
     p_tb, gaps = stepwise_order(sw)
+    p_run, isolated = contiguous_order(sw)
     p_used = int(p) or max(1, p_tb)
     c = canonical(x, p_used)
     lam = c["lam"]
@@ -920,6 +942,10 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
                  + (f" (gaps {gaps})" if gaps else "")
                  + (f"; VAR({p_used}) used." if p_used == max(1, p_tb)
                     else f"; VAR({p_used}) asked for."))
+    if isolated:
+        lines.append(f"- Significant alone after a run of non-significant lags: "
+                     f"l = {isolated}. The contiguous order is {p_run}: the VEC's "
+                     f"default p (prepare_vec) takes {max(1, p_run)}, and offers {p_tb}.")
     lines.append(f"- {len(unit)} component(s) with sqrt(lam) >= {near} (lam >= {near * near:.2f})"
                  + (": " + "; ".join(f"y{j + 1} = {_combination(W[j], names)}" for j in unit)
                     if unit else "") + ".")
@@ -1000,6 +1026,7 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
         "it is the analyst's, in characterize." if raw else "it belongs to the `.pre`."), "",
               "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
     facts = {"lam": [float(v) for v in lam], "p": p_used, "p_tb": p_tb,
+             "p_run": p_run, "isolated": isolated,
              "near_one": len(unit), "near_zero": len(white), "differenced": len(diffd),
              "question": bool(question), "names": list(names),
              "weights": [[float(v) for v in row] for row in W]}
