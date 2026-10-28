@@ -38,6 +38,11 @@ SPECS = {
     "lutkepohl_e1": dict(files=["art/e1invest.pre", "art/e1income.pre", "art/e1cons.pre"],
                          prepare=dict(purpose="long run", p=2, case="2"),
                          rank=dict(B=499)),
+    "martin_manjon_treadway": dict(files=["art/R0T_ar3.pre", "art/R30_ar3.pre", "art/R3_ar3.pre"],
+                                   prepare=dict(purpose="long run", p=4, case="pre"),
+                                   rank=dict(B=499),
+                                   controls=[["art/R0T_ar3.pre", "art/R10_ar3.pre",
+                                              "art/R3_ar3.pre"]]),
     "johansen_juselius": dict(files=["art/LRM_u.pre", "art/LRY_u.pre", "art/IBO_u.pre",
                                      "art/IDE_u.pre"],
                               prepare=dict(purpose="long run", p=2, case="2"),
@@ -87,6 +92,18 @@ def build(name, spec, wait=6 * 3600):
         for jid in jids:
             from sima import jobs
             folders.append(jobs.status(jid)["folder"])
+    # the tutorial's other systems (a control): the same spec, their rank only
+    for k, ctrl in enumerate(spec.get("controls", []), 1):
+        cs = f"{sess}_c{k}"
+        fn(M.load_pre)(cs, json.dumps([os.path.join(d, f) for f in ctrl]))
+        fn(M.run_gate)(cs)
+        fn(M.canonical_analysis)(cs)
+        fn(M.prepare_vec)(cs, **spec["prepare"])
+        print(fn(M.rank_test)(cs, wait=wait, **spec["rank"])[:600])
+        for jids in M._sess.get(cs).rank_jobs.values():
+            for jid in jids:
+                from sima import jobs
+                folders.append(jobs.status(jid)["folder"])
     if spec.get("vec"):
         print(fn(M.estimate_vec)(sess, theory="the tutorial's rank (see TUTORIAL.md)",
                                  **spec["vec"])[:400])

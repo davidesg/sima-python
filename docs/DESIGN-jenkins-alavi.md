@@ -9,7 +9,7 @@ statistics of this phase.
 
 Reference: G. M. Jenkins and A. S. Alavi (1981), "Some aspects of modelling and
 forecasting multivariate time series", *Journal of Time Series Analysis* 2,
-1–47 (in `drvarma_source/literature`). Section numbers in brackets are the
+1–47. Section numbers in brackets are the
 paper's. It is the school's base: Relloso (1997, ICAE 9720) calls it and Tiao and
 Box (1981) "the two basic works" of the MS methodology, and Muñoz Polo (2001,
 Treadway's thesis) writes that her research "did not need multivariate methods
@@ -199,7 +199,7 @@ against univariate (their Table VIII). Cheap: the ψ weights and Σ are there.
   slightly; the structures and the ranking should not.
 - **A second look at the same data**: Chan and Wallis (1978), "Multiple time
   series modelling: another look at the mink–muskrat interaction", *Applied
-  Statistics* 27, 168–175 (in `drvec/literature`), who revisit Jenkins (1975)
+  Statistics* 27, 168–175, who revisit Jenkins (1975)
   — a second reference for the structures and the univariate models.
 - **Their simulated series** (4.1)–(4.3): simulate with our generator and
   check that the statistics show the patterns they describe (MA(2) cut-off;

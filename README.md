@@ -46,9 +46,9 @@ every result.
 | N1 | `run_gate` | does the joint model reproduce the univariate ones? (it stops the analysis if not) |
 | N1b | `canonical_analysis` | Box and Tiao's canonical analysis of the levels |
 | N1c / C0 | `prepare_vec` | the cointegration question (two or more series with d = 1), the model's purpose, the VEC's specification and its checks |
-| C1 | `rank_test` | the cointegration rank, by **parametric bootstrap** (a job) |
+| C1 | `rank_test`, `plot_rank_bootstrap` | the cointegration rank, by **parametric bootstrap** (a job); at small n, the rank at the neighbouring orders (`sweep` over p) |
 | C2 | `estimate_vec` | the adopted VEC: the roles (normalisation), α, β, Π |
-| C3–C4 | `test_restriction`, `add_exogenous` | restrictions on α and β by LR (who corrects); exogenous inputs |
+| C3–C4 | `test_restriction`, `add_exogenous` | restrictions on α, β and Γ by LR (who corrects; no feedback in the short run, the conditional model and the hand-over to mtram); exogenous inputs |
 | C5 | `long_run` | θ, two half-lives, Gonzalo and Ng's permanent and transitory shocks |
 | C6–C7 | `irf_bands`, `sweep` | the level responses' bootstrap bands; robustness (jobs) |
 | C8 | `evaluate` | the yardstick for the VEC: a veto to forecast, a caveat for a long-run claim |
@@ -91,15 +91,21 @@ See [`docs/DESIGN.md`](https://github.com/davidesg/sima-python/blob/main/docs/DE
   analysis of the levels, the structure and the simplification. Their gas
   furnace is runnable in [`examples/tiao_box/`](https://github.com/davidesg/sima-python/tree/main/examples/tiao_box/), and the
   flour prices in [`examples/flour_prices/`](https://github.com/davidesg/sima-python/tree/main/examples/flour_prices/).
-* [Cointegrated systems](https://github.com/davidesg/sima-python/blob/main/docs/STUDY-vec.md): the
-  cointegration question at N1c, the rank by parametric bootstrap, the VEC
-  and its long run (the plan: [`docs/PLAN-vec.md`](https://github.com/davidesg/sima-python/blob/main/docs/PLAN-vec.md)).
+* [Cointegrated systems](https://github.com/davidesg/sima-python/blob/main/docs/MANUAL-vec.md): the
+  cointegration question at N1c, the rank by parametric bootstrap, the VEC,
+  who corrects and the conditional model, the long run and the yardstick
+  (the study behind it: [`docs/STUDY-vec.md`](https://github.com/davidesg/sima-python/blob/main/docs/STUDY-vec.md); the plan:
+  [`docs/PLAN-vec.md`](https://github.com/davidesg/sima-python/blob/main/docs/PLAN-vec.md)).
   Worked in [`examples/flour_prices/`](https://github.com/davidesg/sima-python/tree/main/examples/flour_prices/) (the flagship: where
   the ladder's analysis leads into the rank), [`examples/jenkins_alavi/`](https://github.com/davidesg/sima-python/tree/main/examples/jenkins_alavi/)
   (the mixed case) and [`examples/lutkepohl_e1/`](https://github.com/davidesg/sima-python/tree/main/examples/lutkepohl_e1/) (Lütkepohl's
   E1: one relation, who corrects, an ill-defined fit declared) and
   [`examples/johansen_juselius/`](https://github.com/davidesg/sima-python/tree/main/examples/johansen_juselius/) (the Danish money
-  demand: the bootstrap against the asymptotic table at n = 55). Each ships its
+  demand: the bootstrap against the asymptotic table at n = 55) and
+  [`examples/martin_manjon_treadway/`](https://github.com/davidesg/sima-python/tree/main/examples/martin_manjon_treadway/)
+  (Martín Manjón and Treadway's two interest-rate trends, taken further than
+  the paper: the rank by bootstrap on 1985–2008, the Fed's target as the one
+  that corrects, no feedback and the conditional model). Each ships its
   bootstraps' cache, so the tutorial's jobs return at once.
 * [The echelon form](https://github.com/davidesg/sima-python/blob/main/docs/MANUAL-echelon.md): Lütkepohl and Poskitt's (1996)
   identified VARMA: the Kronecker indices from the data (`identify_echelon`),

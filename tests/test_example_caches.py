@@ -20,7 +20,8 @@ EX = os.path.join(ROOT, "examples")
 SPEC = {"flour_prices": dict(purpose="long run", p=2, case="pre"),
         "jenkins_alavi": dict(purpose="long run", p=2, case="2", mixed=True),
         "lutkepohl_e1": dict(purpose="long run", p=2, case="2"),
-        "johansen_juselius": dict(purpose="long run", p=2, case="2")}
+        "johansen_juselius": dict(purpose="long run", p=2, case="2"),
+        "martin_manjon_treadway": dict(purpose="long run", p=4, case="pre")}
 
 HERE = platform_tier() == "exact" and jobs.resolve_engine()[0] == "c"
 needs_here = pytest.mark.skipif(not HERE, reason="the caches are Linux x86_64's with drvec C "

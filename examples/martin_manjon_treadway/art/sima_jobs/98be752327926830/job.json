@@ -1,0 +1,66 @@
+{
+ "args": {
+  "B": 499,
+  "case": "pre",
+  "multistart": 0,
+  "names": [
+   "R0T",
+   "R10",
+   "R3"
+  ],
+  "nodrift": [],
+  "p": 4,
+  "q": 0
+ },
+ "engine": [
+  "c",
+  "0.13",
+  "bundled"
+ ],
+ "extra_files": [],
+ "files": [
+  "R0T_ar3.pre",
+  "R10_ar3.pre",
+  "R3_ar3.pre"
+ ],
+ "id": "98be752327926830",
+ "key": "98be75232792683083e415abae962d86dc7520f428f83b58ac67b727ec3ae581",
+ "label": "rank test B=499 p=4 case pre",
+ "payload": {
+  "args": {
+   "B": 499,
+   "case": "pre",
+   "multistart": 0,
+   "names": [
+    "R0T",
+    "R10",
+    "R3"
+   ],
+   "nodrift": [],
+   "p": 4,
+   "q": 0
+  },
+  "backend": "c",
+  "engine": "c 0.13",
+  "extra_files": [],
+  "files": [
+   "194abc4a6185ffd18f1e91ca422495ba4cace6694f977fcd2ac116ee988c730e",
+   "dc36fc9c81458cb1bf0bdf55e8fd4540d0dbdce9846eabcc59aba00484128142",
+   "503f85040ed630e9dea7ea5ef9c2829626740ddee0f039a2b66e599cbee6881f"
+  ],
+  "seed": null,
+  "tier": "exact",
+  "tool": "rank_test",
+  "versions": {
+   "drvarma": "0.3.0",
+   "drvec": "0.1.0",
+   "fue": "0.1.18"
+  }
+ },
+ "seed": null,
+ "shipped": "a worked example's cache (tools/build_example_caches.py)",
+ "slots": 1,
+ "status": "done",
+ "tool": "rank_test",
+ "workers": 1
+}

@@ -112,7 +112,10 @@ N1c prepare_vec       THE COINTEGRATION QUESTION, offered whenever TWO OR MORE
                       I(1) series) is an option (mixed=True), never the default.
     C0 (same tool)    the checks (d >= 2, D > 0, drvec's refusals, a moved
                       file, the window), p (the AR rule or Tiao and Box's M(l)
-                      on the levels), the deterministic case (default "pre").
+                      on the levels, up to its first run of non-significant
+                      lags: a lag significant alone after a silence is named
+                      and offered, not taken), the deterministic case
+                      (default "pre").
     C1 rank_test      THE RANK, by PARAMETRIC BOOTSTRAP (a JOB): the only way
                       to a rank. Outcomes:
                         r = 0       — the differences are right: back to N2
@@ -122,7 +125,12 @@ N1c prepare_vec       THE COINTEGRATION QUESTION, offered whenever TWO OR MORE
                         all reject  — "at least M - 1": the last step is a
                                       unit-root question (canonical analysis,
                                       art's table, a VARMA in levels or art);
-                        a tie       — estimate both ranks and compare.
+                        a tie       — estimate both ranks and compare;
+                        not I(1, r) — the model under H0 is not I(1, r) and
+                                      drvec does not simulate from it: no
+                                      rank is read; reread the integration
+                                      orders, or another specification.
+                      plot_rank_bootstrap draws LR* against the observed LR.
                       With n / (M p) small (C1 says so) the verdict can flip
                       with p: sweep(name, p="p-1,p,p+1", B=...) reads the rank
                       at the neighbouring orders (jobs); the autonomous lane
@@ -314,12 +322,13 @@ RULES THAT ARE NOT NEGOTIATED
 14. Resources to ASK for when needed: sima://protocol (this text),
    sima://defects (sima's and the engine's defect registers; one report with
    sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
-   user manual: sima://doc/MANUAL-jenkins-alavi and
-   sima://doc/MANUAL-echelon), sima://examples and
+   user manuals: sima://doc/MANUAL-jenkins-alavi, sima://doc/MANUAL-echelon
+   and, for cointegrated systems, sima://doc/MANUAL-vec; the VEC's study and
+   plan, sima://doc/STUDY-vec and sima://doc/PLAN-vec), sima://examples and
    sima://example/<name> (a worked example's tutorial).
 """
 
-mcp = FastMCP("sima — simultaneous VARMA on the ATSW ladder (drvarma)",
+mcp = FastMCP("sima — simultaneous VARMA and VEC on the ATSW ladder (drvarma, drvec)",
               instructions=_INSTRUCTIONS)
 
 
@@ -1030,8 +1039,9 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
     root: for an AR(1) component lam = phi^2) their common growth.
     When two or more series are differenced and fewer components look
     non-stationary, the joint model may not need every difference — the
-    question of cointegration, which is drvec's (Johansen's test); sima only
-    reads it and never changes a d on its own. `p` is the VAR order (0: the
+    question of cointegration, which N1c asks (prepare_vec) and C1 answers
+    (rank_test, by parametric bootstrap on drvec); this reading is not a
+    test, and sima never changes a d on its own. `p` is the VAR order (0: the
     last significant M(l) of Tiao and Box's stepwise table on the levels). Run
     it after the gate, before the identification, when two or more series are
     differenced; with raw data (load_data, characterize), right after

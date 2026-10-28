@@ -84,9 +84,18 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   ridge declared); `johansen_juselius` is new (the Danish money demand,
   public data via urca: the bootstrap does not reject r = 0 at n = 55 where
   the asymptotic trace test found one relation; on their theory the relation
-  is theirs, LRM = 1.12 LRY - 5.16 IBO + 4.26 IDE). Each ships its job cache (`load_example` copies it), and on
+  is theirs, LRM = 1.12 LRY - 5.16 IBO + 4.26 IDE); `martin_manjon_treadway`
+  is new (U.S. interest rates, FRED, 1985-2008: Martín Manjón and Treadway
+  (1997) taken further than the paper, with the rank by bootstrap on the whole
+  homogeneous regime, who corrects by LR, the joint test of the conditional
+  model and a control with the 10-year rate; MANUAL-vec §3.1). Each ships its job cache (`load_example` copies it), and on
   Linux x86_64 a rerun reproduces its files byte for byte
   (tests/test_example_caches.py; tools/build_example_caches.py builds them).
+  The caches were rebuilt on drvec C 800a540 (#14: BUG-64's last-resort
+  start, the I(1, r) check and the bootstrap block's new text): replications
+  that failed to fit now converge, so a few p-values move in the third
+  decimal (flour_prices r = 1: 0.784 to 0.786; lutkepohl_e1 r = 1: 0.345 to
+  0.346, 499 usable of 499) and no verdict changes.
 - **Dependencies**: `drvec>=0.1.0` (hard), `drvarma>=0.3.0`, `fue>=0.1.18`.
 - The protocol and the rules in the server's instructions: N1c and the C
   nodes; no cointegration claim without a finished bootstrap; the yardstick's
@@ -97,7 +106,7 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   flushes it line by line, and drvec-python bundles that C (csrc/ from
   atsw-gui abe6602). The note is gone.
 
-## 0.1.1 — unreleased
+## 0.1.1 — 2026-10-16
 
 **The PyPI page and the install.** The Homepage pointed at
 `github.com/davidesg/sima`, which does not exist; it is `sima-python`, with
