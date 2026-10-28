@@ -46,5 +46,6 @@ parametric bootstrap on the exact likelihood, on the whole homogeneous regime;
 who corrects is tested by LR (the target, not the market rates); and the joint
 LR on α and the short run (p 0.45) reads the system as a conditional model,
 the target on the market rates: mtram's next rung. The tutorial's last section
-lists these, with the calibration on the 1- and 2-year rates and what happens
-after 2008.
+lists these, with the calibration on the 1- and 2-year rates; the one after
+it, the results after 2008 (the floor, QE and QT), from a separate study whose
+data are not in the example.

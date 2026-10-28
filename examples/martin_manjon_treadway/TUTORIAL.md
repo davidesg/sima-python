@@ -168,11 +168,87 @@ likelihood. With sima and drvec the same question goes further:
 * **The market rates as the policy factor.** With GS1 or GS2 in place of the
   target, on 1985–2008, the rank is the same (one relation), but the roles turn
   round: the short market rate leads and the long ones adjust to it.
-* **After 2008.** On the floor system (2008–2020), with the target stuck at
-  zero, no rank is found with any p or system; outside the floor (2016–2020,
-  2022–2026) the weights are the old ones, but with about 50 months the rank
-  does not prove it. These are results of a separate study; its data are not
-  in this example.
+* **After 2008: the floor, QE and QT.** The next section.
+
+## After 2008: the floor, QE and QT
+
+*Results of a separate study with the same tools (drvec C 0.13, B = 499,
+case pre); its data, FRED up to 9/2026, are not in this example. Tell the
+analyst so, and present them as findings, not as steps to run.*
+
+Since 10/2008 the Fed pays interest on reserves and since 12/2008 it runs a
+floor system with a 0–0.25 band: the target sits at the floor and cannot
+carry the policy factor. QE, Operation Twist and forward guidance were the
+Fed's attempts to move the other trend, the long rates: the natural test of
+the paper's title. The 2-year rate (GS2) takes the target's place, and the
+calibration on 1985–2008 says it may: (GS2, GS30, GS10) gives the paper's
+pattern there (r = 1, p 0.012; no pair cointegrates), with the roles turned
+round, the short rate leading and the long ones adjusting.
+
+**The samples.** 12/2008–2/2020 (n 135: the floor, QE1–3, the Twist, the
+lift-off, QT1); 12/2008–11/2015 (84, the floor alone); 12/2015–2/2020 (51,
+lift-off and QT1); 3/2022–9/2026 (55, the hikes, QT2, the cuts);
+12/2015–9/2026 (130, the pandemic floor as interventions). The univariate
+models come from art, with the interventions its node finds, ω in percentage
+points: GS10 8/2011 (dated guidance, the S&P downgrade) −0.61 (.16); GS30
+8/2011 and 9/2011 (the Twist) −0.60, −0.44 (.14); GS2 6/2019 (the turn to
+cuts) −0.31 (.09); 3/2020, the cut to zero, on R0T, GS2 and GS3. The AR orders
+fall on the floor (the long rates AR(1), GS2 AR(2)): before 2008 the Fed's
+gradualism gave the changes their autocorrelation.
+
+**The rank** (r = 0 → 1: LR, the bootstrap's 95 % value, p):
+
+| system | sample | n | p | r = 0 → 1 | r̂ |
+|---|---|---|---|---|---|
+| (GS2, GS30, GS10) | 2008–2020 | 134 | 4 | 7.92 (22.27) .758 | 0 |
+| (GS2, GS10) / (GS2, GS30) | 2008–2020 | 134 | 4 | p .386 / .286 | 0 |
+| (GS2, GS30, GS10) | 2008–2015 | 83 | 4 | 19.54 (22.90) .116 | 0 |
+| (GS2, GS30, GS10) | 2016–2020 | 50 | 2 / 3 / 4 | **30.85 (22.82) .004** / 16.10 (26.49) .348 / 21.28 (27.36) .230 | 1 / 0 / 0 |
+| (R0T, R30, R3) | 2022–2026 | 54 | 2 / 3 / 4 | **25.09 (23.55) .026** / 9.77 (24.69) .850 / 20.70 (27.97) .232 | 1 / 0 / 0 |
+| (R0T, R30, R3) | 2015–2026 | 129 | 4 | 16.12 (22.80) .202 | 0 |
+| (GS2, GS30, GS10) | 2015–2026 | 129 | 4 | 5.34 (22.01) .868 | 0 |
+
+Power: the LR grows roughly with n, so 1985–2008's 23.2 (n 284) would be
+about 11 at n 134, below the 95 % value; a non-rejection here says "not
+detected", not "absent". And at n ≈ 50 the verdict depends on p: only p = 2
+rejects r = 0 (as on 1985–95), which is why rank_test, at small n, offers the
+sweep over p first.
+
+**The VECs with r = 1** (on theory where the bootstrap says r = 0):
+
+| system, sample | p | weights | μ | who corrects (LR) |
+|---|---|---|---|---|
+| GS10 on GS2, GS30, 2008–2020 | 4 | .056 (.215), .405 (.442) | +1.14 % (1.88) | not identified: a flat likelihood |
+| GS10 on GS2, GS30, 2008–2015 | 4 | 1.212 (.124), 1.333 (.184) | −3.24 % (.79) | GS30 (p .016); GS2 exogenous (p .49) |
+| GS10 on GS2, GS30, 2016–2020 | 2 | .310 (.015), .922 (.042) | −0.81 % (.10) | GS2 (LR 10.56, p .001) |
+| R3 on R0T, R30, 2022–2026 | 2 | .433 (.050), .415 (.108) | +0.22 % (.52) | R0T (LR 13.22, p .0003) |
+
+(The calibration on 1985–2008, for the GS10 rows: GS2 .243, GS30 .821,
+μ −0.44 %.)
+
+**QT2 on the long rates.** A step at each QT2 date, one at a time, on the
+univariate GS10 and GS30: only the start leaves a mark (+0.47 pp on GS10,
+t 2.8, 6/2022 or 9/2022), and it cannot be told apart from the 75 bp hikes of
+6/2022 and 9/2022. The slowdowns (6/2024, 4/2025) and the end (12/2025) leave
+nothing. QE bought duration (the Twist, about 30 % of its purchases at 20–30
+years) and its steps are clear; QT lets short residual maturities run off and
+reaches the term premium only through the Treasury's issuance.
+
+**The reading.**
+
+* **The floor breaks the structure as one regime.** With the floor in the
+  sample nothing is found with any p or system; the floor alone gives a
+  different relation (the long rate loads heavily on GS2, the lift-off date),
+  and mixing it with the active-rate stretches erases both.
+* **Outside the floor the structure is compatible with the old one, not
+  proved.** 2016–2020 has nearly the calibration's weights, with GS2
+  correcting; 2022–2026 has the paper's relation, R3 an almost equal mean of
+  R0T and R30, and the target correcting again, at any p. But with n ≈ 50 the
+  rank rejects r = 0 only at p = 2.
+* **Caveats.** The weak-exogeneity LRs are asymptotic χ² (drvec has no
+  bootstrap of them), less reliable at n ≈ 50–135; GS1 and GS2 are censored at
+  zero on the floor; the parametric bootstrap is homoscedastic and does not
+  see the variance changes between stretches.
 
 ## Closing
 

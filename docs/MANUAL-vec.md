@@ -276,7 +276,8 @@ with the 1- and 2-year rates in the target's place (the same rank on
 1985–2008, but the short rate leads and the long ones adjust), and the samples
 after 2008: on the floor system no rank is found with any p; outside it the
 weights are the old ones, but with about 50 months the rank does not prove
-it.
+it. Its results, with the QE and QT interventions, are in the tutorial's
+last section, "After 2008: the floor, QE and QT".
 
 ## References
 
