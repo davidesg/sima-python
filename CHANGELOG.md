@@ -41,6 +41,13 @@ tag, VARMA or VEC, and the final-stage tools dispatch on the current one.
   asymptotic table shown as orientation only. `estimate_vec` (C2) refuses
   without a finished rank test for the same specification, unless the rank
   is adopted on theory (`theory=`, written in the guion as such).
+  A comparison whose fitted model under H0 is not I(1, r) is said as such
+  (BUG-0006): drvec checks it before simulating (Cavaliere, Rahbek and
+  Taylor 2012, Algorithm 1 step ii; drvec C 800a540) and draws no sample, and
+  the report names the failing condition (an AR root on the unit circle, or a
+  common trend lost) instead of "fewer than 10 replications", proposes no
+  rank and offers the integration orders, another specification or the rank
+  on theory. The shipped caches' `result.json` carry the new field.
 - **The C nodes**: `estimate_vec` (the roles asked for: `normalise_on`; drvec's
   .out blocks verbatim; the canonical weights beside beta; a fit on a ridge
   declared, never an optimum), `test_restriction` (LR with its df and p,
