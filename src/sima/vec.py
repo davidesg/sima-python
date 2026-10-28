@@ -168,7 +168,10 @@ def job_rank_test(job, folder):
                       "fitfail": sum(r.status == "fitfail" for r in b.reps),
                       "cv": list(b.cv) if b.cv else None, "pvalue": b.pvalue,
                       "asym_cv": list(cv) if cv else None,
-                      "asym_verdict": rt.verdict(b.h0)})
+                      "asym_verdict": rt.verdict(b.h0),
+                      # (smallest AR root of Ybar, nabla Y2's long-run rank
+                      # measure) when the H0 model is not I(1, r): no samples
+                      "i1r": list(b.i1r) if getattr(b, "i1r", None) else None})
     ranks = [{"r": r, "logL": rt.ll[r], "npar": rt.npar[r],
               "ma_boundary": bool(rt.boundary[r])} for r in range(M)]
     return {"tool": "rank_test", "names": list(rt.names), "M": M, "nobs": rt.nobs,
@@ -197,6 +200,10 @@ def propose_rank(res):
         if c is None:
             return None, (f"the comparison r = {h} -> {h + 1} did not run (a fit failed): "
                           "no rank can be read beyond it"), tie
+        if c.get("i1r"):
+            return None, (f"r = {h} -> {h + 1}: the model under H0 is not I(1, {h}), so "
+                          "drvec draws no sample from it (Cavaliere, Rahbek and Taylor "
+                          "2012): no critical value"), tie
         if c["cv"] is None:
             return None, (f"r = {h} -> {h + 1}: fewer than 10 replications ok, no critical "
                           "value"), tie
@@ -246,6 +253,10 @@ def rank_report(res, call, folder=None, prov_line=""):
           "   ok / B   asymptotic 5% (orientation)"]
     for c in res["comparisons"]:
         h = c["h0"]
+        if c.get("i1r"):
+            L.append(f"  r={h}  {c['lr']:8.2f}      the model under H0 is not I(1, {h}): "
+                     "not simulated")
+            continue
         cv = c["cv"] or [float("nan")] * 3
         pv = c["pvalue"] if c["pvalue"] is not None else float("nan")
         asym = (f"{c['asym_cv'][1]:8.2f}  {c['asym_verdict']}" if c["asym_cv"] else
@@ -265,6 +276,20 @@ def rank_report(res, call, folder=None, prov_line=""):
             L.append(f"- r = {c['h0']} -> {c['h0'] + 1}: LR {c['lr']:.2f} against the "
                      f"bootstrap's 95 % value {c['cv'][1]:.2f}: {verdict}; p {c['pvalue']:.3f} "
                      f"(floor 1/(B+1) = {1 / (c['ok'] + 1):.3f}).")
+        if c.get("i1r"):
+            ar_min, lr_sv = c["i1r"]
+            L.append(f"- r = {c['h0']} -> {c['h0'] + 1}: NOT TESTED. The model fitted under "
+                     f"H0 (rank {c['h0']}) is not I(1, {c['h0']}): "
+                     + (f"its smallest AR root of [nabla Y2 ; W] is {ar_min:.4f}, on or "
+                        "inside the unit circle (more unit roots than the rank allows: "
+                        "I(2), or a d to reconsider)" if ar_min <= 1.0 + 1e-6 else
+                        f"nabla Y2's long-run covariance is singular (rank measure "
+                        f"{lr_sv:.2e}; 0 = a common trend lost)")
+                     + ". Cavaliere, Rahbek and Taylor's (2012) bootstrap draws no "
+                     "sample from such a model, so this comparison has no critical "
+                     "value. It is a finding about the model, not a failed bootstrap: a "
+                     "larger B does not change it.")
+            continue
         if c["ok"] < 0.9 * c["B"]:
             L.append(f"  WARNING: only {c['ok']} of {c['B']} replications ok "
                      f"({c['simfail']} simulation and {c['fitfail']} fit failures): the "
@@ -320,6 +345,17 @@ def rank_report(res, call, folder=None, prov_line=""):
                      "table per series; if the levels look stationary, the VARMA in levels "
                      "(route V with d = 0) or the series back to art",
                      f'canonical_analysis(name="{call}")'))
+    elif any(c.get("i1r") for c in res["comparisons"]):
+        h = next(c["h0"] for c in res["comparisons"] if c.get("i1r"))
+        opts.append(("the model under H0 is not I(1, r): reread the integration orders "
+                     "(the canonical analysis of the levels; each series' d in art)",
+                     f'canonical_analysis(name="{call}")'))
+        opts.append(("another p, q or case, where the H0 model may be I(1, r)",
+                     f'prepare_vec(name="{call}", purpose="...", p=..., case="...")'))
+        if h > 0:
+            opts.append((f"adopt r = {h} on THEORY, the comparisons before it rejected "
+                         "(written in the guion as such)",
+                         f'estimate_vec(name="{call}", r={h}, theory="...")'))
     else:
         opts.append(("no rank can be read: rerun with a larger B, or another p or case",
                      f'rank_test(name="{call}", B={max(B, B_DEFAULT)})'))

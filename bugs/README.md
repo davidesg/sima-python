@@ -13,4 +13,5 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | fixed | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | 0.1.0 |
 | [BUG-0004](BUG-0004-la-vara-de-n5-en-ruta-v-son-univariantes-ligeros-sin-alternativa.md) | fixed | medium | server | En ruta V, evaluate mide contra univariantes ligeros que elige solo, sin decir cuáles son ni aceptar los del analista | 0.1.0 |
 | [BUG-0005](BUG-0005-la-eleccion-de-indices-depende-de-max-index-y-el-informe-no-da-t.md) | fixed | medium | evidence | identify_echelon cambia de elección con max_index (la muestra común encoge) sin decir sobre cuántas observaciones calcula la tabla; el MANUAL lo atribuye a la ruta U | 0.1.0 |
+| [BUG-0006](BUG-0006-rank-test-no-dice-que-el-modelo-bajo-h0-no-es-i1r.md) | fixed | medium | vec | rank_test no dice que el modelo bajo H0 no es I(1, r) (drvec no simula de él); lo presenta como un bootstrap fallido y aconseja subir B | 0.2.0 |
 

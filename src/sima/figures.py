@@ -445,7 +445,9 @@ def rank_bootstrap_figure(comparisons, boot, names):
             ax.axvline(c["asym_cv"][1], color="0.3", lw=1.0, ls=":")
         ax.set_title(f"H0: r = {c['h0']} vs {c['h0'] + 1}   LR = {c['lr']:.2f}, "
                      f"p = {c['pvalue']:.3f}" if c["pvalue"] is not None else
-                     f"H0: r = {c['h0']} vs {c['h0'] + 1}", fontsize=9, loc="left")
+                     f"H0: r = {c['h0']} vs {c['h0'] + 1}   LR = {c['lr']:.2f}"
+                     + (f"\nthe H0 model is not I(1, {c['h0']}): not simulated"
+                        if c.get("i1r") else ""), fontsize=9, loc="left")
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(False)
         ax.tick_params(labelsize=8)
