@@ -1,6 +1,6 @@
 # Changelog — sima-tseries
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-10-28
 
 **Cointegrated systems: sima takes in drvec** (docs/STUDY-vec.md, the study;
 docs/PLAN-vec.md, the plan and the user's decisions of 2026-10-17/18). One
