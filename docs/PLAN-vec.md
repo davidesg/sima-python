@@ -174,8 +174,8 @@ and one reader of the C's files, next to the port that defines them.
 - on Linux x86_64, the C path and the Python path give byte-identical `.out`
   and `.boot` on the suite's rank cases and on one `irfboot` case;
 - the C-path tests skip with a reason when no binary is found;
-- CI builds drvec C 0.13 from atsw-gui at the oracle commit, as it is
-  already built locally (`~/.local/share/atsw/drvec-ref-0.13`).
+- CI builds drvec C 0.13 from atsw-gui at the oracle commit (drvec-python's
+  `tests/data/oracle/SOURCE`).
 
 **Off Linux** the C itself is a different platform. Its results carry that
 platform's tier, like the port's.

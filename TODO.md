@@ -55,7 +55,7 @@ missing, in order:
       lags (or flag the gap and propose both), not jump to the last
       significant one.
 
-- [x] **The C engine's progress during a rank bootstrap is coarse** (done 2026-10-24: drvec C BUG-63, atsw-gui be36006, the .boot flushed per replication; pending: re-vendor csrc/ in drvec-python after the merges, then drop the "count jumps" note in jobs.progress_text; shakedown
+- [x] **The C engine's progress during a rank bootstrap is coarse** (done 2026-10-24: drvec C BUG-63, atsw-gui be36006, the .boot flushed per replication; csrc/ re-vendored in drvec-python and the "count jumps" note dropped, #13; shakedown
       of 0.2.0): a trivariate rank test takes 60–90 minutes and `job_status`
       shows almost nothing until the end. Raise the priority of the C's
       progress lines (replication k of B, comparison r → r+1), as the Python

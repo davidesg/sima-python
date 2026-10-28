@@ -1,7 +1,7 @@
 # Tutorial — Lütkepohl's E1: investment, income and consumption
 
 *The step-by-step guide of the worked example, for the assistant that leads it.
-The method is in `sima://doc/STUDY-vec` (§3, the cointegration studies) and
+The method is in `sima://doc/MANUAL-vec` (the study behind it, `sima://doc/STUDY-vec`) and
 the decisions in `sima://doc/PLAN-vec` (§0).*
 
 ## For the assistant: how to lead it

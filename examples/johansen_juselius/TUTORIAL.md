@@ -1,7 +1,7 @@
 # Tutorial — Johansen and Juselius (1990): Danish money demand
 
 *The step-by-step guide of the worked example, for the assistant that leads it.
-The method is in `sima://doc/STUDY-vec` (§3) and the decisions in
+The method is in `sima://doc/MANUAL-vec` (the study behind it, `sima://doc/STUDY-vec`) and the decisions in
 `sima://doc/PLAN-vec` (§0). The data and the models: the example's README.*
 
 ## For the assistant: how to lead it
@@ -55,6 +55,14 @@ the bootstrap's are larger at every step.
 **In the paper:** Johansen and Juselius find r = 1 with the asymptotic trace
 test (and discuss r = 2), at the edge of their tables. sima's exact-likelihood
 test, calibrated by simulation, does not confirm it at 5 %.
+
+**The report also says SMALL SAMPLE FOR THIS ORDER**: n / (M p) = 6.75, below
+15, so the verdict can flip with p, and its first option is the sweep over p
+(`sweep(p="1,2,3", B=499)`). Say so, and say that it is the right next step in
+a real analysis. In this tutorial do not launch it unless the analyst asks:
+its three rank jobs are not in the example's cache, and four series at B = 499
+take hours. p = 2 is the paper's specification, and the lesson here is the
+bootstrap against the asymptotic table at that p.
 
 ## Step 5 · C2 — r = 1 ON THEORY
 

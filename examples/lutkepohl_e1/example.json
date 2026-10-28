@@ -14,7 +14,7 @@
     "art/sima_jobs/30a1ae1f6936fd01"
   ],
   "tutorial": "TUTORIAL.md",
-  "manual": "STUDY-vec",
+  "manual": "MANUAL-vec",
   "plan": [
     "N1 run_gate — the three files (random walks with drift in logs, fue)",
     "N1b canonical_analysis — two components near 1 of three",

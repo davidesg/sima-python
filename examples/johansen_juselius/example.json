@@ -20,7 +20,7 @@
     "art/sima_jobs/08c28188dd1f54f8"
   ],
   "tutorial": "TUTORIAL.md",
-  "manual": "STUDY-vec",
+  "manual": "MANUAL-vec",
   "plan": [
     "N1 run_gate — four models built by sima's raw entry (not reviewed in art)",
     "N1b canonical_analysis — two components near 1 of four",

@@ -1,0 +1,88 @@
+{
+ "B": 499,
+ "M": 3,
+ "case": "pre",
+ "comparisons": [
+  {
+   "B": 499,
+   "asym_cv": null,
+   "asym_verdict": null,
+   "cv": [
+    16.812346009899557,
+    20.481638475948785,
+    26.1861551529164
+   ],
+   "fitfail": 0,
+   "h0": 0,
+   "lr": 23.24769489611208,
+   "ok": 499,
+   "pvalue": 0.022,
+   "simfail": 0
+  },
+  {
+   "B": 499,
+   "asym_cv": null,
+   "asym_verdict": null,
+   "cv": [
+    9.771811995649841,
+    11.294320749164399,
+    16.90654398582228
+   ],
+   "fitfail": 0,
+   "h0": 1,
+   "lr": 3.9572370996447717,
+   "ok": 499,
+   "pvalue": 0.462,
+   "simfail": 0
+  }
+ ],
+ "drift_how": "pre",
+ "files": [
+  "rank.out",
+  "rank.boot"
+ ],
+ "multistart": 0,
+ "names": [
+  "R0T",
+  "R10",
+  "R3"
+ ],
+ "nobs": 284,
+ "nodrift": [],
+ "p": 4,
+ "provenance": {
+  "backend": "c",
+  "engine": "c",
+  "extra": {
+   "source": "bundled"
+  },
+  "note": "engine='c'",
+  "platform": "linux x86_64",
+  "seed": null,
+  "tier": "exact",
+  "version": "0.13",
+  "workers": 1
+ },
+ "q": 0,
+ "ranks": [
+  {
+   "logL": -3428.9334277749667,
+   "ma_boundary": false,
+   "npar": 32,
+   "r": 0
+  },
+  {
+   "logL": -3417.3095803269107,
+   "ma_boundary": false,
+   "npar": 38,
+   "r": 1
+  },
+  {
+   "logL": -3415.3309617770883,
+   "ma_boundary": false,
+   "npar": 42,
+   "r": 2
+  }
+ ],
+ "tool": "rank_test"
+}

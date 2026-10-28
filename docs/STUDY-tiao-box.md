@@ -1,13 +1,18 @@
 # Tiao and Box in sima — a study
 
 **Status: a study to be argued with, not a plan.** Written 2026-10-02 and
-revised the same day against the papers, now in `drvarma_source/literature`.
-It asks what the second of the school's "two basic works" of the multivariate
+revised the same day against the papers. It asks what the second of the school's "two basic works" of the multivariate
 stochastic (MS) methodology adds to sima, now that the first, Jenkins and Alavi
 (1981), is implemented (`DESIGN-jenkins-alavi.md`, phase 1, A–F;
 `MANUAL-jenkins-alavi.md`). drvarma's `docs/ECHELON_SEEDED_DESIGN.md` §3.5 and
 §5 already discuss the same papers from the echelon side; this study agrees
 with it and does not repeat it.
+
+**Since 0.2.0.** Where this study says that cointegration is drvec's ground
+and that sima should name it and hand over, sima now asks the question itself:
+N1c (`prepare_vec`), the rank by parametric bootstrap on drvec (C1) and the VEC
+(C2–C8), in the same session (`MANUAL-vec.md`). The canonical analysis stays
+what this study says it is, a reading that points to the question, not a test.
 
 ## 0. The Wisconsin line
 

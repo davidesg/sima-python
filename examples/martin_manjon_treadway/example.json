@@ -1,0 +1,36 @@
+{
+  "name": "martin_manjon_treadway",
+  "title": "Martín Manjón and Treadway (1997): the Fed controls only one of the two interest rates",
+  "summary": "Two common trends in U.S. interest rates, one of them monetary policy: the Fed funds target R0T, the 30-year and the 3-year Treasury rates, monthly 1985-2008 (the post-NOP regime up to interest on reserves), 284 observations from FRED, three univariate AR(3) models built in art. The rank by parametric bootstrap (drvec, B = 499, shipped in the example's cache) finds the paper's one relation, which neither 1985-95 nor 1996-2008 alone shows; the 3-year rate is a weighted mean of the target and the 30-year rate with the paper's constant, the TARGET is the one that corrects, and the joint LR on alpha and the short run reads the system as a conditional model (the target on the market rates), mtram's ground. Further than the paper, which read cointegration from the over-differenced series' MA unit root. A control with the 10-year rate follows.",
+  "files": [
+    "art/R0T_ar3.pre",
+    "art/R30_ar3.pre",
+    "art/R3_ar3.pre"
+  ],
+  "also": [
+    "art/R0T_ar3.out",
+    "art/R30_ar3.out",
+    "art/R3_ar3.out",
+    "art/R10_ar3.pre",
+    "art/R10_ar3.out",
+    "data/tipos_1985_2008.csv",
+    "README.md"
+  ],
+  "jobs": [
+    "art/sima_jobs/dd3b52843b991c10",
+    "art/sima_jobs/98be752327926830"
+  ],
+  "tutorial": "TUTORIAL.md",
+  "manual": "MANUAL-vec",
+  "plan": [
+    "N1 run_gate — three AR(3) models built in art (lambda = 1, d = 1, no mean)",
+    "N1b canonical_analysis — the levels",
+    "N1c prepare_vec — purpose \"long run\", p = 4 (the paper's), case pre",
+    "C1 rank_test (B = 499, cached) — r = 0 rejected (LR 23.75 against 20.15, p 0.022), r = 1 not (p 0.35): one relation, two common trends",
+    "C2 estimate_vec r = 1, normalised on R3 — R3 = .575 R0T + .561 R30 - 0.89 %",
+    "C3 test_restriction — the target corrects (LR 12.36, p 0.0004); R30 and R3 jointly weakly exogenous (LR 1.70, 2 df, p 0.43)",
+    "C3 test_restriction, the joint test — alpha = (1,0,0)' and no feedback R30,R3 <- R0T (gamma): LR 7.83, 8 df, p 0.45: the conditional model R0T | R30, R3, offered to mtram",
+    "C5 long_run — two common trends; the target's forecast-error variance 37 % permanent at h = 1, 97 % at h = 12",
+    "Control — the 10-year rate in place of the 30-year (rank cached): the same verdict, and the conditional model too (p 0.58)"
+  ]
+}

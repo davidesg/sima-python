@@ -1,12 +1,18 @@
 # Cointegrated systems in sima — a study
 
 **Status: a study to be argued with, not a plan.** Written 2026-10-17. The
-implementation plan comes after it, separately.
+implementation plan comes after it, separately (`PLAN-vec.md`). **What sima
+0.2.0 does is in the user manual, `MANUAL-vec.md`**, which also has what came
+after this study in the shakedown: p from M(l)'s contiguous order (§3.1 here),
+the rank's sweep over p at small n (§3.10), no feedback in the short run by LR
+and the conditional model (§2.6, §3.5), and drvec's I(1, r) check before the
+bootstrap.
 
 The question: sima 0.2.0 has to handle drvarma's stationary VARMA, as it does
 now, and also hand cointegrated series to drvec and run the cointegration
 studies itself. The decision of 2026-10-13 stands: **drvec's MCP is sima, not a
-fourth assistant** (atsw-gui `docs/PROCESOS-drvec.md` §5.1, private; TODO.md).
+fourth assistant** (an internal planning note of the suite, PROCESOS-drvec §5.1,
+not distributed; TODO.md).
 This study does not reopen it. It revises the rest of that plan, PROCESOS §5.2–5.4. That
 plan was written on 2026-10-11, before sima was published in its current form
 and before drvec-python existed.
@@ -17,10 +23,10 @@ What was read for it:
 |---|---|
 | `src/sima/mcp_server.py` (31 tools, the protocol in the server instructions), `session.py`, `evidence.py`, `docs/TOOLS.md`, `docs/STUDY-raw-entry.md`, `docs/STUDY-tiao-box.md`, the four examples | what sima is today |
 | drvec-python 0.1.0 (`api.py`, `rank.py`, `irfboot.py`, `forecast.py`, `report.py`, `cli.py`, `README.md`, `docs/PORT.md`, `TODO.md`) | what the engine exposes, refuses and costs |
-| drvarma 0.3.0 (branch `gsl-gensymmv`, `CHANGELOG.md`) | the eigensolvers drvec needs |
+| drvarma 0.3.0 (`CHANGELOG.md`) | the eigensolvers drvec needs |
 | drvec C (`engines/drvec/docs/USAGE.md`, `MODEL.md`, `VERSIONS.md`, `datasets/MANIFEST.md`; BUG-58..60 in atsw-gui PR #52) | the oracle and the public data |
 | drtran-python `docs/ARCHITECTURE_MCP.md`, `src/drtran/mcp_server.py` (`_handoff_to_sima`) | how the assistants are separated and how mtram hands over |
-| PROCESOS-drvec.md §2–§5 | the processes; only its general lessons are used here, none of its article's content |
+| PROCESOS-drvec §2–§5 (internal, not distributed) | the processes; only its general lessons are used here |
 
 ---
 

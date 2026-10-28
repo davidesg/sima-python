@@ -49,7 +49,7 @@
 | [`structure`](#structure) | N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On |
 | [`study_estimation`](#study-estimation) | N4b — Study the current fit when the estimation may be ill-defined. |
 | [`sweep`](#sweep) | C7 — Robustness: a grid of fits over the same files, one CACHED JOB per |
-| [`test_restriction`](#test-restriction) | C3 — A restriction on alpha or beta of the current VEC, tested by |
+| [`test_restriction`](#test-restriction) | C3 — A restriction on alpha, beta or Gamma of the current VEC, tested by |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
 | [`write_specs`](#write-specs) | N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector |
 
@@ -134,8 +134,9 @@ N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
     root: for an AR(1) component lam = phi^2) their common growth.
     When two or more series are differenced and fewer components look
     non-stationary, the joint model may not need every difference — the
-    question of cointegration, which is drvec's (Johansen's test); sima only
-    reads it and never changes a d on its own. `p` is the VAR order (0: the
+    question of cointegration, which N1c asks (prepare_vec) and C1 answers
+    (rank_test, by parametric bootstrap on drvec); this reading is not a
+    test, and sima never changes a d on its own. `p` is the VAR order (0: the
     last significant M(l) of Tiao and Box's stepwise table on the levels). Run
     it after the gate, before the identification, when two or more series are
     differenced; with raw data (load_data, characterize), right after
@@ -910,7 +911,7 @@ N1c/C0 — The cointegration question, and the VEC's specification with its
 
     `p`: drvec's AR order on (nabla Y2, W) (0: proposed — the univariate AR
     order in nabla plus 1, or Tiao and Box's M(l) on the levels when
-    canonical_analysis ran). `q`: the MA order (0 by default). `case`: 1, 2, 3
+    canonical_analysis ran, up to its first run of non-significant lags). `q`: the MA order (0 by default). `case`: 1, 2, 3
     or "pre" (default: each drift as its file's mean says). `nodrift`: series
     whose drift is held at 0 (case 3/pre). Never offered: drvec's refused
     options (-warma, -mawarma, -specs, -matest, -artest, -m 2, -rankadm, the
@@ -1140,6 +1141,10 @@ C7 — Robustness: a grid of fits over the same files, one CACHED JOB per
     nothing beyond its cells: what it preserves is the list of what was run,
     and why, in the guion.
 
+    At C1, before any VEC (prepare_vec's specification, `B` required, no
+    `estwin`): the RANK over p, each order its own bootstrap — what rank_test
+    offers when n / (M p) is small and the verdict can flip with p.
+
 ---
 
 ## `test_restriction`
@@ -1153,9 +1158,10 @@ C7 — Robustness: a grid of fits over the same files, one CACHED JOB per
 | `alpha` | string | no | `` |
 | `fixb2` | string | no | `` |
 | `fixb2row` | string | no | `` |
+| `gamma` | string | no | `` |
 | `adopt` | boolean | no | `False` |
 
-C3 — A restriction on alpha or beta of the current VEC, tested by
+C3 — A restriction on alpha, beta or Gamma of the current VEC, tested by
     LIKELIHOOD RATIO (never by the .out's Wald, which depends on the
     normalisation): LR, its degrees of freedom and chi2 p-value, both logLs.
 
@@ -1167,7 +1173,12 @@ C3 — A restriction on alpha or beta of the current VEC, tested by
     one drvec holds B2 at its static OLS value, which is not a test); fixb2=0
     in the mixed case is the ladder's model. `fixb2row`: rows of B2 held,
     "NAME=value, NAME2=value". weakex/alpha combine with fixb2row (the joint
-    LR).
+    LR). `gamma`: NO FEEDBACK in the short run, "R30,R3 <- R0T" (the equations,
+    then the regressors; "A <- B; C <- D" for several): Gamma_k[eq][reg] = 0 at
+    every lag (drvec -gzero; p >= 2, q = 0). With weakex/alpha on the same
+    inputs it is the CONDITIONAL model's joint test (weak exogeneity and no
+    feedback, Johansen 1992): when it holds, the report offers mtram with the
+    same files and the roles. gamma does not combine with fixb2/fixb2row.
 
     drvec fits the free model of these LRs as the C does (one est() from a
     cold start for alpha and weakex; no ladder for fixb2row), so its free logL

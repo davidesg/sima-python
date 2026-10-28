@@ -7,9 +7,11 @@ By CI with trusted publishing (OIDC), as the rest of the suite
 |---|---|---|
 | sima-tseries | `.github/workflows/publish-sima.yml` | `sima-v*` |
 
-**Order.** sima-tseries depends on drvarma ≥ 0.2.0 and fue ≥ 0.1.16:
-`fue → drvarma → sima-tseries`. drvarma 0.2.0 has to be on PyPI before sima
-0.1.0 is tagged, or the smoke test (which installs the wheel in a clean
+**Order.** sima-tseries 0.2.0 depends on fue ≥ 0.1.18, drvarma ≥ 0.3.0 and
+drvec ≥ 0.1.0 (drvec-python, its own `publish.yml`, tag `v*`):
+`fue → drvarma → drvec → sima-tseries`, the suite's order in
+`art-python/docs/PUBLISHING.md`. All three have to be on PyPI before sima
+0.2.0 is tagged, or the smoke test (which installs the wheel in a clean
 environment) fails. That is the intended outcome: a blocked release is better
 than a published package nobody can install.
 
@@ -23,5 +25,11 @@ only runs on a `sima-v*` tag.
    Then `python3 tools/sync_material.py` (the CI runs it too): the packaged
    copy of `bugs/` and `docs/` that the MCP resources serve.
 3. The CHANGELOG entry has its date.
-4. PyPI: a trusted publisher for `davidesg/sima`, workflow `publish-sima.yml`,
-   environment `pypi`.
+4. The worked examples' job caches match the drvec C that drvec-python
+   bundles: their key holds the engine and the tier, so a new C (or a new
+   csrc/) asks for `python3 tools/build_example_caches.py` (move the old
+   `sima_jobs/` aside first, or the run finds them by their key), and
+   `SIMA_SLOW=1 python -m pytest tests/test_example_caches.py` on Linux x86_64.
+5. PyPI: a trusted publisher for the repository `davidesg/sima-python`,
+   workflow `publish-sima.yml`, environment `pypi` (registered: 0.1.1 went out
+   by it).
