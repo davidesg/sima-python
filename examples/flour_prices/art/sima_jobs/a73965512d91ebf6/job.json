@@ -25,8 +25,8 @@
   "MINNEAPOLIS_m01.pre",
   "KANSASCITY_m01.pre"
  ],
- "id": "4a354f44fbb144f4",
- "key": "4a354f44fbb144f40609492523c15a5a47849f26fce4d8369da28d99943eb750",
+ "id": "a73965512d91ebf6",
+ "key": "a73965512d91ebf60d513dfd91df6f5e39d45ef2926fad26286679df0bad29d9",
  "label": "IRF bands N=499 r=1",
  "payload": {
   "args": {
@@ -56,9 +56,9 @@
   "tier": "exact",
   "tool": "irf_bands",
   "versions": {
-   "drvarma": "0.3.0",
+   "drvarma": "0.3.1",
    "drvec": "0.1.0",
-   "fue": "0.1.18"
+   "fue": "0.1.19"
   }
  },
  "seed": null,

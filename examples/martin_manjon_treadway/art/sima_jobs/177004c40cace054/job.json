@@ -5,7 +5,7 @@
   "multistart": 0,
   "names": [
    "R0T",
-   "R30",
+   "R10",
    "R3"
   ],
   "nodrift": [],
@@ -20,11 +20,11 @@
  "extra_files": [],
  "files": [
   "R0T_ar3.pre",
-  "R30_ar3.pre",
+  "R10_ar3.pre",
   "R3_ar3.pre"
  ],
- "id": "dd3b52843b991c10",
- "key": "dd3b52843b991c101ce6f57084462b418315c924bd61f5bb05b9d59d703276cf",
+ "id": "177004c40cace054",
+ "key": "177004c40cace054807ba7619efebfb0cbe8f6b2d2e9eb32da7915522f25ca25",
  "label": "rank test B=499 p=4 case pre",
  "payload": {
   "args": {
@@ -33,7 +33,7 @@
    "multistart": 0,
    "names": [
     "R0T",
-    "R30",
+    "R10",
     "R3"
    ],
    "nodrift": [],
@@ -45,16 +45,16 @@
   "extra_files": [],
   "files": [
    "194abc4a6185ffd18f1e91ca422495ba4cace6694f977fcd2ac116ee988c730e",
-   "9ec3c0796beac97fb38249ff3a91ee67bb9a114ba5a1b0b673b3c6509ae0ef2b",
+   "dc36fc9c81458cb1bf0bdf55e8fd4540d0dbdce9846eabcc59aba00484128142",
    "503f85040ed630e9dea7ea5ef9c2829626740ddee0f039a2b66e599cbee6881f"
   ],
   "seed": null,
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.0",
+   "drvarma": "0.3.1",
    "drvec": "0.1.0",
-   "fue": "0.1.18"
+   "fue": "0.1.19"
   }
  },
  "seed": null,
