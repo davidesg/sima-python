@@ -1,6 +1,6 @@
 # Changelog — sima-tseries
 
-## 0.2.1 — unreleased
+## 0.2.1 — 2026-10-31
 
 **The worked examples' job caches, rebuilt for fue 0.1.19 and drvarma 0.3.1.**
 A cache's key holds the versions of drvec, drvarma and fue (`jobs.make_key`),
