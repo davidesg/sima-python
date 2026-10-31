@@ -4,8 +4,10 @@
   "case": "2",
   "multistart": 0,
   "names": [
-   "MUSKRAT",
-   "MINK"
+   "LRM",
+   "LRY",
+   "IBO",
+   "IDE"
   ],
   "nodrift": [],
   "p": 2,
@@ -18,11 +20,13 @@
  ],
  "extra_files": [],
  "files": [
-  "MUSKRAT_m03.pre",
-  "MINK_m02.pre"
+  "LRM_u.pre",
+  "LRY_u.pre",
+  "IBO_u.pre",
+  "IDE_u.pre"
  ],
- "id": "6c54cbbbfa2ca9ec",
- "key": "6c54cbbbfa2ca9ec5a223941534773aea2f1b1df9fd11959ad7bce7fc4d7f072",
+ "id": "290f7ee278756890",
+ "key": "290f7ee278756890058bd7698e4bae9e71cf877050d1e9d777b6a747f13dfcbe",
  "label": "rank test B=499 p=2 case 2",
  "payload": {
   "args": {
@@ -30,8 +34,10 @@
    "case": "2",
    "multistart": 0,
    "names": [
-    "MUSKRAT",
-    "MINK"
+    "LRM",
+    "LRY",
+    "IBO",
+    "IDE"
    ],
    "nodrift": [],
    "p": 2,
@@ -41,16 +47,18 @@
   "engine": "c 0.13",
   "extra_files": [],
   "files": [
-   "5047b81b7303fd465e866c17e11a970be930a69f72aa41db77e7bf1c2d8e5eb3",
-   "18660336875a54756d6a712aa33a956d2967e9c3b4aa51b9686b384a3d003316"
+   "7712b3314f8ca6e2696b350085a36c86edb54bc1b3947a29449462985ac5acf7",
+   "e89d4cb7b0cd78191b825a5896c327191cd7bdab8a01abd0c34401da02945200",
+   "8ff8217c3d17ecfd2a986a430a0068a65831e71c9265830e8e7b9e3938137db6",
+   "91f1ffd2230637ebc0c540fdc319646e3fbab75b1335f860da5fd15bba90960c"
   ],
   "seed": null,
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.0",
+   "drvarma": "0.3.1",
    "drvec": "0.1.0",
-   "fue": "0.1.18"
+   "fue": "0.1.19"
   }
  },
  "seed": null,
