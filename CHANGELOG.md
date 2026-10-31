@@ -1,5 +1,25 @@
 # Changelog — sima-tseries
 
+## 0.2.1 — 2026-10-31
+
+**The worked examples' job caches, rebuilt for fue 0.1.19 and drvarma 0.3.1.**
+A cache's key holds the versions of drvec, drvarma and fue (`jobs.make_key`),
+so with the patch releases that add the Python 3.14 wheels the seven caches
+of 0.2.0 stopped matching. The tutorials' bootstraps then ran as jobs, minutes
+each, instead of returning at once. Found on 2026-10-30, in a clean install on
+Arch Linux with Python 3.14 and the new wheels (the preflight's E1 rank, and
+`tests/test_example_caches.py`). The numbers do not change: the two releases
+change only the packaging.
+
+- `examples/*/art/sima_jobs/` rebuilt with `tools/build_example_caches.py`
+  (fue 0.1.19, drvarma 0.3.1, drvec 0.1.0 with its bundled C 0.13, Linux
+  x86_64). Every `.out`, `.boot`, `.irfboot` and `result.json` is
+  byte-identical to 0.2.0's; only the keys move, and each `example.json`
+  lists the new ids (the script does not update them).
+- `fue>=0.1.19` and `drvarma>=0.3.1`, so that the shipped caches match what
+  is installed.
+- Python 3.14 in the classifiers.
+
 ## 0.2.0 — 2026-10-28
 
 **Cointegrated systems: sima takes in drvec** (docs/STUDY-vec.md, the study;

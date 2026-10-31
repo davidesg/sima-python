@@ -4,10 +4,9 @@
   "case": "2",
   "multistart": 0,
   "names": [
-   "LRM",
-   "LRY",
-   "IBO",
-   "IDE"
+   "invest",
+   "income",
+   "cons"
   ],
   "nodrift": [],
   "p": 2,
@@ -20,13 +19,12 @@
  ],
  "extra_files": [],
  "files": [
-  "LRM_u.pre",
-  "LRY_u.pre",
-  "IBO_u.pre",
-  "IDE_u.pre"
+  "e1invest.pre",
+  "e1income.pre",
+  "e1cons.pre"
  ],
- "id": "08c28188dd1f54f8",
- "key": "08c28188dd1f54f807a905e5c8bc2c8b40d309f109fcc106b4a3ea443f728cd6",
+ "id": "241e5c2e22029757",
+ "key": "241e5c2e22029757f7c3f8779e16f118e95749626ace238750923ab74a903942",
  "label": "rank test B=499 p=2 case 2",
  "payload": {
   "args": {
@@ -34,10 +32,9 @@
    "case": "2",
    "multistart": 0,
    "names": [
-    "LRM",
-    "LRY",
-    "IBO",
-    "IDE"
+    "invest",
+    "income",
+    "cons"
    ],
    "nodrift": [],
    "p": 2,
@@ -47,18 +44,17 @@
   "engine": "c 0.13",
   "extra_files": [],
   "files": [
-   "7712b3314f8ca6e2696b350085a36c86edb54bc1b3947a29449462985ac5acf7",
-   "e89d4cb7b0cd78191b825a5896c327191cd7bdab8a01abd0c34401da02945200",
-   "8ff8217c3d17ecfd2a986a430a0068a65831e71c9265830e8e7b9e3938137db6",
-   "91f1ffd2230637ebc0c540fdc319646e3fbab75b1335f860da5fd15bba90960c"
+   "b6eda29e7063a661663a5b7d780cabee29ef637879920288a2fd751e3bc801be",
+   "3ebec8652b851626a0265432570b9c8a6fc1d756ef0bcd7959c0b3fad575a357",
+   "3ce042729843684a3aca42ec67750d45e0685aa87d1b6a8d65682a226d53c78c"
   ],
   "seed": null,
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.0",
+   "drvarma": "0.3.1",
    "drvec": "0.1.0",
-   "fue": "0.1.18"
+   "fue": "0.1.19"
   }
  },
  "seed": null,

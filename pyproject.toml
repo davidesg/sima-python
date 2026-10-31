@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "sima-tseries"
-version         = "0.2.0"
+version         = "0.2.1"
 description     = "sima — the MCP assistant for simultaneous VARMA and cointegrated VARMA-VEC models on the ATSW ladder (engines: drvarma, drvec)"
 readme          = "README.md"
 license         = { text = "GPL-2.0-or-later" }
@@ -23,6 +23,7 @@ classifiers     = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     # >=0.2.0: the ladder (drvarma.ladder) and the engine API this assistant
@@ -31,14 +32,17 @@ dependencies = [
     # speed: without it the ladder warns and runs ~250x slower.
     # >=0.3.0: GSL's eigensolvers, and forecast_given (the VEC in levels is
     # forecast by drvarma's forecaster: one forecaster, PLAN-vec decision 5)
-    "drvarma>=0.3.0",
+    # >=0.3.1: the examples' job caches are keyed on it (jobs.make_key), and
+    # 0.3.1 has the wheels for Python 3.14
+    "drvarma>=0.3.1",
     # the cointegrated systems (VARMA-VEC by exact ML, the port of drvec C
     # 0.13): a hard dependency (PLAN-vec Q11); its wheels carry drvec C for
     # the long bootstraps
     "drvec>=0.1.0",
     # the reference parser of the univariate files, and the univariate cast
-    # (>=0.1.18: the deterministic component by lib/fuedet, which drvec needs)
-    "fue>=0.1.18",
+    # (>=0.1.18: the deterministic component by lib/fuedet, which drvec needs;
+    # >=0.1.19: the examples' job caches are keyed on it, as on drvarma)
+    "fue>=0.1.19",
     # the one graphics engine of the ladder: residual panels and the forecast
     "pyfug>=2.0.1",
     "numpy>=1.24",
