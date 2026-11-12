@@ -418,10 +418,13 @@ def build_one(y, c, freq, start, out_dir, top_n=5):
     model.write_pre(base + ".pre")
     model.write_out(base + ".out", inp_name=os.path.basename(base) + ".inp",
                     out_name=os.path.basename(base) + ".out")
+    # fue's header is five lines that may hold anything (fue.c [3.0]), read
+    # by position: the provenance takes the fifth, the blank one under the
+    # box, and the frequency stays on the sixth (BUG-0007)
     with open(base + ".pre") as fh:
         lines = fh.read().split("\n")
-    if PROVENANCE not in lines:
-        lines.insert(4, PROVENANCE)
+    if PROVENANCE not in lines and len(lines) > 4 and not lines[4].strip():
+        lines[4] = PROVENANCE
         with open(base + ".pre", "w") as fh:
             fh.write("\n".join(lines))
     r = _resid(model)

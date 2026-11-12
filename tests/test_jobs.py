@@ -35,6 +35,16 @@ def _wait_status(jid, want, seconds=60):
     raise AssertionError(f"job {jid} still {jobs.status(jid)['status']}")
 
 
+def _wait_progress(jid, seconds=60):
+    t0 = time.time()
+    while time.time() - t0 < seconds:
+        p = jobs.status(jid)["progress"]
+        if p:
+            return p
+        time.sleep(0.1)
+    raise AssertionError(f"job {jid} wrote no progress in {seconds} s")
+
+
 def test_a_job_runs_detached_and_its_result_is_cached(home):
     _tmp, f = home
     jid, state = jobs.submit("_selftest", {"steps": 3, "dt": 0.1}, [f], bootstrap=False)
@@ -76,9 +86,9 @@ def test_never_a_partial_result(home):
     with pytest.raises(jobs.JobError, match="no final result"):
         jobs.result(jid)
     assert "result.json" not in os.listdir(st["folder"])
-    # progress is counts only
-    time.sleep(0.6)
-    p = jobs.status(jid)["progress"]
+    # progress is counts only; "running" comes before the runner has
+    # imported anything, so wait for its first progress, not a fixed time
+    p = _wait_progress(jid)
     assert set(p) == {"total", "done", "what", "updated"} and p["done"] < p["total"]
     assert jobs.cancel(jid) == "cancelled"
     assert jobs.status(jid)["status"] == "cancelled"

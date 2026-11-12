@@ -1366,9 +1366,14 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason,
                 kind="VARMA")
     nxt = "Next: evaluate — the candidate against the univariates."
+    fold = evidence.folded_own_ma(L.series, L.result)
     if getattr(L.result, "ma_boundary", 0):
         nxt = ("The fit stopped on the MA invertibility wall: study it before "
                "reading its numbers (study_estimation).")
+    elif fold:
+        # BUG-0008: the fold of the cast is a wall of one coefficient
+        nxt = (f"The fit stopped at the fold of an own MA(1) ({', '.join(n for n, _ in fold)}): "
+               "not an optimum. Study it before reading its numbers (study_estimation).")
     return txt + "\n\n" + nxt
 
 
@@ -1670,14 +1675,19 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
            + (f"STOPPED ON THE MA WALL ({r.ma_boundary} of {r.ma_nroots} roots)"
               if getattr(r, "ma_boundary", 0) else "not on the MA wall"), "",
            evidence.roots_text(r, freq), ""]
+    fold = evidence.folded_own_ma(L.series, r)
+    if fold:
+        out[2:2] = ["  " + evidence.fold_text(fold), "  The joint roots below need not "
+                    "show it: the free cross MA keep them inside."]
     # 2. the second path
     try:
         Ls = _model_ladder(s, s.current, lik="shea")
         rs = Ls.fit()
         out += ["SECOND PATH (Shea's likelihood, AS 242):",
                 f"  logL {rs.logL:.6f}  ({rs.nit} iterations; "
-                + (f"on the MA wall, {rs.ma_boundary} of {rs.ma_nroots} roots)"
-                   if rs.ma_boundary else "not on the MA wall)")
+                + (f"on the MA wall, {rs.ma_boundary} of {rs.ma_nroots} roots"
+                   if rs.ma_boundary else "not on the MA wall")
+                + ("; at the fold" if evidence.folded_own_ma(Ls.series, rs) else "") + ")"
                 + f"   difference to the fit: {rs.logL - r.logL:+.6f}", ""]
     except Exception as e:                                # pragma: no cover
         out += [f"SECOND PATH failed: {e}", ""]
@@ -1695,7 +1705,9 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
                 break
             rows.append(f"  round {k}: logL {rk.logL:.6f}  ({rk.nit} it.)  "
                         + (f"on the wall ({rk.ma_boundary} of {rk.ma_nroots})"
-                           if rk.ma_boundary else "inside"))
+                           if rk.ma_boundary else
+                           "at the fold" if evidence.folded_own_ma(Lr.series, rk)
+                           else "inside"))
             if not rk.logL > best + 1e-6:
                 break
             x, best = rk.x.copy(), rk.logL
@@ -1709,6 +1721,23 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
             "  c) If the restarts or the second path climbed, the fit as estimated",
             "     is not the top of the ridge; report the highest point as such,",
             "     stating that it is on the wall."]
+    if fold:
+        names_f = [n for n, _ in fold]
+        ours = _own_is_free(s, s.current) and all(_OWN.fullmatch(n) for n in names_f)
+        out += [f"  f) THE FOLD: {', '.join(names_f)} stopped on the invertibility",
+                "     boundary of an own MA(1), where the cast folds (theta -> 1/theta).",
+                "     Treat it as the wall: no optimum to report."]
+        if ours:
+            out += ["     Hold them at zero and re-estimate (with every own and cross MA",
+                    "     dropped, the echelon form is a VAR):",
+                    "     " + _estimate_call(name, (p, q, diagcov, lk, cross,
+                                                     _zeros(list(zs) + names_f), ech)),
+                    "     For: a model whose likelihood has an interior maximum. Against:",
+                    "     an own MA(1) at -1 is the signature of over-differencing, whose",
+                    "     cause is the series' d: the univariate decision (art)."]
+        else:
+            out += ["     The coefficient belongs to the univariate model: revise it in",
+                    "     art (an MA(1) at -1 is the signature of over-differencing)."]
     wall = evidence.wall_frequencies(r, freq)
     seasonal = sorted({round(k / freq, 6) for k in range(1, freq // 2 + 1)}) if freq > 1 else []
     if 0.0 in wall:
@@ -1722,7 +1751,8 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
                 "     over-difference (or a deterministic seasonality treated as",
                 "     stochastic): again the univariate model's decision (art)."]
     s.guion.add("N4b", "study_estimation", {"p": p, "q": q, "diagcov": diagcov},
-                f"fit logL {r.logL:.4f}; boundary {getattr(r, 'ma_boundary', 0)}",
+                f"fit logL {r.logL:.4f}; boundary {getattr(r, 'ma_boundary', 0)}"
+                + (f"; at the fold: {', '.join(n for n, _ in fold)}" if fold else ""),
                 "")
     return "\n".join(out)
 

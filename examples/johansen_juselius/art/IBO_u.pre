@@ -3,7 +3,6 @@
 * Copyright (C) 1996 Jos? Alberto Mauricio     *
 ************************************************
 * Built by sima's raw entry (route U), not reviewed in art
-
 ** Frequency of time series: either 1(A), 4(Q) or 12(M):
  4
 ** Number of observations and starting date of time series:

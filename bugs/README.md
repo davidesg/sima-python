@@ -4,7 +4,7 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**5 report(s), 0 open.**
+**10 report(s), 0 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
@@ -13,5 +13,9 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | fixed | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | 0.1.0 |
 | [BUG-0004](BUG-0004-la-vara-de-n5-en-ruta-v-son-univariantes-ligeros-sin-alternativa.md) | fixed | medium | server | En ruta V, evaluate mide contra univariantes ligeros que elige solo, sin decir cuáles son ni aceptar los del analista | 0.1.0 |
 | [BUG-0005](BUG-0005-la-eleccion-de-indices-depende-de-max-index-y-el-informe-no-da-t.md) | fixed | medium | evidence | identify_echelon cambia de elección con max_index (la muestra común encoge) sin decir sobre cuántas observaciones calcula la tabla; el MANUAL lo atribuye a la ruta U | 0.1.0 |
-| [BUG-0006](BUG-0006-rank-test-no-dice-que-el-modelo-bajo-h0-no-es-i1r.md) | fixed | medium | vec | rank_test no dice que el modelo bajo H0 no es I(1, r) (drvec no simula de él); lo presenta como un bootstrap fallido y aconseja subir B | 0.2.0 |
+| [BUG-0006](BUG-0006-rank-test-no-dice-que-el-modelo-bajo-h0-no-es-i1r.md) | fixed | medium | vec | rank_test no dice que el modelo bajo H0 no es I(1, r); lo presenta como un bootstrap fallido | 0.2.0 |
+| [BUG-0007](BUG-0007-la-ruta-u-escribe-pre-que-fue-no-lee.md) | fixed | medium | raw | La ruta U escribe .pre que fue no lee (la línea de procedencia dentro de la cabecera) | 0.2.2 |
+| [BUG-0008](BUG-0008-un-ma-propio-se-para-en-el-pliegue-y-estimate-lo-da-por-convergido.md) | fixed | medium | evidence | Un MA(1) propio se para en θ = −1, el pliegue del cast, y estimate lo da por convergido, con t significativas y «Next: evaluate» | 0.2.2 |
+| [BUG-0009](BUG-0009-platform-tier-dice-exact-en-todo-linux-x86-64-sin-mirar-la-libc.md) | fixed | low | jobs | platform_tier() dice «exact» en todo Linux x86_64 sin mirar la libc; la caché de un ejemplo se sirve en una libm que no la reproduce | 0.2.2 |
+| [BUG-0010](BUG-0010-test-never-a-partial-result-espera-un-tiempo-fijo-al-primer-progreso.md) | fixed | low | tests | test_never_a_partial_result espera 0.6 s fijos al primer progreso del job; en una máquina cargada falla | 0.2.2 |
 

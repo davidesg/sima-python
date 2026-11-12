@@ -109,6 +109,9 @@ def test_route_u_builds_the_seed_and_opens_the_ladder(tmp_path):
     assert "not reviewed in art" in t and "run_gate" in t
     pre = tmp_path / "mink_muskrat_sima" / "mink_u.pre"
     assert raw.PROVENANCE in pre.read_text()
+    # inside fue's five free lines: the frequency stays on the sixth (BUG-0007)
+    lines = pre.read_text().split("\n")
+    assert lines[4] == raw.PROVENANCE and lines[5].startswith("** Frequency")
     # the mean starts at the series' mean: not a unit root carrying the level
     s = M._sess.get("u_mm")
     phi, _theta, mu, _f = s.series[0].polynomials()

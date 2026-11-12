@@ -33,9 +33,33 @@ def platform_string():
     return f"{sys.platform} {_pf.machine()}"
 
 
+# The glibc versions whose libm was measured to reproduce the examples' bytes
+# (clean-install test of atsw 2.1.0, 2026-10-30): 2.35 to 2.41 agree; 2.28,
+# 2.34 and musl differ. Outside this range the tier is "tolerance" until the
+# same test in containers measures it (BUG-0009).
+EXACT_GLIBC = ((2, 35), (2, 41))
+
+
+def _glibc():
+    """(major, minor) of the glibc, or None (musl, which libc_ver gives as
+    ('', ''), or anything else)."""
+    try:
+        lib, ver = _pf.libc_ver()
+        if lib != "glibc":
+            return None
+        return tuple(int(x) for x in ver.split(".")[:2])
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
 def platform_tier():
-    return ("exact" if sys.platform == "linux" and _pf.machine() in ("x86_64", "AMD64")
-            else "tolerance")
+    """"exact" where an example's cache reproduces byte for byte: Linux
+    x86_64 with a glibc in the measured range; "tolerance" elsewhere."""
+    if sys.platform != "linux" or _pf.machine() not in ("x86_64", "AMD64"):
+        return "tolerance"
+    g = _glibc()
+    lo, hi = EXACT_GLIBC
+    return "exact" if g is not None and lo <= g <= hi else "tolerance"
 
 
 def drvarma_backend():
