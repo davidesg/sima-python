@@ -1,11 +1,11 @@
 ---
 id: BUG-0009
 title: platform_tier() dice «exact» en todo Linux x86_64 sin mirar la libc; la caché de un ejemplo se sirve en una libm que no la reproduce
-status: open
+status: fixed
 severity: low
 component: jobs
 found_in: 0.2.0
-fixed_in:
+fixed_in: 0.2.2
 reported: 2026-10-30
 reporter: David / Claude — prueba de instalación limpia de atsw 2.1.0 en diez distribuciones
 tags:
@@ -66,3 +66,13 @@ mueve, se mide de nuevo con la misma prueba en contenedores.
 
 El repro, y la prueba de bytes del caso mixto en AlmaLinux 8, Rocky 9 y Alpine
 (se salta en vez de fallar), con la caché del ejemplo sin servirse allí.
+
+## Arreglo
+
+`platform_tier()` da `"exact"` sólo en Linux x86_64 con una glibc dentro del
+intervalo medido, `EXACT_GLIBC = ((2, 35), (2, 41))` en `provenance.py`;
+fuera de él, y con musl (que `platform.libc_ver()` no reconoce como glibc), da
+`"tolerance"`. Se ha tomado el intervalo cerrado y no «≥ 2.35»: una glibc
+posterior a 2.41 no está medida, y pasa a `"exact"` cuando la misma prueba en
+contenedores lo mida (se amplía la constante). En esas plataformas la clave ya
+no casa con la de las cachés de los ejemplos y las pruebas de bytes se saltan.

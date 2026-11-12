@@ -1,11 +1,11 @@
 ---
 id: BUG-0007
 title: La ruta U escribe .pre que fue no lee (la línea de procedencia dentro de la cabecera)
-status: open
+status: fixed
 severity: medium
 component: raw
 found_in: 0.2.0
-fixed_in:
+fixed_in: 0.2.2
 reported: 2026-11-12
 reporter: David / Claude — integración del VEC en sim_gui (atsw-gui, S10c)
 tags:
@@ -54,3 +54,22 @@ regenerar los `.pre` del ejemplo `johansen_juselius`.
 ## Validation
 
 El repro sale con 0 con los `.pre` regenerados, y fue los lee.
+
+## Arreglo
+
+La cabecera de fue son cinco líneas que pueden llevar cualquier cosa (fue.c
+[3.0]); la quinta, en el `.pre` que escribe fue, es la línea en blanco bajo el
+recuadro. `raw.build_one` pone ahí la procedencia, en lugar de insertarla: la
+frecuencia sigue en la sexta y el `.pre` vuelve a fue y a drvarma. El `.inp`
+de la ruta U ya la llevaba dentro de esas cinco líneas.
+
+Los cuatro `.pre` de `johansen_juselius` (y la copia del repro) se han
+regenerado con `build_one` sobre `data/denmark.csv`: salen idénticos a los de
+antes con la línea en blanco quitada, y los `.out` byte a byte. Como la clave
+de la caché lleva el digest de los ficheros, la carpeta del rank test pasa de
+`sima_jobs/290f7ee278756890` a `sima_jobs/9f38d2e4a3c1b869`: misma carga útil
+(versiones, motor, nivel) con los digests nuevos, y `rank.out`, `rank.boot` y
+`result.json` sin tocar —drvec lee los `.pre` con el cast de fue, que salta los
+comentarios, así que los números no dependen de esa línea—. `example.json` apunta
+a la carpeta nueva. `tests/test_raw_entry.py` comprueba que la procedencia está
+en la quinta línea y la frecuencia en la sexta.

@@ -1,11 +1,11 @@
 ---
 id: BUG-0008
 title: Un MA(1) propio se para en θ = −1, el pliegue del cast, y estimate lo da por convergido, con t significativas y «Next: evaluate»
-status: open
+status: fixed
 severity: medium
 component: evidence
 found_in: 0.1.0
-fixed_in:
+fixed_in: 0.2.2
 reported: 2026-10-16
 reporter: David / Claude — ejemplo lutkepohl_poskitt, ruta V, índices (1, 1, 1)
 tags:
@@ -85,3 +85,26 @@ Propuesto, sin aplicar:
 
 El repro sale con 0. Habrá un test sobre el (1, 1, 1) del ejemplo, y otro de
 drvarma que compruebe que un θ propio en ±1 no cuenta como convergencia.
+
+## Arreglo
+
+En sima, sin tocar drvarma (un motor probado no se arregla por un defecto
+latente: se lee su resultado). `evidence.folded_own_ma` recorre, como el
+`canonicalize` del cast, los MA(1) regulares propios libres (y los MA de
+frecuencia fija, cuyo pliegue está en c2 = −1) y devuelve los que paran a
+menos de `MA_WALL_TOL` (5e-5) de |θ| = 1.
+
+- `estimate`: si hay pliegue, la línea del optimizador ya no dice «converged»
+  sino que paró donde el gradiente se anula en el pliegue; debajo, «STOPPED AT
+  THE FOLD OF AN OWN MA(1)» con los coeficientes, que no es un óptimo interior
+  ni una convergencia. Esos coeficientes pierden el asterisco (`<- fold`) y el
+  «Next» pasa de `evaluate` a `study_estimation`, como con la pared conjunta.
+- `study_estimation`: dice el pliegue en la cabecera, lo marca en el segundo
+  camino y en los reinicios, y añade al menú la opción f): tratarlo como la
+  pared y reestimar con esos θ a cero (`zeros=`; con todo el MA fuera, la
+  forma echelon es el VAR que eligió el ejemplo). Si el θ es del modelo
+  univariante (ruta U fuera de la forma echelon), remite a art.
+
+Los ajustes que no paran en el pliegue no cambian (ni números ni texto).
+Test: `tests/test_fold.py` (la detección sobre un resultado sintético y el
+(1, 1, 1) del ejemplo). El repro sale con 0.

@@ -1,11 +1,11 @@
 ---
 id: BUG-0010
 title: test_never_a_partial_result espera 0.6 s fijos al primer progreso del job; en una máquina cargada falla
-status: open
+status: fixed
 severity: low
 component: tests
 found_in: 0.2.0
-fixed_in:
+fixed_in: 0.2.2
 reported: 2026-10-30
 reporter: David / Claude — prueba de instalación limpia de atsw 2.1.0 en diez distribuciones
 tags:
@@ -56,3 +56,12 @@ que no termine mientras tanto.
 ## Validation
 
 El repro, y la prueba bajo carga.
+
+## Arreglo
+
+La prueba espera el estado, no un tiempo: `_wait_progress` (en
+`tests/test_jobs.py`, junto a `_wait_status`) consulta `status()["progress"]`
+cada 0,1 s hasta que trae recuentos, con un plazo de 60 s, y sólo entonces
+comprueba las cuatro claves y que `done < total`. El job (200 pasos de 0,05 s)
+deja unos 10 s de margen desde su primer progreso. El código de `jobs` no
+cambia: un job «running» sin recuentos todavía es cierto.

@@ -605,9 +605,57 @@ def _is_covariance(name):
     return name.startswith("log(Q[") or name.startswith("Q[")
 
 
+def folded_own_ma(series, r):
+    """The own MA coefficients that stopped AT THE FOLD of the cast (BUG-0008).
+
+    fue's cast (drvarma's ``LadderSeries.canonicalize``) reads a regular MA(1)
+    factor with |theta| > 1 as 1/theta, and a fixed-frequency MA with c2 < -1
+    as 1/c2: the likelihood is the same on both sides of |theta| = 1 (c2 = -1),
+    so its gradient vanishes there by construction and the optimiser may stop
+    and declare a convergence. That point is the coefficient's invertibility
+    boundary, not an interior maximum, and the joint MA wall (ma_boundary) need
+    not see it when cross MA terms are free. Returns [(name, value)] of the free
+    foldable coefficients within MA_WALL_TOL of the fold, in the order of
+    ``r.names``. The engine is read here, not fixed."""
+    at = dict(zip(r.names, np.asarray(r.x, float)))
+    out = []
+    for s in series:
+        m = s.model
+        cand = []
+        for k, factor in enumerate(m.ma):                 # regular MA(1) factors
+            free = m.ma_free[k] if m.ma_free is not None else None
+            if len(factor) == 1 and (free is None or free[0]):
+                tag = "theta" if len(m.ma) == 1 else f"theta{k + 1}"
+                cand.append((f"{tag}_{s.name}[B^1]", False))
+        cand += [(f"thetaf_{s.name}[f={ff.freq}]", True) for ff in m.ma_f if ff.free]
+        for nm, neg_only in cand:
+            v = at.get(nm)
+            if v is None:
+                continue
+            if (v <= -1.0 + MA_WALL_TOL) if neg_only else (abs(v) >= 1.0 - MA_WALL_TOL):
+                out.append((nm, float(v)))
+    order = {n: i for i, n in enumerate(r.names)}
+    return sorted(out, key=lambda t: order[t[0]])
+
+
+def fold_text(fold):
+    """The line that says a fit stopped at the fold (BUG-0008), or ''."""
+    if not fold:
+        return ""
+    return ("STOPPED AT THE FOLD OF AN OWN MA(1): "
+            + ", ".join(f"{n} = {v:+.6f}" for n, v in fold)
+            + ", where the cast reads theta as 1/theta. The likelihood is symmetric "
+            "there and its gradient vanishes by construction: NOT an interior optimum, "
+            "and not a convergence. Each such coefficient sits on its invertibility "
+            "boundary: its s.e. and t are not valid (no asterisk), and the others come "
+            "from the same curvature.")
+
+
 def estimation_text(L, nlags):
     from drvarma.diagnostics import hosking_q
     r = L.result
+    fold = folded_own_ma(L.series, r)
+    folded = {n for n, _ in fold}
     names = [s.name for s in L.series]
     links = getattr(L, "links", None)
     ech = getattr(L, "echelon", None)
@@ -621,12 +669,16 @@ def estimation_text(L, nlags):
                f"{names[i]}<-{names[j]}" for i in range(len(names))
                for j in range(len(names)) if i != j and links[i, j])
               + " (the other pairs carry no cross dynamics)"] if links is not None else []),
-           f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iterations"
+           f"optimiser: "
+           + ("stopped where the gradient vanishes at the fold of an own MA(1) (see below)"
+              if fold and r.termcode == 1 else _TERM.get(r.termcode, r.termcode))
+           + f" ({r.nit} iterations"
            + (f"; cross terms started at {L.start_used}" if getattr(L, "start_used", None)
               and L.start_used != "zero" else "") + ")"
            + (f"\n  STOPPED AT THE MA INVERTIBILITY BOUNDARY: "
               f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots within 5e-5 of the unit circle"
-              if getattr(r, "ma_boundary", 0) else ""),
+              if getattr(r, "ma_boundary", 0) else "")
+           + (f"\n  {fold_text(fold)}" if fold else ""),
            f"  {'parameter':<34}{'estimate':>12}{'s.e.':>12}{'t':>9}"]
     cov = []
     for n, v, se in zip(r.names, r.x, r.std_errors):
@@ -634,7 +686,8 @@ def estimation_text(L, nlags):
             cov.append((n, v))
             continue
         t = v / se if se > 0 else float("nan")
-        mark = "  *" if se > 0 and abs(t) > 1.96 else ""
+        mark = ("  <- fold" if n in folded
+                else "  *" if se > 0 and abs(t) > 1.96 else "")
         out.append(f"  {n:<34}{v:>12.6f}{se:>12.6f}{t:>9.2f}{mark}")
     if cov:
         # drvarma BUG-0008: the covariance of the innovations is concentrated
