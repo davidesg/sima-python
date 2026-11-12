@@ -53,7 +53,11 @@ def test_estimate_does_not_call_the_fold_a_convergence(tmp_path):
     t = _fn(M.estimate)("fold", indices="1, 1, 1")
     s = M._sess.get("fold")
     r = s.fits[s.current].result
-    assert r.termcode == 1 and r.ma_boundary == 0        # the engine's facts, unchanged
+    # The engine's facts, unchanged. The likelihood is flat at the fold, so the
+    # optimiser stops on the gradient (1, glibc) or on a step that finds no
+    # lower point (3, macOS): which one is the platform's last bits. Neither
+    # may be read as a convergence.
+    assert r.termcode in (1, 3) and r.ma_boundary == 0
     assert [n for n, _ in evidence.folded_own_ma(s.fits[s.current].series, r)] == \
         ["theta_Minneapolis[B^1]", "theta_KansasCity[B^1]"]
     assert "STOPPED AT THE FOLD OF AN OWN MA(1)" in t
