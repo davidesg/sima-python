@@ -53,13 +53,19 @@ def test_estimate_does_not_call_the_fold_a_convergence(tmp_path):
     t = _fn(M.estimate)("fold", indices="1, 1, 1")
     s = M._sess.get("fold")
     r = s.fits[s.current].result
-    # The engine's own stop is the platform's: termcode 1 with ma_boundary 0 on
-    # glibc, termcode 3 with the joint MA on the wall (ma_boundary 2) on macOS.
-    # The flat likelihood at the fold leaves it to the last bits. What sima
-    # must do is the same on every platform: read the fold and not call it
-    # a convergence.
-    assert [n for n, _ in evidence.folded_own_ma(s.fits[s.current].series, r)] == \
-        ["theta_Minneapolis[B^1]", "theta_KansasCity[B^1]"]
+    # Where the optimiser stops is the platform's. On glibc it stops at the
+    # fold of the two own MA(1) (termcode 1, ma_boundary 0): the case of
+    # BUG-0008. On macOS the same fit ends on the joint MA's invertibility wall
+    # instead (termcode 3, ma_boundary 2), and no own MA(1) is at the fold.
+    # Either way sima must not call it a convergence; the fold's own text is
+    # checked where the fold happens.
+    folded = [n for n, _ in evidence.folded_own_ma(s.fits[s.current].series, r)]
+    assert "converged" not in t
+    if not folded:
+        assert r.ma_boundary > 0 and "STOPPED AT THE MA INVERTIBILITY BOUNDARY" in t
+        pytest.skip(f"this platform's optimiser does not stop at the fold here "
+                    f"(termcode {r.termcode}, ma_boundary {r.ma_boundary})")
+    assert folded == ["theta_Minneapolis[B^1]", "theta_KansasCity[B^1]"]
     assert "STOPPED AT THE FOLD OF AN OWN MA(1)" in t
     assert "converged" not in t
     assert "Next: evaluate" not in t and "(study_estimation)" in t
