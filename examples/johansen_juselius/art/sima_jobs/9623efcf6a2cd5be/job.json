@@ -25,8 +25,8 @@
   "IBO_u.pre",
   "IDE_u.pre"
  ],
- "id": "9f38d2e4a3c1b869",
- "key": "9f38d2e4a3c1b8692946a46bd85221574fc83c46caf52b3760d2eb0063202155",
+ "id": "9623efcf6a2cd5be",
+ "key": "9623efcf6a2cd5becdf5d055fb35d5b8b2e49bd77f62dc6558857aaf52d58b51",
  "label": "rank test B=499 p=2 case 2",
  "payload": {
   "args": {
@@ -56,9 +56,9 @@
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.1",
-   "drvec": "0.1.0",
-   "fue": "0.1.19"
+   "drvarma": "0.3.2",
+   "drvec": "0.1.1",
+   "fue": "0.1.20"
   }
  },
  "seed": null,

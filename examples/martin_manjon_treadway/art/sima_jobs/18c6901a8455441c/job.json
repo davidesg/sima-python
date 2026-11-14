@@ -4,12 +4,12 @@
   "case": "pre",
   "multistart": 0,
   "names": [
-   "BUFFALO",
-   "MINNEAPOLIS",
-   "KANSASCITY"
+   "R0T",
+   "R10",
+   "R3"
   ],
   "nodrift": [],
-  "p": 2,
+  "p": 4,
   "q": 0
  },
  "engine": [
@@ -19,42 +19,42 @@
  ],
  "extra_files": [],
  "files": [
-  "BUFFALO_m01.pre",
-  "MINNEAPOLIS_m01.pre",
-  "KANSASCITY_m01.pre"
+  "R0T_ar3.pre",
+  "R10_ar3.pre",
+  "R3_ar3.pre"
  ],
- "id": "da853f9359ef97cb",
- "key": "da853f9359ef97cb7fec776d8a0f8e51a7ceb0f2f7a78a973949ecd6a76a3373",
- "label": "rank test B=499 p=2 case pre",
+ "id": "18c6901a8455441c",
+ "key": "18c6901a8455441ce1197afc8dfa589ada470be742b8afaff88cb0aed6891814",
+ "label": "rank test B=499 p=4 case pre",
  "payload": {
   "args": {
    "B": 499,
    "case": "pre",
    "multistart": 0,
    "names": [
-    "BUFFALO",
-    "MINNEAPOLIS",
-    "KANSASCITY"
+    "R0T",
+    "R10",
+    "R3"
    ],
    "nodrift": [],
-   "p": 2,
+   "p": 4,
    "q": 0
   },
   "backend": "c",
   "engine": "c 0.13",
   "extra_files": [],
   "files": [
-   "075adbe949f3f7756f5a1d8df304b3923ffcd20441f8f8bf3a0e4609de668190",
-   "2775ad18cca32a6a1617e6b789d964d662f3762969dd1fe6a7407f17072ae7d5",
-   "03c38f15a84587d8057f2f67090fba6cdc1ff129768f749781f7b81e86b68b77"
+   "194abc4a6185ffd18f1e91ca422495ba4cace6694f977fcd2ac116ee988c730e",
+   "dc36fc9c81458cb1bf0bdf55e8fd4540d0dbdce9846eabcc59aba00484128142",
+   "503f85040ed630e9dea7ea5ef9c2829626740ddee0f039a2b66e599cbee6881f"
   ],
   "seed": null,
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.1",
-   "drvec": "0.1.0",
-   "fue": "0.1.19"
+   "drvarma": "0.3.2",
+   "drvec": "0.1.1",
+   "fue": "0.1.20"
   }
  },
  "seed": null,

@@ -1,62 +1,62 @@
-Program          : DRVEC 0.1.0 (python)
+Program          : DRVEC 0.1.1 (python)
 Input Data File  : the .pre files
 Output File      : rank.out
 Model            : VARMA-VECM(2,0), M = 3 series, cointegration rank r = 0..2 (sequential test)
 Estimation       : Exact Unconditional Maximum Likelihood, Algorithm AS 311 (Mauricio 1997), xi sequence truncated at 1e-3
 Transformation   : VECM to stationary VARMA (Mauricio 2006)
-Deterministic    : case 2 -- E[nabla Y2] = 0, E[W] free
+Deterministic    : case 3 -- E[nabla Y2] free, E[W] free (drifts as in the .pre files)
 Structure        : F free, Theta absent (q = 0), Sigma free
-Series           : invest income cons   (2 in the nabla Y2 block, 1 in Y1)
-Sample           : 91 observations from 1960/2, quarterly (raw 92)
+Series           : BUFFALO MINNEAPOLIS KANSASCITY   (2 in the nabla Y2 block, 1 in Y1)
+Sample           : 99 observations from 1972/9, monthly (raw 100)
 
 === Sequential LR test for the cointegration rank ===
 
 === The ladder below the rank: r = 0, from the gate up ===
-  rung 0  (F diag, Theta diag, Sigma diag)   logL = 656.3578127682
+  rung 0  (F diag, Theta diag, Sigma diag)   logL = -901.0562829728
 
 === Entry gate: the factorisation contract ===
 
 At r = 0 with diagonal Phi, Theta and Sigma the likelihood factorises,
 so the joint fit must equal the sum of the univariate fits exactly.
 
-  univariate 1 (p=2, q=0)   logL =     147.9767602488
-  univariate 2 (p=2, q=0)   logL =     253.5424657685
-  univariate 3 (p=2, q=0)   logL =     254.8385867509
-                                 sum  =     656.3578127682
-                                 joint=     656.3578127682
-  (both sides untruncated; the fit's own logL, xi truncated at 1e-03, is 656.3578127682)
+  univariate 1 (p=2, q=0)   logL =    -296.5756786209
+  univariate 2 (p=2, q=0)   logL =    -299.8033848238
+  univariate 3 (p=2, q=0)   logL =    -304.6772195273
+                                 sum  =    -901.0562829721
+                                 joint=    -901.0562829728
+  (both sides untruncated; the fit's own logL, xi truncated at 1e-03, is -901.0562829728)
 
-  crossing identity (joint - sum) = -2.444e-11   (tolerance 1.0e-06)   VERIFIED
-  rung 1  (F diag, Theta diag, Sigma free)   logL = 669.9608176531
-  rung 2  (F free, Theta free, Sigma free)   logL = 721.1988081448
+  crossing identity (joint - sum) = -6.987e-10   (tolerance 1.0e-06)   VERIFIED
+  rung 1  (F diag, Theta diag, Sigma free)   logL = -684.9987531938
+  rung 2  (F free, Theta free, Sigma free)   logL = -667.6772449102
 
 --- rank r = 0 ---
 
-Search: 2 starting points, 2 converged; logL from 721.198808 to 721.198808.  The best is `seed'.
+Search: 2 starting points, 2 converged; logL from -667.677245 to -667.677245.  The best is `seed'.
   start        logL            stop  iters  admissible start
-  seed            721.198808     grad      1  as given
-  cold            721.198808     grad     18  as given
+  seed           -667.677245     grad      0  as given
+  cold           -667.677245     grad     23  as given
   The SPREAD is the diagnostic: on a well-behaved surface every start lands in the same place.
 
 =============================================================
-  OPTIMIZER CONVERGED after 1 iterations
+  OPTIMIZER CONVERGED after 0 iterations
   Objective function = 1.000000000000
   Convergence criterion: norm of scaled gradient <= gradtol
 =============================================================
 
 
 =============================================================
-  OPTIMIZER CONVERGED after 16 iterations
-  Objective function = 0.957770025033
+  OPTIMIZER CONVERGED after 30 iterations
+  Objective function = 0.980176946628
   Convergence criterion: norm of scaled gradient <= gradtol
 =============================================================
 
 
 === -seedgate: the VEC block profiled on the rung below ===
 
-  r = 0 optimum (F, Theta, Sigma)        logL =     721.1988081448
-  admissible entry, Lambda x 1.00          logL =     725.0422345962
-  + Lambda and B2 profiled on it         logL =     727.0054498141
+  r = 0 optimum (F, Theta, Sigma)        logL =    -667.6772449102
+  admissible entry, Lambda x 1.00          logL =    -663.0275488774
+  + Lambda and B2 profiled on it         logL =    -662.0364516686
 
   The starting point for the free fit below is that second value, not
   a conditional regression.  Holding the rung below and estimating only
@@ -67,42 +67,42 @@ Search: 2 starting points, 2 converged; logL from 721.198808 to 721.198808.  The
 
   the pre-estimates the conditional step produced
     Lambda (3 x 1):
-          0.175582
-         -0.031444
-          0.051309
+         -0.252896
+         -0.263528
+         -0.303757
     B2 (2 x 1):
-          0.044964
-         -1.007634
-    mean block (1):       0.090028
+          0.585269
+         -1.687143
+    mean block (1):     -47.662466
 
 --- rank r = 1 ---
 
-Search: 3 starting points, 3 converged; logL from 750.524709 to 750.524709.  The best is `cold'.
+Search: 3 starting points, 3 converged; logL from -660.500278 to -660.500278.  The best is `seed'.
   start        logL            stop  iters  admissible start
-  seed            750.524709     grad     70  as given
-  cold            750.524709     grad     71  as given
-  johansen        750.524709     grad     61  as given
+  seed           -660.500278     grad     49  as given
+  cold           -660.500278     grad     47  as given
+  johansen       -660.500278     grad     48  as given
   The SPREAD is the diagnostic: on a well-behaved surface every start lands in the same place.
 
 =============================================================
-  OPTIMIZER CONVERGED after 71 iterations
-  Objective function = 0.581647876824
+  OPTIMIZER CONVERGED after 49 iterations
+  Objective function = 0.969442796311
   Convergence criterion: norm of scaled gradient <= gradtol
 =============================================================
 
 
 =============================================================
-  OPTIMIZER CONVERGED after 27 iterations
-  Objective function = 0.948285994543
+  OPTIMIZER CONVERGED after 59 iterations
+  Objective function = 0.940685154055
   Convergence criterion: norm of scaled gradient <= gradtol
 =============================================================
 
 
 === -seedgate: the VEC block profiled on the rung below ===
 
-  r = 0 optimum (F, Theta, Sigma)        logL =     721.1988081448
-  admissible entry, Lambda x 1.00          logL =     725.7668273510
-  + Lambda and B2 profiled on it         logL =     728.1828382308
+  r = 0 optimum (F, Theta, Sigma)        logL =    -667.6772449102
+  admissible entry, Lambda x 1.00          logL =    -663.6644383905
+  + Lambda and B2 profiled on it         logL =    -660.6376726847
 
   The starting point for the free fit below is that second value, not
   a conditional regression.  Holding the rung below and estimating only
@@ -113,42 +113,42 @@ Search: 3 starting points, 3 converged; logL from 750.524709 to 750.524709.  The
 
   the pre-estimates the conditional step produced
     Lambda (3 x 2):
-          0.010054     0.010901
-         -0.161963     0.165701
-         -0.157333     0.078436
+          0.560376    -0.285301
+          0.538600    -0.201545
+          0.468523    -0.253329
     B2 (1 x 2):
-         -1.155252    -1.119076
-    mean block (2):       0.144753     0.235410
+         -0.898228    -0.919693
+    mean block (2):      48.212201    38.902543
 
 --- rank r = 2 ---
 
-Search: 3 starting points, 3 converged; logL from 753.535383 to 753.535383.  The best is `cold'.
+Search: 3 starting points, 3 converged; logL from -658.998953 to -658.998953.  The best is `seed'.
   start        logL            stop  iters  admissible start
-  seed            753.535383     grad     84  as given
-  cold            753.535383     grad     89  as given
-  johansen        753.535383     grad     84  as given
+  seed           -658.998953     grad     64  as given
+  cold           -658.998953     grad     70  as given
+  johansen       -658.998953     grad     87  as given
   The SPREAD is the diagnostic: on a well-behaved surface every start lands in the same place.
 
 =============================================================
-  OPTIMIZER CONVERGED after 89 iterations
-  Objective function = 0.558780531811
+  OPTIMIZER CONVERGED after 64 iterations
+  Objective function = 0.967436545206
   Convergence criterion: norm of scaled gradient <= gradtol
 =============================================================
 
 
   r    npar        logL         AIC         BIC
   ---------------------------------------------------
-  0      14     721.1988    -15.5428    -15.1565
-  1      20     750.5247    -16.0555    -15.5037
-  2      24     753.5354    -16.0337    -15.3715
+  0      14    -667.6772     13.7713     14.1382
+  1      20    -660.5003     13.7475     14.2717
+  2      24    -658.9990     13.7980     14.4271
 
   H0: P = r   vs   H1: P = r+1        LR = 2*[L(r+1) - L(r)]
-  (asymptotic critical values: case 2, restricted constant)
+  (asymptotic critical values: case 3 — NOT TABULATED HERE)
 
   r    M-r        LR      10%      5%      1%
   ---------------------------------------------------
-  0       3    58.6518    19.77    22.00    26.81   reject H0 at 1%
-  1       2     6.0213    13.75    15.67    20.20   H0 not rejected
+  0       3    14.3539        -        -        -   (no values)
+  1       2     3.0026        -        -        -   (no values)
 
   Distribution is the non-standard Johansen one.  That MA terms do
   not affect it (Yap and Reinsel 1995, Thm. 3; Mauricio 2006, Remark 5)
@@ -181,8 +181,8 @@ Search: 3 starting points, 3 converged; logL from 753.535383 to 753.535383.  The
 
   r    M-r        LR      10%      5%      1%   p-value  reps
   -----------------------------------------------------------------
-  0       3    58.6518    19.84    22.59    30.07   0.0020   499   reject H0 at 1%
-  1       2     6.0213    10.49    13.22    18.52   0.3460   499   H0 not rejected
+  0       3    14.3539    17.63    20.06    26.03   0.1940   499   H0 not rejected
+  1       2     3.0026    11.17    13.39    16.93   0.7860   499   H0 not rejected
 
   Every replication, with its LR*, is in rank.boot.
 

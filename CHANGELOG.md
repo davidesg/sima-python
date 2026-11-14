@@ -1,5 +1,46 @@
 # Changelog — sima-tseries
 
+## 0.2.2 — unreleased
+
+**An own MA(1) that stops on the fold is no longer reported as converged,
+and the route U `.pre` files go back to fue.** Plus the examples' job caches,
+rebuilt for fue 0.1.20, drvarma 0.3.2 and drvec 0.1.1 (the releases with the
+macOS 11 wheels).
+
+- **BUG-0008: the fold of an own MA(1).** In an echelon form an own MA(1)
+  can stop at exactly θ = −1, the fold of the cast, with the optimiser
+  saying "converged" and significant t's (the flour prices, route V,
+  indices (1, 1, 1)). `estimate` now says "STOPPED AT THE FOLD OF AN OWN
+  MA(1)", drops those coefficients' asterisk (`<- fold`) and points to
+  `study_estimation` instead of `evaluate`, as with the joint MA wall;
+  `study_estimation` offers to re-estimate with those θ at zero. drvarma is
+  not touched: sima reads its result (`evidence.folded_own_ma`). Fits that
+  do not stop on the fold do not change.
+- **BUG-0007: the route U `.pre` files did not load in fue.** The
+  provenance line was inserted as a fifth header line, which moved the
+  frequency to line 7. It now goes in the fifth line, which fue leaves free.
+  The four `.pre` of `johansen_juselius` are regenerated (identical but for
+  the blank line, and their `.out` byte for byte).
+- **BUG-0009: the exact tier looks at the libc.** `platform_tier()` says
+  "exact" only on Linux x86_64 with a glibc in the measured interval,
+  2.35–2.41 (`EXACT_GLIBC`); on other glibcs and on musl it says
+  "tolerance", so an example's cache is not served where its bytes do not
+  reproduce.
+- **BUG-0010:** `test_never_a_partial_result` waits for the job's first
+  progress instead of a fixed 0.6 s, which failed on a loaded machine.
+- `test_fold` does not pin how the optimiser stops, which depends on the
+  platform (on macOS the fit can end on the joint MA wall instead of the
+  fold).
+- **The job caches**, `examples/*/art/sima_jobs/`, rebuilt with
+  `tools/build_example_caches.py` (fue 0.1.20, drvarma 0.3.2, drvec 0.1.1
+  with its bundled C 0.13, Linux x86_64): the key holds the engines'
+  versions, so the caches of 0.2.1 stopped matching. The numbers do not
+  change: every `.out`, `.boot`, `.irfboot` and `result.json` equals 0.2.1's
+  but for drvec's version in the header and the versions and key in
+  `result.json`; each `example.json` lists the new ids. `fue>=0.1.20`,
+  `drvarma>=0.3.2`, `drvec>=0.1.1`, so that the shipped caches match what is
+  installed.
+
 ## 0.2.1 — 2026-10-31
 
 **The worked examples' job caches, rebuilt for fue 0.1.19 and drvarma 0.3.1.**
