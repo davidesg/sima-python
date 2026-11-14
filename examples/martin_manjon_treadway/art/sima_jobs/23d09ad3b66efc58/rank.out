@@ -1,4 +1,4 @@
-Program          : DRVEC 0.1.0 (python)
+Program          : DRVEC 0.1.1 (python)
 Input Data File  : the .pre files
 Output File      : rank.out
 Model            : VARMA-VECM(4,0), M = 3 series, cointegration rank r = 0..2 (sequential test)

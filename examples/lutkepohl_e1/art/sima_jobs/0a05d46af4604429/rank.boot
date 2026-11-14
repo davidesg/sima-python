@@ -1,4 +1,4 @@
-# drvec 0.1.0 (python) -bootstrap 499: the rank test, one line per replication
+# drvec 0.1.1 (python) -bootstrap 499: the rank test, one line per replication
 h0,rep,status,lr
 0,1,ok,9.8160559536040637
 0,2,ok,8.8503251737079154

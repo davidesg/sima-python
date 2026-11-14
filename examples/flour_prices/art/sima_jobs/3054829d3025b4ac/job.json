@@ -1,12 +1,12 @@
 {
  "args": {
   "B": 499,
-  "case": "2",
+  "case": "pre",
   "multistart": 0,
   "names": [
-   "invest",
-   "income",
-   "cons"
+   "BUFFALO",
+   "MINNEAPOLIS",
+   "KANSASCITY"
   ],
   "nodrift": [],
   "p": 2,
@@ -19,22 +19,22 @@
  ],
  "extra_files": [],
  "files": [
-  "e1invest.pre",
-  "e1income.pre",
-  "e1cons.pre"
+  "BUFFALO_m01.pre",
+  "MINNEAPOLIS_m01.pre",
+  "KANSASCITY_m01.pre"
  ],
- "id": "241e5c2e22029757",
- "key": "241e5c2e22029757f7c3f8779e16f118e95749626ace238750923ab74a903942",
- "label": "rank test B=499 p=2 case 2",
+ "id": "3054829d3025b4ac",
+ "key": "3054829d3025b4ac08dc7e8754cba0b7dfab91e57469a2b768cdf1a7b4ee9d3e",
+ "label": "rank test B=499 p=2 case pre",
  "payload": {
   "args": {
    "B": 499,
-   "case": "2",
+   "case": "pre",
    "multistart": 0,
    "names": [
-    "invest",
-    "income",
-    "cons"
+    "BUFFALO",
+    "MINNEAPOLIS",
+    "KANSASCITY"
    ],
    "nodrift": [],
    "p": 2,
@@ -44,17 +44,17 @@
   "engine": "c 0.13",
   "extra_files": [],
   "files": [
-   "b6eda29e7063a661663a5b7d780cabee29ef637879920288a2fd751e3bc801be",
-   "3ebec8652b851626a0265432570b9c8a6fc1d756ef0bcd7959c0b3fad575a357",
-   "3ce042729843684a3aca42ec67750d45e0685aa87d1b6a8d65682a226d53c78c"
+   "075adbe949f3f7756f5a1d8df304b3923ffcd20441f8f8bf3a0e4609de668190",
+   "2775ad18cca32a6a1617e6b789d964d662f3762969dd1fe6a7407f17072ae7d5",
+   "03c38f15a84587d8057f2f67090fba6cdc1ff129768f749781f7b81e86b68b77"
   ],
   "seed": null,
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.1",
-   "drvec": "0.1.0",
-   "fue": "0.1.19"
+   "drvarma": "0.3.2",
+   "drvec": "0.1.1",
+   "fue": "0.1.20"
   }
  },
  "seed": null,

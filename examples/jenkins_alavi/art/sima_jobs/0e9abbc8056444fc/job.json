@@ -21,8 +21,8 @@
   "MUSKRAT_m03.pre",
   "MINK_m02.pre"
  ],
- "id": "3ec569d1b202b360",
- "key": "3ec569d1b202b360a2ad9d7cf9c06fb30b3d3828f3bf3744fa839c59500240ad",
+ "id": "0e9abbc8056444fc",
+ "key": "0e9abbc8056444fce0ef0bf3f6ef818bc75bf9c03d4671e011a3e9c6945f9a11",
  "label": "rank test B=499 p=2 case 2",
  "payload": {
   "args": {
@@ -48,9 +48,9 @@
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.1",
-   "drvec": "0.1.0",
-   "fue": "0.1.19"
+   "drvarma": "0.3.2",
+   "drvec": "0.1.1",
+   "fue": "0.1.20"
   }
  },
  "seed": null,
