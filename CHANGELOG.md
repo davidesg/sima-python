@@ -1,6 +1,6 @@
 # Changelog — sima-tseries
 
-## 0.2.2 — unreleased
+## 0.2.2 — 2026-11-14
 
 **An own MA(1) that stops on the fold is no longer reported as converged,
 and the route U `.pre` files go back to fue.** Plus the examples' job caches,
