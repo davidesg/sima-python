@@ -4,10 +4,13 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**10 report(s), 0 open.**
+**13 report(s), 3 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
+| [BUG-0011](BUG-0011-un-varma-que-no-salio-del-arranque-se-presenta-como-estimacion.md) | open | high | estimate | Un VARMA cuya búsqueda no salió del arranque diagonal se presenta como estimación, y su LR = 0 como prueba de que no hay dinámica cruzada | — |
+| [BUG-0012](BUG-0012-con-factores-de-reescala-distintos-la-restriccion-va-en-unidades-del-motor.md) | open | high | vec | Con ficheros de factores de reescala distintos, todo lo que cruza series va en unidades del motor — una β = −1 cierta se rechaza con p = 0.0000 y nada avisa | — |
+| [BUG-0013](BUG-0013-la-cabecera-dice-hessiano-por-diferencias-cuando-van-los-de-bfgs.md) | open | medium | vec | estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS | — |
 | [BUG-0001](BUG-0001-load-pre-muestra-un-paseo-aleatorio-como-ar1.md) | fixed | low | server | load_pre muestra un paseo aleatorio (0,1,0) como «AR 1» en la tabla de los modelos | 0.1.0 |
 | [BUG-0002](BUG-0002-el-lr-dice-contra-los-univariantes-y-es-contra-el-modelo-sin-cruces.md) | fixed | low | evidence | El LR de estimate dice «against the diagonal system (the univariates)» y es contra el mismo modelo sin términos cruzados | 0.1.0 |
 | [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | fixed | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | 0.1.0 |
