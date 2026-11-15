@@ -419,8 +419,16 @@ class VecFit:
         """drvec.fit's keywords for this fit (and its bootstraps)."""
         kw = dict(case=case_arg(self.case), nodrift=nodrift_index(self.order, self.nodrift),
                   multistart=self.multistart)
-        kw.update(restriction_kw(self.restriction, self.order, self.r))
+        kw.update(restriction_kw(self.restriction, self.order, self.r, self.units()))
         return kw
+
+    def units(self):
+        """{name: (lambda, refactor)} of the files (None if they cannot be read)."""
+        try:
+            from . import scale as _sc
+            return _sc.units_of_files(self.files)
+        except Exception:                                   # noqa: BLE001
+            return None
 
 
 def vec_key(order, p, q, r, case, nodrift, restriction=None, multistart=0):
@@ -429,11 +437,25 @@ def vec_key(order, p, q, r, case, nodrift, restriction=None, multistart=0):
             int(multistart))
 
 
-def restriction_kw(restr, order, r):
-    """sima's restriction (names) -> drvec.fit's keywords (1-based indices)."""
+def restriction_kw(restr, order, r, units=None):
+    """sima's restriction (names) -> drvec.fit's keywords (1-based indices).
+
+    `units` ({name: (lambda, refactor)}): when the files do not share a factor
+    and a lambda, the values the analyst holds beta at are in each series'
+    units and are taken to the engine's here (BUG-0012)."""
     kw = {}
     if not restr:
         return kw
+    if units is not None and (restr.get("fixb2") is not None or restr.get("fixb2row")):
+        from . import scale as _sc
+        if _sc.mixed(units):
+            restr = dict(restr)
+            filas = dict(restr.get("fixb2row") or {})
+            if restr.get("fixb2") is not None:
+                for nm in order[:len(order) - r]:
+                    filas.setdefault(nm, restr["fixb2"])
+                restr["fixb2"] = None
+            restr["fixb2row"] = _sc.to_engine_b2(units, order, r, filas)
     if restr.get("weakex"):
         kw["weakex"] = order.index(restr["weakex"]) + 1
     if restr.get("alpha") is not None:
@@ -457,7 +479,12 @@ def fit_vec(files, order, p, q, r, case, nodrift, restriction=None, multistart=0
     import drvec
     kw = dict(case=case_arg(case), nodrift=nodrift_index(order, nodrift),
               multistart=int(multistart), fdhess=fdhess)
-    kw.update(restriction_kw(restriction, order, r))
+    try:
+        from . import scale as _sc
+        _units = _sc.units_of_files(files)
+    except Exception:                                       # noqa: BLE001
+        _units = None
+    kw.update(restriction_kw(restriction, order, r, _units))
     kw.update(extra)
     return drvec.fit(list(files), int(p), int(q), int(r), **kw)
 
@@ -558,7 +585,12 @@ def estimate_report(vf, call, rank_note, canon_text="", prov_line="", purpose=No
     L = [f"# The VEC — rank r = {vf.r}, VARMA({vf.p},{vf.q}) short run, "
          f"{CASE_TEXT.get(str(vf.case), vf.case)} (C2)",
          f"*(drvec, exact ML; n = {f.nobs}; logL {f.loglik:.4f}, {f.npar} parameters; "
-         f"standard errors from the finite-difference Hessian)*", "",
+         + ("standard errors from the finite-difference Hessian"
+            if getattr(getattr(f, "fdhess", None), "ok", False) else
+            "standard errors from the BFGS Hessian of the search: the finite-"
+            "difference Hessian did not come out, which is what happens when the "
+            "series' scale is outside the optimiser's band (see load_pre's notes)")
+         + ")*", "",
          "THE ROLES (they are part of the model): beta is normalised on "
          f"{', '.join(vf.y1())} (the Y1 block, the last {vf.r} of drvec's order); the "
          f"nabla Y2 block is {', '.join(vf.y2()) or '(empty)'}. drvec's order "
@@ -913,7 +945,16 @@ def long_run_report(vf, lr, call, freq=1, prov_line=""):
          "sima from drvec's matrices; drvec computes none of them)*", "",
          "## 1 · TABLE", "", "```", "theta, the long-run coefficients (beta normalised: "
          "Y1 = theta' Y2 + a stationary error):"]
-    th = np.asarray(lr["theta"])
+    th = np.array(lr["theta"], dtype=float)
+    _u = vf.units()
+    if _u:                       # BUG-0012: in each series' units
+        from . import scale as _sc
+        if _sc.mixed(_u):
+            for c in range(r):
+                for i in range(s):
+                    th[i, c] *= _sc.cross(_u, names[s + c], names[i])
+            L.insert(len(L) - 1, "(in each series' units: the files do not share a "
+                                 "rescaling factor, and drvec's beta is in the engine's)")
     for c in range(r):
         L.append(f"  {names[s + c]} = " + " ".join(
             f"{th[i, c]:+.4f}*{names[i]}" for i in range(s)) + "  + stationary")

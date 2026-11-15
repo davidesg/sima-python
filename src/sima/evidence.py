@@ -657,6 +657,32 @@ def estimation_text(L, nlags):
     fold = folded_own_ma(L.series, r)
     folded = {n for n, _ in fold}
     names = [s.name for s in L.series]
+    # BUG-0011: a search that ends at its first step without improving on the
+    # diagonal start is not an estimate. Its cross terms are the seeds, their
+    # standard errors the search's own, and an LR of 0 says nothing about the
+    # data: say so, and why.
+    if not (L.p == 0 and L.q == 0 and L.diagcov) and int(getattr(r, "nit", 2)) <= 1:
+        try:
+            _lr0 = float(L.lr_test()[0])
+        except Exception:                                   # noqa: BLE001
+            _lr0 = 1.0
+        if abs(_lr0) < 1e-6:
+            from . import scale as _sc
+            notas = _sc.load_notes(L.series)
+            return "\n".join(
+                ["NOT ESTIMATED: the search did not start.",
+                 f"optimiser: {_TERM.get(r.termcode, r.termcode)} ({r.nit} iteration), and "
+                 "the likelihood is that of the diagonal start to the last digit: no "
+                 "cross term has moved from its seed. This is NOT evidence that there "
+                 "is no cross dynamics; no table and no LR are given.",
+                 "",
+                 "The usual cause is the scale of the files:"]
+                + ([f"  {n}" for n in notas] or
+                   ["  (the scale check finds nothing: try start=\"preliminary\", or "
+                    "other orders)"])
+                + ["", "Next: bring the files into the optimiser's band (art writes the "
+                   "factor that does it; a series in levels may need other units or a "
+                   "difference) and estimate again."])
     links = getattr(L, "links", None)
     ech = getattr(L, "echelon", None)
     head = (f"echelon form, Kronecker indices ({', '.join(map(str, ech))})" if ech
@@ -681,14 +707,26 @@ def estimation_text(L, nlags):
            + (f"\n  {fold_text(fold)}" if fold else ""),
            f"  {'parameter':<34}{'estimate':>12}{'s.e.':>12}{'t':>9}"]
     cov = []
+    from . import scale as _sc
+    import re as _re
+    _u = _sc.units_of_series(L.series)
+    _mix = _sc.mixed(_u)
     for n, v, se in zip(r.names, r.x, r.std_errors):
         if _is_covariance(n):
             cov.append((n, v))
             continue
+        _m = _re.search(r"\[(.+)<-(.+)\]", n) if _mix else None
+        if _m and _m.group(1) in _u and _m.group(2) in _u:     # BUG-0012
+            _k = _sc.cross(_u, _m.group(1), _m.group(2))
+            v, se = v * _k, se * abs(_k)
         t = v / se if se > 0 else float("nan")
         mark = ("  <- fold" if n in folded
                 else "  *" if se > 0 and abs(t) > 1.96 else "")
         out.append(f"  {n:<34}{v:>12.6f}{se:>12.6f}{t:>9.2f}{mark}")
+    if _mix:
+        out.append("  (the files do not share a rescaling factor: the cross terms are "
+                   "given in each series' units, the means and covariances in the "
+                   "engine's)")
     if cov:
         # drvarma BUG-0008: the covariance of the innovations is concentrated
         # out of the likelihood and parametrised free of scale (log ratios and

@@ -1,11 +1,11 @@
 ---
 id: BUG-0012
 title: Con ficheros de factores de reescala distintos, todo lo que cruza series va en unidades del motor — una β = −1 cierta se rechaza con p = 0.0000 y nada avisa
-status: open
+status: fixed
 severity: high
 component: vec
 found_in: 0.2.2
-fixed_in:
+fixed_in: 0.2.3 (unreleased)
 reported: 2026-11-15
 reporter: David / Claude — auditoría de la escala en la escalera completa
 tags:
@@ -62,16 +62,22 @@ series se toma de los motores en sus unidades.
 
 ## Fix
 
-La regla de la GUI (`gui/sim`), con la función común de fue:
+`sima.scale`, con la regla de `fue.scale` (`display_cross`):
 
-- al cargar, se dice si los ficheros no comparten factor (y si alguno queda
-  fuera de la banda de escala);
-- lo que se PRESENTA va en las unidades de cada serie: un cruzado A←B por
-  factor_B/factor_A, β y θ por el cociente con el bloque Y1, α por el inverso,
-  las medias por su factor;
-- lo que el analista IMPONE (`fixb2`, `fixb2row`, `alpha`) se entiende en esas
-  mismas unidades y se convierte antes de pasarlo a drvec.
+- **al cargar** (`load_pre`) se dice si los ficheros no comparten factor o λ, y
+  si alguno queda fuera de la banda de escala del optimizador;
+- **lo que sima escribe** va en las unidades de cada serie: los cruzados de la
+  tabla del VARMA (`AR1[Y<-X]`) y θ, los coeficientes de largo plazo;
+- **lo que el analista impone** (`fixb2`, `fixb2row`) se entiende en esas
+  unidades y se lleva a las del motor antes de pasarlo a drvec. Si las series
+  sobre las que se normalizan las relaciones no comparten factor, una fila no
+  puede llevar un solo valor y se dice.
+
+El `.out` de drvec sigue en las unidades del motor: es el del C. drvec avisa
+ahora, como el C, de que los ficheros no comparten factor (drvec 0.1.2). Una
+restricción `alpha` sigue en unidades del motor.
 
 ## Validation
 
-Pendiente.
+El repro sale 0: con Y a 100 y X a 1, H0: β = −1 da LR = 0.02, p = 0.885 (antes
+37.46 y 0.0000); con factor común, 0.03 y 0.869.

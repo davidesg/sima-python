@@ -1,11 +1,11 @@
 ---
 id: BUG-0013
 title: estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS
-status: open
+status: fixed
 severity: medium
 component: vec
 found_in: 0.2.2
-fixed_in:
+fixed_in: 0.2.3 (unreleased)
 reported: 2026-11-15
 reporter: David / Claude — auditoría de la escala en la escalera completa
 tags:
@@ -42,9 +42,10 @@ hessiano por diferencias en un ajuste cuyo fdhess no es ok.
 
 ## Fix
 
-La cabecera dice lo que lleva la tabla (fdhess, o BFGS porque fdhess no salió,
-con la causa probable: la escala).
+La cabecera dice lo que lleva la tabla: el hessiano por diferencias cuando
+`FitResult.fdhess.ok`, y si no, que son los de BFGS porque el otro no salió y
+que eso es lo que pasa con una escala fuera de la banda del optimizador.
 
 ## Validation
 
-Pendiente.
+El repro sale 0.
