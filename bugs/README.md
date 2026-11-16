@@ -4,13 +4,10 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**13 report(s), 3 open.**
+**13 report(s), 0 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
-| [BUG-0011](BUG-0011-un-varma-que-no-salio-del-arranque-se-presenta-como-estimacion.md) | open | high | estimate | Un VARMA cuya búsqueda no salió del arranque diagonal se presenta como estimación, y su LR = 0 como prueba de que no hay dinámica cruzada | — |
-| [BUG-0012](BUG-0012-con-factores-de-reescala-distintos-la-restriccion-va-en-unidades-del-motor.md) | open | high | vec | Con ficheros de factores de reescala distintos, todo lo que cruza series va en unidades del motor — una β = −1 cierta se rechaza con p = 0.0000 y nada avisa | — |
-| [BUG-0013](BUG-0013-la-cabecera-dice-hessiano-por-diferencias-cuando-van-los-de-bfgs.md) | open | medium | vec | estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS | — |
 | [BUG-0001](BUG-0001-load-pre-muestra-un-paseo-aleatorio-como-ar1.md) | fixed | low | server | load_pre muestra un paseo aleatorio (0,1,0) como «AR 1» en la tabla de los modelos | 0.1.0 |
 | [BUG-0002](BUG-0002-el-lr-dice-contra-los-univariantes-y-es-contra-el-modelo-sin-cruces.md) | fixed | low | evidence | El LR de estimate dice «against the diagonal system (the univariates)» y es contra el mismo modelo sin términos cruzados | 0.1.0 |
 | [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | fixed | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | 0.1.0 |
@@ -21,4 +18,7 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0008](BUG-0008-un-ma-propio-se-para-en-el-pliegue-y-estimate-lo-da-por-convergido.md) | fixed | medium | evidence | Un MA(1) propio se para en θ = −1, el pliegue del cast, y estimate lo da por convergido, con t significativas y «Next: evaluate» | 0.2.2 |
 | [BUG-0009](BUG-0009-platform-tier-dice-exact-en-todo-linux-x86-64-sin-mirar-la-libc.md) | fixed | low | jobs | platform_tier() dice «exact» en todo Linux x86_64 sin mirar la libc; la caché de un ejemplo se sirve en una libm que no la reproduce | 0.2.2 |
 | [BUG-0010](BUG-0010-test-never-a-partial-result-espera-un-tiempo-fijo-al-primer-progreso.md) | fixed | low | tests | test_never_a_partial_result espera 0.6 s fijos al primer progreso del job; en una máquina cargada falla | 0.2.2 |
+| [BUG-0011](BUG-0011-un-varma-que-no-salio-del-arranque-se-presenta-como-estimacion.md) | fixed | high | estimate | Un VARMA cuya búsqueda no salió del arranque diagonal se presenta como estimación, y su LR = 0 como prueba de que no hay dinámica cruzada | 0.2.3 |
+| [BUG-0012](BUG-0012-con-factores-de-reescala-distintos-la-restriccion-va-en-unidades-del-motor.md) | fixed | high | vec | Con ficheros de factores de reescala distintos, todo lo que cruza series va en unidades del motor — una β = −1 cierta se rechaza con p = 0.0000 y nada avisa | 0.2.3 |
+| [BUG-0013](BUG-0013-la-cabecera-dice-hessiano-por-diferencias-cuando-van-los-de-bfgs.md) | fixed | medium | vec | estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS | 0.2.3 |
 

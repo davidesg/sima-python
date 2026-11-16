@@ -953,6 +953,10 @@ def load_pre(name: str, paths_json: str) -> str:
     except Exception as e:                                # the engine says why
         return f"Cannot open the session: {e}"
     txt = evidence.series_table(s.series)
+    from . import scale as _sc
+    _notas = _sc.load_notes(s.series)
+    if _notas:
+        txt += "\n\n" + "\n".join("! " + n for n in _notas)
     s.guion.add("N0", "load_pre", {"files": len(paths)},
                 f"{len(paths)} series: {', '.join(_names(s))}")
     nd = sum(int(x.model.d or 0) == 1 for x in s.series)

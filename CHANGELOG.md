@@ -1,5 +1,28 @@
 # Changelog — sima-tseries
 
+## 0.2.3 — 2026-11-16
+
+**The scale of the files in a system** (fue >= 0.1.22, drvarma >= 0.3.3,
+drvec >= 0.1.2). From the scale study and the audit of the whole ladder
+(atsw-gui, `docs/ESTUDIO-escala.md`). No estimate changes.
+
+- **BUG-0011: a search that did not start is not reported as an estimate.**
+  With two series about 10 000 and lambda = −1 at `refactor = 100`, the
+  optimiser stopped at its first step and sima printed the cross terms at 0
+  and "LR = 0.000, p = 1.0000". It now says the search did not start, gives no
+  table and no LR, and names the scale of the files as the usual cause.
+- **BUG-0012: files that do not share a rescaling factor.** Everything between
+  two series was presented, and imposed, in the engine's units: with Y at 100
+  and X at 1, `test_restriction(fixb2="-1")` rejected a true beta = −1 with
+  p = 0.0000. `load_pre` now says when the files do not share a factor or a
+  lambda (and when a series is outside the optimiser's band); the cross terms
+  of the VARMA table and theta go in each series' units; and `fixb2` /
+  `fixb2row` are taken in those units. drvec's `.out` stays as the C's.
+- **BUG-0013: the header names the Hessian the table carries.** It said "the
+  finite-difference Hessian" when drvec's had not come out and the standard
+  errors were BFGS's.
+- `forecast`'s table follows drvarma 0.3.3: a percentage only with logs.
+
 ## 0.2.2 — 2026-11-14
 
 **An own MA(1) that stops on the fold is no longer reported as converged,

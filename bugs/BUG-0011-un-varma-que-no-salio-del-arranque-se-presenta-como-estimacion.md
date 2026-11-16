@@ -1,11 +1,11 @@
 ---
 id: BUG-0011
 title: Un VARMA cuya búsqueda no salió del arranque diagonal se presenta como estimación, y su LR = 0 como prueba de que no hay dinámica cruzada
-status: open
+status: fixed
 severity: high
 component: estimate
 found_in: 0.2.2
-fixed_in:
+fixed_in: 0.2.3
 reported: 2026-11-15
 reporter: David / Claude — auditoría de la escala en la escalera completa
 tags:
@@ -60,12 +60,13 @@ trata como tal.
 
 ## Fix
 
-Un ajuste que no mejora la verosimilitud del arranque diagonal en ninguna
-iteración se dice como lo que es —la búsqueda no arrancó—, sin tabla de
-coeficientes ni LR, con la causa probable (la escala de los ficheros: la
-comprobación de `load_pre`, BUG-0012) y qué hacer. La comprobación de escala
-al cargar evita llegar aquí.
+`evidence.estimation_text`: una búsqueda que acaba en su primera iteración con
+la verosimilitud del arranque diagonal (LR = 0) no se presenta como ajuste.
+sima dice «NOT ESTIMATED: the search did not start», sin tabla ni LR, que eso
+no es evidencia de que no haya dinámica cruzada, y las notas de escala de los
+ficheros (`sima.scale.load_notes`, la regla de `fue.scale`), que es la causa
+habitual. `load_pre` da esas mismas notas al cargar, antes de llegar aquí.
 
 ## Validation
 
-Pendiente.
+El repro sale 0. `tests/test_bug_0011_0012_0013_escala.py`.
