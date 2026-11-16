@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "sima-tseries"
-version         = "0.2.3"
+version         = "0.2.4"
 description     = "sima — the MCP assistant for simultaneous VARMA and cointegrated VARMA-VEC models on the ATSW ladder (engines: drvarma, drvec)"
 readme          = "README.md"
 license         = { text = "GPL-2.0-or-later" }

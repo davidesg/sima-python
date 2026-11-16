@@ -456,6 +456,11 @@ def restriction_kw(restr, order, r, units=None):
                     filas.setdefault(nm, restr["fixb2"])
                 restr["fixb2"] = None
             restr["fixb2row"] = _sc.to_engine_b2(units, order, r, filas)
+    if units is not None and restr.get("alpha") is not None:
+        from . import scale as _sc
+        if _sc.mixed(units) and not isinstance(restr["alpha"], (str, bytes)):
+            restr = dict(restr)
+            restr["alpha"] = _sc.to_engine_alpha(units, order, restr["alpha"])
     if restr.get("weakex"):
         kw["weakex"] = order.index(restr["weakex"]) + 1
     if restr.get("alpha") is not None:
@@ -567,12 +572,23 @@ def alpha_reading(vf):
            "on the variable the relation is normalised on; on the others the correction "
            "has the sign of -beta):"]
     se = {p.label: p.se for p in f.params if p.kind == "alpha"}
+    k = np.ones_like(A)
+    _u = vf.units()
+    if _u:                       # BUG-0014: in each series' units, as theta
+        from . import scale as _sc
+        if _sc.mixed(_u):
+            y1 = vf.order[len(vf.order) - vf.r:]
+            for c in range(vf.r):
+                for i, nm in enumerate(vf.order):
+                    k[i, c] = _sc.cross(_u, nm, y1[c])
+            out.insert(1, "  (in each series' units: the files do not share a rescaling "
+                          "factor, and drvec's alpha is in the engine's; the t do not change)")
     for c in range(vf.r):
         for i, nm in enumerate(vf.order):
             lab = f"D.{nm} <- ec{c + 1}"
             s = se.get(lab, float("nan"))
             t = A[i, c] / s if s and np.isfinite(s) and s > 0 else float("nan")
-            out.append(f"  {lab:<28} {A[i, c]:+.4f}  (t {t:+.2f})"
+            out.append(f"  {lab:<28} {k[i, c] * A[i, c]:+.4f}  (t {t:+.2f})"
                        + ("  adjusts" if np.isfinite(t) and abs(t) >= 2 else ""))
     out.append("  A |t| < 2 is a candidate for weak exogeneity: test it by LR "
                "(test_restriction), never by this t or the .out's Wald.")

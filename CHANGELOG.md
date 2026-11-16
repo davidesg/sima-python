@@ -1,5 +1,18 @@
 # Changelog — sima-tseries
 
+## 0.2.4 — 2026-11-16
+
+**BUG-0014: alpha in each series' units, its restriction too.** BUG-0012 took
+beta's restrictions and theta to each series' units when the files do not
+share a rescaling factor; alpha stayed in the engine's. With Y at
+`refactor = 100` and X at 1, `estimate_vec` printed alpha_Y = 30.73 (it is
+0.307), and `test_restriction(alpha=...)` imposed `alpha = A psi` in the
+engine's units: a restriction that holds exactly with a common factor
+(LR = 0) was rejected with p = 0.0072. `alpha_reading` now prints alpha in
+each series' units (the t do not change), and the `alpha` matrix is taken in
+them (row i of A divided by its display factor). Weak exogeneity, a zero row,
+is the same in both. With a common factor nothing changes.
+
 ## 0.2.3 — 2026-11-16
 
 **The scale of the files in a system** (fue >= 0.1.22, drvarma >= 0.3.3,
