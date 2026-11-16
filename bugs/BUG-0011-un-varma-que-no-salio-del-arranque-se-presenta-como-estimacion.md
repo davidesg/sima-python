@@ -5,7 +5,7 @@ status: fixed
 severity: high
 component: estimate
 found_in: 0.2.2
-fixed_in: 0.2.3 (unreleased)
+fixed_in: 0.2.3
 reported: 2026-11-15
 reporter: David / Claude — auditoría de la escala en la escalera completa
 tags:

@@ -1,6 +1,6 @@
 # Changelog — sima-tseries
 
-## 0.2.3 — unreleased
+## 0.2.3 — 2026-11-16
 
 **The scale of the files in a system** (fue >= 0.1.22, drvarma >= 0.3.3,
 drvec >= 0.1.2). From the scale study and the audit of the whole ladder
