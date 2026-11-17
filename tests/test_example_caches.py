@@ -32,6 +32,24 @@ def _fn(f):
     return getattr(f, "fn", f)
 
 
+@pytest.fixture(autouse=True)
+def _stop_my_jobs(monkeypatch):
+    """Each test runs its jobs under its own SIMA_JOBS_HOME (set in the test,
+    through this monkeypatch, which is torn down after this fixture). Whatever
+    is still running when the test ends -- passed or failed -- is cancelled:
+    sima's jobs are detached, and a failed test used to leave its bootstrap
+    running for hours (BUG-0017)."""
+    yield
+    if not os.environ.get("SIMA_JOBS_HOME"):
+        return
+    for st in jobs.all_jobs():
+        if st["status"] not in jobs.FINAL:
+            try:
+                jobs.cancel(st["id"])
+            except jobs.JobError:
+                pass
+
+
 def _manifest(name):
     return json.load(open(os.path.join(EX, name, "example.json")))
 

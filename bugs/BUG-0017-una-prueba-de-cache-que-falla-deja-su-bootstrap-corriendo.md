@@ -1,11 +1,11 @@
 ---
 id: BUG-0017
 title: Una prueba de las cachés que falla deja su bootstrap corriendo, desligado, sin nada que lo pare
-status: open
+status: fixed
 severity: low
 component: tests
 found_in: 0.2.4
-fixed_in:
+fixed_in: 0.2.5
 reported: 2026-11-17
 reporter: David / Claude — suite de sima contra drvarma 0.3.4
 tags:
@@ -38,7 +38,8 @@ durante horas sin que se vea.
 con un plugin que fuerza el fallo de caché, y busca los procesos que quedan en
 su carpeta temporal (y los para). Sale 1 mientras quede alguno.
 
-## Arreglo propuesto
+## Arreglo
 
-Un fixture que cancele (`jobs.cancel`) los trabajos que la prueba lanzó, al
-acabar, pase o falle.
+Un fixture `autouse` en `tests/test_example_caches.py` cancela, al acabar cada
+prueba (pase o falle), los trabajos que sigan vivos en su `SIMA_JOBS_HOME`. El
+repro sale 0.

@@ -53,7 +53,14 @@ KEEP = (".out", ".boot", ".irfboot", "result.json", "job.json")
 
 
 def sanitize(folder):
-    """Keep what a cache needs; drop absolute paths and times from job.json."""
+    """Keep what a cache needs; drop absolute paths and times from job.json.
+
+    Only a job that has ended done: cleaning a running one takes its working
+    files from under it and it fails (BUG-0016)."""
+    with open(os.path.join(folder, "job.json"), encoding="utf-8") as fh:
+        st = json.load(fh).get("status")
+    if st != "done":
+        raise RuntimeError(f"{folder}: its job is {st!r}, not done -- not a cache yet")
     for f in os.listdir(folder):
         p = os.path.join(folder, f)
         if os.path.isdir(p):
@@ -111,6 +118,15 @@ def build(name, spec, wait=6 * 3600):
             print(fn(M.irf_bands)(sess, wait=wait, **spec["irf"])[:400])
             from sima import jobs
             folders.append(jobs.status(s.irf_jobs[s.vec_current])["folder"])
+    # rank_test(wait=...) can come back before its job ends (it did on
+    # 2026-11-16, BUG-0016): wait for every job here, and require it done.
+    from sima import jobs
+    for f in folders:
+        jid = os.path.basename(f)
+        st = jobs.wait(jid, wait)
+        if st["status"] != "done":
+            raise RuntimeError(f"{name}: job {jid} ended {st['status']} "
+                               f"({st.get('error', '')}) -- not a cache")
     for f in folders:
         sanitize(f)
         print("cache:", os.path.relpath(f, ROOT),

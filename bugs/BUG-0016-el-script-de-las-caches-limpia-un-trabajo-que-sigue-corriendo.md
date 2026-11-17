@@ -1,11 +1,11 @@
 ---
 id: BUG-0016
 title: tools/build_example_caches.py limpia la carpeta de un trabajo sin comprobar que ha terminado — el trabajo pierde sus ficheros y falla
-status: open
+status: fixed
 severity: low
 component: tools
 found_in: 0.2.4
-fixed_in:
+fixed_in: 0.2.5
 reported: 2026-11-17
 reporter: David / Claude — reconstrucción de las cachés para drvarma 0.3.4
 tags:
@@ -44,7 +44,8 @@ trabajo fallido se puede confundir con un resultado distinto.
 Lütkepohl, lanzado con `wait=0` (vuelve mientras corre), y luego `sanitize()`
 sobre su carpeta. Sale 1 mientras el trabajo acabe fallido.
 
-## Arreglo propuesto
+## Arreglo
 
-Antes de `sanitize`, esperar a que cada trabajo esté en un estado final y
-exigir `done`; `sanitize` se niega con un trabajo vivo.
+`build()` espera a que cada trabajo termine (`jobs.wait`) y exige `done`
+antes de limpiar; `sanitize` se niega con un trabajo que no ha acabado `done`.
+El repro sale 0.

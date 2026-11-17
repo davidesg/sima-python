@@ -45,13 +45,25 @@ drvarma 0.3.3 y 0.3.4. Sale 1 mientras difieran.
 
 ## Causa
 
-La clave guarda las versiones por prudencia: cualquier cambio en la suite
-invalida el resultado. Pero el resultado del bootstrap sólo depende de los
-datos, los argumentos, el motor (drvec y su C), la semilla y la plataforma, que
-la clave ya lleva aparte.
+La clave guarda las versiones para que cualquier cambio que pueda mover el
+resultado lo invalide. Con el motor C, las réplicas del bootstrap son del C,
+que lee los `.pre` él mismo. Pero los ajustes observados y el estadístico LR
+los calcula el porte de drvec en Python **también con el motor C** («the
+port's observed fits are done, they ran while the C did», `drvec.rank_test`).
+Y ese porte usa el optimizador y la verosimilitud de drvarma (`_qnewt`,
+`elf_c`) y lee los `.pre` con fue (`cast_us`, `forecast`). Una versión de
+drvarma o de fue puede, por tanto, mover el LR observado sin tocar un byte del
+C.
 
 ## Arreglo (por decidir)
 
-Que la clave lleve lo que cambia el resultado: drvec y su C, la plataforma, los
-datos y los argumentos; no la versión de drvarma ni la de fue. Decisión de
-diseño de sima, pendiente de David.
+Quitar drvarma y fue de la clave cuando el motor es C (la primera propuesta,
+17-nov) **no es seguro**, por lo de arriba: se descarta. Opciones:
+
+- **Dejar la clave como está** y asumir el coste: una publicación de fue o de
+  drvarma va seguida de una de sima con las cachés rehechas (ya es el paso 4
+  de `docs/PUBLISHING.md`). Con BUG-0016 arreglado, rehacerlas ya no falla a
+  medias.
+- **Una huella del código que el bootstrap usa**, en vez de la versión del
+  paquete: los módulos de drvarma y fue que el porte de drvec llama. Más fino,
+  pero más frágil (qué módulos, qué pasa con la extensión compilada).

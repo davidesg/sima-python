@@ -23,6 +23,6 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0013](BUG-0013-la-cabecera-dice-hessiano-por-diferencias-cuando-van-los-de-bfgs.md) | fixed | medium | vec | estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS | 0.2.3 |
 | [BUG-0014](BUG-0014-alfa-y-su-restriccion-en-unidades-del-motor.md) | fixed | high | vec | Con factores de reescala distintos, α y su restricción (α = Aψ) iban en unidades del motor — una restricción cierta se rechaza con p = 0.0072 | 0.2.4 |
 | [BUG-0015](BUG-0015-la-clave-de-los-trabajos-lleva-la-version-de-drvarma.md) | open | medium | jobs | La clave de un trabajo lleva la versión de drvarma (y de fue) — cada publicación de drvarma invalida las cachés de los ejemplos | |
-| [BUG-0016](BUG-0016-el-script-de-las-caches-limpia-un-trabajo-que-sigue-corriendo.md) | open | low | tools | tools/build_example_caches.py limpia la carpeta de un trabajo sin comprobar que ha terminado | |
-| [BUG-0017](BUG-0017-una-prueba-de-cache-que-falla-deja-su-bootstrap-corriendo.md) | open | low | tests | Una prueba de las cachés que falla deja su bootstrap corriendo, desligado | |
+| [BUG-0016](BUG-0016-el-script-de-las-caches-limpia-un-trabajo-que-sigue-corriendo.md) | fixed | low | tools | tools/build_example_caches.py limpia la carpeta de un trabajo sin comprobar que ha terminado | 0.2.5 |
+| [BUG-0017](BUG-0017-una-prueba-de-cache-que-falla-deja-su-bootstrap-corriendo.md) | fixed | low | tests | Una prueba de las cachés que falla deja su bootstrap corriendo, desligado | 0.2.5 |
 
