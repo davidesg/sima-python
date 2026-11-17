@@ -1,11 +1,11 @@
 ---
 id: BUG-0015
 title: La clave de un trabajo lleva la versión de drvarma (y de fue) — cada publicación de drvarma invalida las cachés de los ejemplos
-status: open
+status: wontfix
 severity: medium
 component: jobs
 found_in: 0.2.3
-fixed_in:
+fixed_in: by design (0.2.5)
 reported: 2026-11-17
 reporter: David / Claude — publicación de drvarma 0.3.4 y sima 0.2.4
 tags:
@@ -55,15 +55,15 @@ Y ese porte usa el optimizador y la verosimilitud de drvarma (`_qnewt`,
 drvarma o de fue puede, por tanto, mover el LR observado sin tocar un byte del
 C.
 
-## Arreglo (por decidir)
+## Decisión: es así por diseño (17-nov-2026)
 
-Quitar drvarma y fue de la clave cuando el motor es C (la primera propuesta,
-17-nov) **no es seguro**, por lo de arriba: se descarta. Opciones:
+Quitar drvarma y fue de la clave cuando el motor es C (la primera propuesta)
+no es seguro, por lo de arriba. Una huella del código que el bootstrap usa
+sería más fina, pero frágil (qué módulos cuentan, y la extensión compilada).
+Se queda la clave como está, y el coste se asume en el protocolo:
+`docs/PUBLISHING.md`, paso 4. Una publicación de fue o de drvarma va seguida
+de una de sima con las cachés rehechas. Con BUG-0016 arreglado, rehacerlas ya
+no falla a medias.
 
-- **Dejar la clave como está** y asumir el coste: una publicación de fue o de
-  drvarma va seguida de una de sima con las cachés rehechas (ya es el paso 4
-  de `docs/PUBLISHING.md`). Con BUG-0016 arreglado, rehacerlas ya no falla a
-  medias.
-- **Una huella del código que el bootstrap usa**, en vez de la versión del
-  paquete: los módulos de drvarma y fue que el porte de drvec llama. Más fino,
-  pero más frágil (qué módulos, qué pasa con la extensión compilada).
+El repro queda de guarda, con el sentido invertido: sale 0 mientras la versión
+de drvarma cambie la clave, y 1 si alguien la quita.

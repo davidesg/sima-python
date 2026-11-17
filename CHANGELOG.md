@@ -11,9 +11,11 @@ user sees changes.
 - **BUG-0017:** the cache tests cancel, when they end, the jobs still running
   under their `SIMA_JOBS_HOME`: a failed test used to leave its bootstrap
   running, detached, for hours.
-- BUG-0015 (a fue or drvarma release invalidates the caches) is open: the key
-  is right as it is (drvec's port, which computes the observed LR even with the
-  C engine, runs on drvarma's optimizer and reads the files with fue).
+- BUG-0015 (a fue or drvarma release invalidates the caches) is by design:
+  drvec's port computes the observed LR even with the C engine, on drvarma's
+  optimizer and fue's reader, so their versions stay in the key.
+  `docs/PUBLISHING.md` step 4 now says a fue, drvarma or drvec release asks
+  for the caches rebuilt and a sima release.
 
 ## 0.2.4 — 2026-11-17
 
