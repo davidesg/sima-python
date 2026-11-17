@@ -1,18 +1,16 @@
 {
  "args": {
-  "N": 499,
+  "B": 499,
   "case": "pre",
   "multistart": 0,
-  "nodrift": [],
-  "order": [
+  "names": [
    "BUFFALO",
    "MINNEAPOLIS",
    "KANSASCITY"
   ],
+  "nodrift": [],
   "p": 2,
-  "q": 0,
-  "r": 1,
-  "restriction": {}
+  "q": 0
  },
  "engine": [
   "c",
@@ -25,24 +23,22 @@
   "MINNEAPOLIS_m01.pre",
   "KANSASCITY_m01.pre"
  ],
- "id": "1ab6d0f341550117",
- "key": "1ab6d0f341550117b6cd7b0fdff755d86cceb3d341141093e6249b40d777fd68",
- "label": "IRF bands N=499 r=1",
+ "id": "7e4970eb23c8817b",
+ "key": "7e4970eb23c8817bdd95027cf580201e1d64670a945ccbb0d56302839b505669",
+ "label": "rank test B=499 p=2 case pre",
  "payload": {
   "args": {
-   "N": 499,
+   "B": 499,
    "case": "pre",
    "multistart": 0,
-   "nodrift": [],
-   "order": [
+   "names": [
     "BUFFALO",
     "MINNEAPOLIS",
     "KANSASCITY"
    ],
+   "nodrift": [],
    "p": 2,
-   "q": 0,
-   "r": 1,
-   "restriction": {}
+   "q": 0
   },
   "backend": "c",
   "engine": "c 0.13",
@@ -54,9 +50,9 @@
   ],
   "seed": null,
   "tier": "exact",
-  "tool": "irf_bands",
+  "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.3",
+   "drvarma": "0.3.4",
    "drvec": "0.1.2",
    "fue": "0.1.22"
   }
@@ -65,6 +61,6 @@
  "shipped": "a worked example's cache (tools/build_example_caches.py)",
  "slots": 1,
  "status": "done",
- "tool": "irf_bands",
+ "tool": "rank_test",
  "workers": 1
 }

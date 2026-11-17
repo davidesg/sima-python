@@ -1,6 +1,6 @@
 # Changelog — sima-tseries
 
-## 0.2.4 — 2026-11-16
+## 0.2.4 — 2026-11-17
 
 **BUG-0014: alpha in each series' units, its restriction too.** BUG-0012 took
 beta's restrictions and theta to each series' units when the files do not
@@ -12,6 +12,13 @@ engine's units: a restriction that holds exactly with a common factor
 each series' units (the t do not change), and the `alpha` matrix is taken in
 them (row i of A divided by its display factor). Weak exogeneity, a zero row,
 is the same in both. With a common factor nothing changes.
+
+**The examples' job caches, for drvarma 0.3.4.** Their key holds the versions
+of fue, drvarma and drvec, so with drvarma 0.3.4 the tutorials ran their
+bootstraps instead of serving them. Rebuilt with
+`tools/build_example_caches.py` against fue 0.1.22, drvarma 0.3.4 and drvec
+0.1.2 (`docs/PUBLISHING.md`, step 4): the seven results are the same; the key
+changes.
 
 ## 0.2.3 — 2026-11-16
 
