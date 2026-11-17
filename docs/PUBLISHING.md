@@ -25,11 +25,17 @@ only runs on a `sima-v*` tag.
    Then `python3 tools/sync_material.py` (the CI runs it too): the packaged
    copy of `bugs/` and `docs/` that the MCP resources serve.
 3. The CHANGELOG entry has its date.
-4. The worked examples' job caches match the drvec C that drvec-python
-   bundles: their key holds the engine and the tier, so a new C (or a new
-   csrc/) asks for `python3 tools/build_example_caches.py` (move the old
-   `sima_jobs/` aside first, or the run finds them by their key), and
+4. The worked examples' job caches match what is on PyPI: their key holds the
+   engine, the tier and the versions of drvec, drvarma and fue, so a new C (or
+   a new csrc/) **or a new release of fue, drvarma or drvec** asks for
+   `python3 tools/build_example_caches.py` (move the old `sima_jobs/` aside
+   first, or the run finds them by their key), against those versions, and
    `SIMA_SLOW=1 python -m pytest tests/test_example_caches.py` on Linux x86_64.
+   So a fue or drvarma release is followed by a sima release with the caches
+   rebuilt: until then the tutorials run their bootstraps instead of serving
+   them (same result, minutes instead of at once). That is by design
+   (BUG-0015): drvec's port computes the observed fits and the LR with
+   drvarma's optimizer and fue's reader, even when the bootstrap runs in C.
 5. PyPI: a trusted publisher for the repository `davidesg/sima-python`,
    workflow `publish-sima.yml`, environment `pypi` (registered: 0.1.1 went out
    by it).

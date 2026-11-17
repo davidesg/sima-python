@@ -1,5 +1,22 @@
 # Changelog — sima-tseries
 
+## 0.2.5 — unreleased
+
+The examples' job caches, as the tools and the suite handle them; nothing a
+user sees changes.
+
+- **BUG-0016:** `tools/build_example_caches.py` waits for every job to end
+  and requires it done before cleaning its folder; `sanitize` refuses a job
+  that has not ended done. It had cleaned a running job, which then failed.
+- **BUG-0017:** the cache tests cancel, when they end, the jobs still running
+  under their `SIMA_JOBS_HOME`: a failed test used to leave its bootstrap
+  running, detached, for hours.
+- BUG-0015 (a fue or drvarma release invalidates the caches) is by design:
+  drvec's port computes the observed LR even with the C engine, on drvarma's
+  optimizer and fue's reader, so their versions stay in the key.
+  `docs/PUBLISHING.md` step 4 now says a fue, drvarma or drvec release asks
+  for the caches rebuilt and a sima release.
+
 ## 0.2.4 — 2026-11-17
 
 **BUG-0014: alpha in each series' units, its restriction too.** BUG-0012 took
