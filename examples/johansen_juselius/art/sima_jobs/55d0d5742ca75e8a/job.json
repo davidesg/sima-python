@@ -1,15 +1,16 @@
 {
  "args": {
   "B": 499,
-  "case": "pre",
+  "case": "2",
   "multistart": 0,
   "names": [
-   "R0T",
-   "R10",
-   "R3"
+   "LRM",
+   "LRY",
+   "IBO",
+   "IDE"
   ],
   "nodrift": [],
-  "p": 4,
+  "p": 2,
   "q": 0
  },
  "engine": [
@@ -19,40 +20,43 @@
  ],
  "extra_files": [],
  "files": [
-  "R0T_ar3.pre",
-  "R10_ar3.pre",
-  "R3_ar3.pre"
+  "LRM_u.pre",
+  "LRY_u.pre",
+  "IBO_u.pre",
+  "IDE_u.pre"
  ],
- "id": "01c57730a6423a05",
- "key": "01c57730a6423a05227faa32d0b7828977049a9495e198a8a409a4657dfab6d8",
- "label": "rank test B=499 p=4 case pre",
+ "id": "55d0d5742ca75e8a",
+ "key": "55d0d5742ca75e8af426f69c7616b0de0e4e5c2363c127d8e2b4baf35225dc01",
+ "label": "rank test B=499 p=2 case 2",
  "payload": {
   "args": {
    "B": 499,
-   "case": "pre",
+   "case": "2",
    "multistart": 0,
    "names": [
-    "R0T",
-    "R10",
-    "R3"
+    "LRM",
+    "LRY",
+    "IBO",
+    "IDE"
    ],
    "nodrift": [],
-   "p": 4,
+   "p": 2,
    "q": 0
   },
   "backend": "c",
   "engine": "c 0.13",
   "extra_files": [],
   "files": [
-   "194abc4a6185ffd18f1e91ca422495ba4cace6694f977fcd2ac116ee988c730e",
-   "dc36fc9c81458cb1bf0bdf55e8fd4540d0dbdce9846eabcc59aba00484128142",
-   "503f85040ed630e9dea7ea5ef9c2829626740ddee0f039a2b66e599cbee6881f"
+   "50dea821486801c0224b1d146b9e84be9b538a0e257634acb51556d51f855276",
+   "9b3b616032fba8234577ebd1df0dc1b39cc35fe319c4b13276f7a373fd85bb6d",
+   "4f7684050934df49480b0776a3ee4bbf2aef8d75bbd21572fa0cbbc7359aa59a",
+   "f990dddaffe1d87c425c5fc80ef1b3c0b7faefa173c13e30a97fa6143c4787f0"
   ],
   "seed": null,
   "tier": "exact",
   "tool": "rank_test",
   "versions": {
-   "drvarma": "0.3.3",
+   "drvarma": "0.3.4",
    "drvec": "0.1.2",
    "fue": "0.1.22"
   }

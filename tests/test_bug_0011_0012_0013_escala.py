@@ -1,4 +1,4 @@
-"""BUG-0011, 0012 and 0013: the scale of the files in a system. Each repro is
+"""BUG-0011, 0012, 0013 and 0014: the scale of the files in a system. Each repro is
 a self-contained case on synthetic series and returns 0 when the defect is
 gone."""
 import importlib.util
@@ -12,7 +12,7 @@ import pytest
 BUGS = pathlib.Path(__file__).resolve().parents[1] / "bugs"
 
 
-@pytest.mark.parametrize("n", ["0011", "0012", "0013"])
+@pytest.mark.parametrize("n", ["0011", "0012", "0013", "0014"])
 def test_the_repro_exits_zero(n):
     d = BUGS / f"BUG-{n}-repro"
     sys.path.insert(0, str(d))
@@ -56,3 +56,18 @@ def test_the_restriction_is_taken_in_the_series_units():
     assert restriction_kw({"fixb2": -1.0}, ["Y", "X"], 1, same) == {"fixb2": -1.0}
     assert scale.cross(u, "Y", "X") == pytest.approx(0.01)
     assert scale.what(u, "Y", "X") == "an elasticity"
+
+
+def test_the_alpha_restriction_is_taken_in_the_series_units():
+    """BUG-0014: alpha = A psi in each series' units -> the engine's A, row i
+    divided by its display factor; a zero row (weak exogeneity) is the same."""
+    from sima.vec import restriction_kw
+    u = {"Y": (0.0, 100.0), "X": (0.0, 1.0)}
+    kw = restriction_kw({"alpha": [[1.0], [-1.0]]}, ["Y", "X"], 1, u)
+    a = np.asarray(kw["alpha"], float)
+    assert a[0, 0] / a[1, 0] == pytest.approx(-100.0)      # Y's row x f_Y/f_X
+    kw0 = restriction_kw({"alpha": [[0.0], [1.0]]}, ["Y", "X"], 1, u)
+    assert kw0["alpha"][0] == [0.0]
+    same = {"Y": (0.0, 100.0), "X": (0.0, 100.0)}
+    assert restriction_kw({"alpha": [[1.0], [-1.0]]}, ["Y", "X"], 1, same)["alpha"] \
+        == [[1.0], [-1.0]]

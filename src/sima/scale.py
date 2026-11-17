@@ -115,3 +115,19 @@ def to_engine_b2(units, order, r, value_by_row):
                 "each relation. Bring the files to a common factor.")
         out[nm] = float(v) / ks.pop()
     return out
+
+
+def to_engine_alpha(units, order, A):
+    """alpha = A psi, A given in each series' units -> the engine's A.
+
+    alpha's row i is the equation of series i: in the units it is presented in
+    it is K_i times the engine's (K_i = display_scale(lambda_i, refactor_i).k,
+    up to one factor common to the column, which psi absorbs). So alpha lies in
+    the span of A in those units iff the engine's alpha lies in the span of
+    K^-1 A: row i of A divided by K_i (here by cross(i, last), the same up to
+    that common factor). A zero row -- weak exogeneity -- is the same in both
+    (BUG-0014).
+    """
+    ref = order[-1]
+    return [[float(v) / cross(units, nm, ref) for v in row]
+            for nm, row in zip(order, A)]

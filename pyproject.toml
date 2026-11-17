@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "sima-tseries"
-version         = "0.2.3"
+version         = "0.2.4"
 description     = "sima — the MCP assistant for simultaneous VARMA and cointegrated VARMA-VEC models on the ATSW ladder (engines: drvarma, drvec)"
 readme          = "README.md"
 license         = { text = "GPL-2.0-or-later" }
@@ -34,8 +34,9 @@ dependencies = [
     # forecast by drvarma's forecaster: one forecaster, PLAN-vec decision 5)
     # >=0.3.1: the examples' job caches are keyed on it (jobs.make_key), and
     # 0.3.1 has the wheels for Python 3.14; 0.3.2 the macOS 11 wheels, on
-    # which the caches of 0.2.2 are built
-    "drvarma>=0.3.3",
+    # which the caches of 0.2.2 are built; 0.3.4 the one the caches of 0.2.4
+    # are built on (with an older drvarma the tutorials run their bootstraps)
+    "drvarma>=0.3.4",
     # the cointegrated systems (VARMA-VEC by exact ML, the port of drvec C
     # 0.13): a hard dependency (PLAN-vec Q11); its wheels carry drvec C for
     # the long bootstraps (>=0.1.1: the caches are keyed on it too)

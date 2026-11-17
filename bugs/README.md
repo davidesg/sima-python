@@ -21,4 +21,5 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0011](BUG-0011-un-varma-que-no-salio-del-arranque-se-presenta-como-estimacion.md) | fixed | high | estimate | Un VARMA cuya búsqueda no salió del arranque diagonal se presenta como estimación, y su LR = 0 como prueba de que no hay dinámica cruzada | 0.2.3 |
 | [BUG-0012](BUG-0012-con-factores-de-reescala-distintos-la-restriccion-va-en-unidades-del-motor.md) | fixed | high | vec | Con ficheros de factores de reescala distintos, todo lo que cruza series va en unidades del motor — una β = −1 cierta se rechaza con p = 0.0000 y nada avisa | 0.2.3 |
 | [BUG-0013](BUG-0013-la-cabecera-dice-hessiano-por-diferencias-cuando-van-los-de-bfgs.md) | fixed | medium | vec | estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS | 0.2.3 |
+| [BUG-0014](BUG-0014-alfa-y-su-restriccion-en-unidades-del-motor.md) | fixed | high | vec | Con factores de reescala distintos, α y su restricción (α = Aψ) iban en unidades del motor — una restricción cierta se rechaza con p = 0.0072 | 0.2.4 |
 
