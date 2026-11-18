@@ -2,6 +2,22 @@
 
 ## 0.2.5 — unreleased
 
+**P2: the lane lives in the session.** "guided" or "autonomous" is declared
+once, with `lane=` in `load_pre`, `load_data` or `load_example`; a later load of
+the same session keeps it, and N0 (N0r) records it in the guion. One filter on
+every tool's answer (`sima.lane`, applied where the tools are registered)
+reads it, so the tools that build the envelopes need not:
+- guided: the answer as it is, ending in the pause;
+- guided and not declared: the same, with one line above the pause saying
+  so (a silent default cannot be discussed);
+- autonomous: no pause. In its place the `record_decision` call for that
+  node, filled with the node and the evidence of the step just recorded and
+  `decided_by="LLM"`; the decision and the reason are left to write (it
+  informs, it does not decide: art's BUG-0180). A decision's figures go by
+  their path, not inside the answer.
+In art the lane is per call, which is what let the pause into the autonomous
+lane (art's BUG-0181).
+
 **The CCFs are drawn by pyfug** (`pyfug.graphics.ccf`, pyfug >= 2.1.0), the
 suite's one CCF drawing. sima borrowed it from drvarma through a private
 function (`drvarma.plots._draw_ccf_panel`); the panel is identical (checked

@@ -74,6 +74,14 @@ FIRST QUESTION
       hand you the path and the model."
 Both lanes walk the SAME nodes. Only who sits in the analyst's chair changes.
 
+Pass the answer ONCE, when loading: lane="guided" or lane="autonomous" in
+load_pre, load_data or load_example. It is the session's from then on; do not
+ask again. The answers follow it: in the guided lane each decision ends with
+the pause (⏸ Your decision) and you stop there; in the autonomous lane the
+pause is replaced by the record_decision call for that node, already filled
+with the node and its evidence -- write the decision and the reason, call it,
+and go on. Undeclared, the lane is guided, and every pause says so.
+
 If the user is new to sima, or asks to see how it works, offer a WORKED
 EXAMPLE first: `examples()` lists them, `load_example(<name>)` loads one (the
 univariate models of a real analysis), and its tutorial, sima://example/<name>,
@@ -331,6 +339,22 @@ RULES THAT ARE NOT NEGOTIATED
 
 mcp = FastMCP("sima — simultaneous VARMA and VEC on the ATSW ladder (drvarma, drvec)",
               instructions=_INSTRUCTIONS)
+
+# Every tool's answer goes through the lane of its session (sima.lane): the
+# guided pause, or in the autonomous lane the record_decision call in its
+# place. One filter here, so that the tools that build the envelopes need not
+# know who is in the analyst's chair.
+from . import lane as _lane                                   # noqa: E402
+
+_mcp_tool = mcp.tool
+
+
+def _tool(*a, **k):
+    deco = _mcp_tool(*a, **k)
+    return lambda fn: deco(_lane.wrap(fn, _sess))
+
+
+mcp.tool = _tool
 
 
 # --------------------------------------------------------------------------- #
@@ -676,7 +700,8 @@ def examples() -> str:
 
 
 @mcp.tool()
-def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "") -> str:
+def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
+                 lane: str = "") -> str:
     """N0 for a worked example: copy its files to a working folder (`dest`,
     default ~/sima-examples/<name>; files already there are kept) and load
     them. An example from univariate models loads them as load_pre does, and
@@ -689,6 +714,10 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
     it says what to look at and what the original analysis found, which you
     add after each report ("In the paper: ..."). The tools do not change in a
     tutorial; the explanation of the method is the manual it names.
+
+    `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
+    session (the first question). Undeclared, guided, and every decision says
+    so; a later load of the same session keeps the lane it has.
     """
     import json as _json
     import shutil
@@ -718,6 +747,10 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "")
             shutil.copytree(o, d, dirs_exist_ok=True)
         cached += os.path.isdir(o)
     session = session or name
+    try:
+        _sess.declare_lane(session, lane)
+    except ValueError as e:
+        return str(e)
     if raw:
         loaded = getattr(load_data, "fn", load_data)(
             session, os.path.join(dest, raw["data"]), int(raw.get("freq", 0)),
@@ -753,7 +786,8 @@ def _fn_load_pre(name, paths_json):
 
 
 @mcp.tool()
-def load_data(name: str, path: str, freq: int = 0, start: str = "") -> str:
+def load_data(name: str, path: str, freq: int = 0, start: str = "",
+              lane: str = "") -> str:
     """N0r — RAW DATA: an analyst with series and no univariate models
     (docs/STUDY-raw-entry.md). An Excel (.xlsx/.xls) or CSV table, one column
     per series in ORIGINAL levels (never transformed or differenced), a header
@@ -763,7 +797,16 @@ def load_data(name: str, path: str, freq: int = 0, start: str = "") -> str:
     `freq`: 1, 4 or 12 (0: inferred from the date column). `start`: the first
     date, "1972-08" or "1850" (empty: from the date column). The table must be
     complete on one common calendar: missing values are refused, with where.
-    Next: characterize — each series' transformation with art's engine."""
+    Next: characterize — each series' transformation with art's engine.
+
+    `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
+    session (the first question). Undeclared, guided, and every decision says
+    so; a later load of the same session keeps the lane it has.
+    """
+    try:
+        _lane_now = _sess.declare_lane(name, lane)
+    except ValueError as e:
+        return str(e)
     from . import raw
     try:
         names, data, dates = raw.read_table(path)
@@ -784,11 +827,13 @@ def load_data(name: str, path: str, freq: int = 0, start: str = "") -> str:
     except raw.RawError as e:
         return f"Cannot load: {e}"
     s = _sess.open_raw(name, os.path.abspath(os.path.expanduser(path)), names, data, f, st)
-    s.guion.add("N0r", "load_data", {"path": path, "freq": f, "start": list(st)},
+    s.guion.add("N0r", "load_data", {"path": path, "freq": f, "start": list(st),
+                                     "lane": _lane_now},
                 f"{len(names)} series, {data.shape[0]} observations")
     return (evidence.raw_table_text(names, data, f, st, nonpos, path)
             + "\n\nNo univariate models: this is the raw entry. Next: characterize — "
-            f'each series\' transformation, with art\'s engine (characterize("{name}")).')
+            f'each series\' transformation, with art\'s engine (characterize("{name}")).'
+            + "\n" + _lane_line(name))
 
 
 @mcp.tool()
@@ -930,7 +975,7 @@ def write_specs(name: str, out_dir: str = "", overwrite: bool = False) -> str:
 
 
 @mcp.tool()
-def load_pre(name: str, paths_json: str) -> str:
+def load_pre(name: str, paths_json: str, lane: str = "") -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
     `paths_json` is a JSON list of paths to fue files — `.pre` (optima, from art
@@ -941,7 +986,15 @@ def load_pre(name: str, paths_json: str) -> str:
     The files are read by fue's own parser and recognised by their content. The
     series must share their frequency and their LAST date (BUG-2): different
     start dates are aligned at the end; different ends are refused.
+
+    `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
+    session (the first question). Undeclared, guided, and every decision says
+    so; a later load of the same session keeps the lane it has.
     """
+    try:
+        _lane_now = _sess.declare_lane(name, lane)
+    except ValueError as e:
+        return str(e)
     try:
         paths = json.loads(paths_json)
     except json.JSONDecodeError:
@@ -958,7 +1011,7 @@ def load_pre(name: str, paths_json: str) -> str:
     _notas = _sc.load_notes(s.series)
     if _notas:
         txt += "\n\n" + "\n".join("! " + n for n in _notas)
-    s.guion.add("N0", "load_pre", {"files": len(paths)},
+    s.guion.add("N0", "load_pre", {"files": len(paths), "lane": _lane_now},
                 f"{len(paths)} series: {', '.join(_names(s))}")
     nd = sum(int(x.model.d or 0) == 1 for x in s.series)
     coint = ("\n\nTwo or more series have d = 1: after the gate and the canonical "
@@ -966,7 +1019,16 @@ def load_pre(name: str, paths_json: str) -> str:
              "parametric bootstrap) before any VARMA in differences — the same files "
              "mtram hands over with a cycle." if nd >= 2 else "")
     return (txt + coint + "\n\nNext: run_gate — the univariate base has to be certified "
-            "before anything is built on it.")
+            "before anything is built on it.\n" + _lane_line(name))
+
+
+def _lane_line(name):
+    """The lane in force, as the load states it."""
+    if name not in _sess._LANES:
+        return _lane.UNDECLARED
+    return {"guided": "Lane: guided — you decide every node; I stop at each decision.",
+            "autonomous": "Lane: autonomous — I decide every node and write down "
+                          "why (record_decision, decided_by=\"LLM\")."}[_sess._LANES[name]]
 
 
 # --------------------------------------------------------------------------- #
