@@ -30,6 +30,16 @@ class Session:
     vec_current: tuple = None          # the key of the current VEC
     irf_jobs: dict = field(default_factory=dict)    # VEC key -> irf_bands job id
 
+    @property
+    def lane(self):
+        """"guided" or "autonomous": who sits in the analyst's chair. Set once,
+        at the load (`declare_lane`); undeclared, guided -- art's default."""
+        return _LANES.get(self.name, "guided")
+
+    @property
+    def lane_declared(self):
+        return self.name in _LANES
+
     def current_kind(self):
         """VEC when the current model is a VEC, VARMA otherwise (the default:
         estimate makes a VARMA current, estimate_vec a VEC)."""
@@ -37,6 +47,22 @@ class Session:
 
 
 _SESSIONS: dict = {}
+# The lane, by session NAME, not on the Session object: the raw entry
+# (load_data) declares it before any session exists, and a later load that
+# reopens the session under the same name keeps it.
+_LANES: dict = {}
+LANES = ("guided", "autonomous")
+
+
+def declare_lane(name, lane):
+    """Fix the lane of session `name`; "" keeps the one it has (or none).
+    Returns the lane in force, or raises ValueError for an unknown one."""
+    lane = (lane or "").strip().lower()
+    if lane:
+        if lane not in LANES:
+            raise ValueError(f"lane must be 'guided' or 'autonomous', not {lane!r}")
+        _LANES[name] = lane
+    return _LANES.get(name, "guided")
 
 
 def open_session(name, files):
