@@ -13,6 +13,7 @@ import math
 import os
 
 import numpy as np
+from . import envelope as _env
 
 # --------------------------------------------------------------------------- #
 #  N0 — the series                                                             #
@@ -80,23 +81,21 @@ def gate_text(gate, pre_move=1e-3):
 #  N2 — cross identification                                                   #
 # --------------------------------------------------------------------------- #
 
-def cross_identification(res, names, nlags, freq, n_arma=None):
+def cross_identification(res, names, nlags, freq, n_arma=None, call="NAME"):
     """CCFs of the residuals of the DIAGONAL system, pair by pair.
 
     Those residuals are each series' univariate innovations: prewhitened by
     construction, so a significant cross-correlation is the evidence of a
-    dynamic the univariate models do not carry. Returns (text, facts).
+    dynamic the univariate models do not carry. Returns (text, facts): the
+    text is the node's envelope (sima.envelope), every option with its call on
+    the session `call`.
     """
     from drvarma.diagnostics import ccf, qccf
     res = np.asarray(res, float)
     n, m = res.shape
     band = 2.0 / math.sqrt(n)
     lags_found, contemp, directed = [], [], []
-    out = ["CROSS IDENTIFICATION — residual CCFs of the diagonal system",
-           f"n = {n}, band 2/sqrt(n) = {band:.3f}. At lag k > 0 in the pair (A, B),",
-           "B leads A by k periods; at k < 0, A leads B; k = 0 is contemporaneous.",
-           f"With {2 * nlags + 1} lags per pair about {0.05 * (2 * nlags + 1):.1f} crossings are",
-           "expected by chance alone: one isolated bar is weak evidence.", ""]
+    table = []
     for i in range(m):
         for j in range(i + 1, m):
             rho = ccf(res[:, i], res[:, j], nlags)
@@ -107,14 +106,14 @@ def cross_identification(res, names, nlags, freq, n_arma=None):
             sig = [k - nlags for k in range(2 * nlags + 1) if abs(rho[k]) > band]
             r0 = rho[nlags]
             A, B = names[i], names[j]
-            out.append(f"  ({A}, {B}): r0 = {r0:+.3f}"
-                       f"{'  (significant)' if abs(r0) > band else ''};"
-                       f"  Hosking Q({nlags}) = {Q:.2f}, p = {pv:.4f}")
+            table.append(f"  ({A}, {B}): r0 = {r0:+.3f}"
+                         f"{'  (significant)' if abs(r0) > band else ''};"
+                         f"  Hosking Q({nlags}) = {Q:.2f}, p = {pv:.4f}")
             leads = [k for k in sig if k != 0]
             if leads:
                 txt = ", ".join(f"{k:+d} ({B + ' leads' if k > 0 else A + ' leads'},"
                                 f" {rho[k + nlags]:+.3f})" for k in leads)
-                out.append(f"      significant lags: {txt}")
+                table.append(f"      significant lags: {txt}")
                 lags_found += [abs(k) for k in leads]
                 for k in leads:
                     if abs(k) <= 3:                       # SHORT, below
@@ -128,51 +127,78 @@ def cross_identification(res, names, nlags, freq, n_arma=None):
     longer = sorted({k for k in lags_found if k > SHORT})
     maxlag = max(short) if short else 0
     seasonal = [k for k in longer if freq > 1 and k % freq == 0]
-    out += ["", "What this says, and the decisions it opens:"]
+
+    shows = [f"n = {n}, band 2/sqrt(n) = {band:.3f}. At lag k > 0 in the pair (A, B), "
+             "B leads A by k periods; at k < 0, A leads B; k = 0 is contemporaneous.",
+             f"With {2 * nlags + 1} lags per pair about {0.05 * (2 * nlags + 1):.1f} "
+             "crossings are expected by chance alone: one isolated bar is weak evidence.",
+             "These residuals are each series' own innovations, prewhitened by its "
+             "univariate model: a bar beyond the band is a dynamic BETWEEN the series. "
+             "A contemporaneous one points to the innovation covariance; a short lead to "
+             "cross orders p (or q); an isolated one at a long lag to something a "
+             "univariate model misses."]
+    concl = []
     if not lags_found and not contemp:
-        out += ["  No cross-correlation beyond the band. The univariate models already",
-                "  carry what the data show: the system IS the diagonal one.",
-                "  (a) stay with the univariates (p = q = 0, -diagcov) — for: the",
-                "      evidence; against: a weak link can hide under the band, and",
-                "      only the out-of-sample yardstick (N5) can show it helps."]
+        concl.append("No cross-correlation beyond the band: the univariate models already "
+                     "carry what the data show, and the system IS the diagonal one. A weak "
+                     "link can still hide under the band; only the yardstick (N5) of a "
+                     "candidate could show it.")
     else:
         if contemp:
-            out += ["  Contemporaneous correlation: "
-                    + ", ".join(f"{a}-{b} {r:+.2f}" for a, b, r in contemp) + ".",
-                    "  (a) a full innovation covariance (not -diagcov) — for: it is the",
-                    "      measured fact; it costs m(m-1)/2 parameters and no dynamics;",
-                    "      against: it does not help a forecast by itself (the future",
-                    "      innovation of the other series is not known)."]
+            concl.append("Contemporaneous correlation: "
+                         + ", ".join(f"{a}-{b} {r:+.2f}" for a, b, r in contemp)
+                         + " — the innovation covariance is not diagonal. That costs "
+                         "m(m-1)/2 parameters and no dynamics, and does not help a forecast "
+                         "by itself (the other series' future innovation is not known).")
         if short:
-            out += [f"  Short lead-lag correlation at lags {short} (up to {SHORT}).",
-                    f"  (b) cross orders p = {maxlag}, q = 0 — for: the leads seen;",
-                    f"      against: {m * (m - 1)} parameters per lag, on every pair,",
-                    "      whether or not that pair showed anything;",
-                    "  (c) p = 1, q = 1 — for: a decaying cross pattern is cheaper as MA",
-                    "      than as several AR lags; against: harder to identify."]
-            if directed and len(directed) < m * (m - 1):
-                out += [f"  (d) the same orders on the pairs that showed something only:",
-                        f"      links = \"{', '.join(directed)}\" — for: "
-                        f"{len(directed)} of {m * (m - 1)} pairs, so",
-                        "      fewer parameters, each one argued by a bar; against: a pair",
-                        "      whose link sits under the band is excluded by construction.",
-                        "      Estimating (b) as well tells them apart: the LR of the full",
-                        "      model against this one is the test of the pairs left out."]
+            concl.append(f"Short lead-lag correlation at lags {short} (up to {SHORT}): "
+                         f"evidence for cross orders up to p = {maxlag}"
+                         + (f", on the pairs {', '.join(directed)}" if directed else "")
+                         + f". A full p costs {m * (m - 1)} parameters per lag, on every "
+                         "pair, whether or not it showed anything.")
         if longer:
-            out += [f"  Isolated correlations at longer lags {longer}: with this many lags",
-                    "  some are chance, and a VAR does not reach them without many lags.",
-                    "  They are better read as something the UNIVARIATE models miss."]
-            if seasonal:
-                out.append(f"  Some are seasonal ({seasonal}): a cross effect at the seasonal"
-                           " lag usually means a seasonal pattern one of the univariate"
-                           " models did not capture — look at art before building a VARMA"
-                           " on it.")
-        out += ["  In every case the decision is tested at N5: a VARMA that does not",
-                "  beat the univariates out of sample has no reason to exist."]
+            concl.append(f"Isolated correlations at longer lags {longer}: with this many "
+                         "lags some are chance, and a VAR does not reach them without many "
+                         "lags. They read better as something a UNIVARIATE model misses."
+                         + (f" Some are seasonal ({seasonal}): a seasonal pattern one of the "
+                            "univariate models did not capture — look at art before building "
+                            "a VARMA on it." if seasonal else ""))
+        concl.append("Whatever is estimated, the decision is tested at N5: a VARMA that "
+                     "does not beat the univariates out of sample has no reason to exist.")
+
+    q = f'name="{call}"'
+    opts = []
+    if short:
+        opts.append((f"cross orders p = {maxlag}, q = 0, full covariance — for: the leads "
+                     f"seen; against: {m * (m - 1)} parameters per lag on every pair",
+                     f"estimate({q}, p={maxlag}, q=0)"))
+        if directed and len(directed) < m * (m - 1):
+            opts.append((f"the same orders on the pairs that showed something only "
+                         f"({len(directed)} of {m * (m - 1)}) — for: fewer parameters, each "
+                         "argued by a bar; against: a link under the band is excluded by "
+                         "construction (estimating both and their LR tests the pairs left out)",
+                         f'estimate({q}, p={maxlag}, q=0, links="{", ".join(directed)}")'))
+        opts.append(("p = 1, q = 1 — for: a decaying cross pattern is cheaper as MA than as "
+                     "several AR lags; against: harder to identify",
+                     f"estimate({q}, p=1, q=1)"))
+    if contemp:
+        opts.append(("the contemporaneous link only: no cross dynamics, a full innovation "
+                     "covariance", f"estimate({q}, p=0, q=0)"))
+    if longer:
+        opts.append(("back to art: the univariate model of a series misses the long-lag "
+                     "correlation; reformulate it there and rebuild its .pre",
+                     "art (outside sima)"))
+    opts.append(("the second identification, Jenkins and Alavi's matrices (sample and "
+                 "partial autoregression), before choosing", f"identify_matrices({q})"))
+    opts.append(("stay with the univariates: the system is the diagonal one",
+                 f'record_decision({q}, node="N2", decision="the diagonal system", '
+                 'reason="...")'))
+    text = _env.envelope("# N2 · Cross identification — residual CCFs of the diagonal system",
+                         table, shows, concl, opts)
     facts = {"maxlag": maxlag, "longer": longer, "contemporaneous": len(contemp) > 0,
              "links": directed,
              "any": bool(lags_found or contemp), "band": band}
-    return "\n".join(out), facts
+    return text, facts
 
 
 # --------------------------------------------------------------------------- #
@@ -320,7 +346,7 @@ def stepwise_lines(sw, names, indent="  "):
     return out
 
 
-def ja_identification(w, res, names, K, qmax, freq, route="U"):
+def ja_identification(w, res, names, K, qmax, freq, route="U", call="NAME"):
     """Jenkins and Alavi's two identifications [§3.3-3.4], from the ladder.
 
     Method 2 (prewhitened): the correlation matrices of the residuals of the
@@ -438,6 +464,9 @@ def ja_identification(w, res, names, K, qmax, freq, route="U"):
                    "§4.2) — look at art before modelling it.")
 
     # the menu
+    i_lectura = len(out)                 # where the reading starts (the envelope)
+    nq = f'name="{call}"'
+    opts = []                            # (what, call): the same candidates, executable
     out += ["", ("What this says, and the decisions it opens (Tiao and Box: the vector "
                  "first, the full model, then simplify):" if route == "V" else
                  "What this says, and the decisions it opens (Jenkins and Alavi: use both; "
@@ -449,6 +478,11 @@ def ja_identification(w, res, names, K, qmax, freq, route="U"):
         out.append("  Neither method shows cross structure: the univariate models carry "
                    "it; the system is the diagonal one (N5 is still the test).")
     if q2:
+        opts.append((f"method 2: an MA({q2}) residual model, the univariate models on the "
+                     "diagonal (Jenkins and Alavi's form 3.22)",
+                     f"estimate({nq}, p=0, q={q2}"
+                     + (f', links="{", ".join(links)}"' if links else "")
+                     + ', cross="residual")'))
         out.append(f"  (a) from method 2: an MA({q2}) residual model, the univariate "
                    f"models on the diagonal — estimate(p=0, q={q2}"
                    + (f', links="{", ".join(links)}"' if links else "")
@@ -464,28 +498,39 @@ def ja_identification(w, res, names, K, qmax, freq, route="U"):
                 if i != j and Psym[k, i, j] != "." and f"{names[i]}<-{names[j]}" not in links1:
                     links1.append(f"{names[i]}<-{names[j]}")
     if p1 and route != "V":
+        opts.append((f"method 1: a cross AR of order {p1} (S_k)",
+                     f"estimate({nq}, p={p1}, q=0"
+                     + (f', links="{", ".join(links1)}"' if links1 else "") + ")"))
         out.append(f"  (b) from method 1: a cross AR of order {p1} (S_k) — "
                    f"estimate(p={p1}, q=0"
                    + (f', links="{", ".join(links1)}"' if links1 else "") + ").")
     for q, p in (pq.items() if route != "V" else ()):
         if p and (p < p1 or not p1):
+            opts.append((f"method 1: an ARMA({p},{q}) (S_k({q}) cuts off after {p})",
+                         f"estimate({nq}, p={p}, q={q})"))
             out.append(f"  (c) from method 1: an ARMA({p},{q}) (S_k({q}) cuts off after "
                        f"{p}) — estimate(p={p}, q={q}).")
     if route == "V":
         out.append("  Route V: the diagonal is not given, so the WHOLE matrices are the "
                    "reading — S_k and M(l) choose one order p for every element.")
         if tb_p:
+            opts.append((f"Tiao and Box's order: the full VAR({tb_p})",
+                         f"estimate({nq}, p={tb_p}, q=0)"))
             out.append(f"  (a) Tiao and Box's order: M(l) is significant up to l = {tb_p} — "
                        f"estimate(p={tb_p}, q=0): the full VAR({tb_p}), each series' own "
                        f"AR({tb_p}) with the cross terms.")
         if p1w and p1w != tb_p:
+            opts.append((f"S_k's whole-matrix cut-off: p = {p1w}", f"estimate({nq}, p={p1w}, q=0)"))
             out.append(f"  (b) S_k's whole-matrix cut-off: estimate(p={p1w}, q=0).")
         if q1w and not tb_p:
+            opts.append((f"R_k cuts off after {q1w}: a VMA({q1w})", f"estimate({nq}, p=0, q={q1w})"))
             out.append(f"  (c) R_k cuts off after {q1w}: a VMA — estimate(p=0, q={q1w}).")
         out.append("  Mixed orders: S_k(q) above, and Tiao and Tsay's ESCC (not yet in sima). "
                    "After the fit, simplification by coefficient is what makes a full "
                    "VARMA readable (Tiao and Box §4).")
     elif tb_p and tb_p != p1:
+        opts.append((f"Tiao and Box's order: a cross order p = {tb_p}, the univariate models "
+                     "kept on the diagonal", f"estimate({nq}, p={tb_p}, q=0)"))
         out.append(f"  (d) Tiao and Box's order: M(l) asks for a VAR({tb_p}) on w_t. In the "
                    f"ladder that is the cross order — estimate(p={tb_p}, q=0) — with the "
                    "univariate models kept on the diagonal (theirs would refit the "
@@ -500,7 +545,20 @@ def ja_identification(w, res, names, K, qmax, freq, route="U"):
              "method1_pq": pq, "method1_whole": {"q": q1w, "p": p1w, "pq": pqw},
              "diagonal_left": diag_left, "tb_p": tb_p, "tb_gaps": tb_gaps,
              "tb_M": [float(v) for v in sw["M"]]}
-    return "\n".join(out), facts
+    if route != "V":
+        opts.append(("the first identification, the residual CCFs pair by pair",
+                     f"identify_cross({nq})"))
+        opts.append(("stay with the univariates: the system is the diagonal one",
+                     f'record_decision({nq}, node="N2", decision="the diagonal system", '
+                     'reason="...")'))
+    lectura = [l.strip() if l.startswith("  ") else l for l in out[i_lectura:] if l]
+    shows = ["Method 2 reads the residuals of the univariate models (prewhitened): its "
+             "off-diagonal cut-off is the cross order of a residual model. Method 1 reads the "
+             "stationary series themselves: R_k (a cut-off is an MA), S_k (an AR), S_k(q) "
+             "(an ARMA). Tiao and Box's M(l) is the test; the symbols are a guide, not tests."]
+    text = _env.envelope(f"# N2 · Identification by matrices — {'Tiao and Box' if route == 'V' else 'Jenkins and Alavi'}",
+                         out[:i_lectura], shows, lectura, opts)
+    return text, facts
 
 
 def ja_checking(res, sigma, names, K, freq, date_of):
@@ -651,6 +709,36 @@ def fold_text(fold):
             "from the same curvature.")
 
 
+def estimation_facts(L, nlags):
+    """What the conclusions of an estimation read, with the rules the table
+    prints (estimation_text): the optimiser's stop, the LR against the diagonal
+    system, the cross coefficients with |t| <= 1.96, the residuals' Hosking Q,
+    and whether the fit sits on the MA wall or at the fold of an own MA(1)."""
+    from drvarma.diagnostics import hosking_q
+    import re as _re
+    r = L.result
+    cross = [(n, v / se if se > 0 else float("nan"))
+             for n, v, se in zip(r.names, r.x, r.std_errors)
+             if not _is_covariance(n) and _re.search(r"\[(.+)<-(.+)\]", n)]
+    weak = [n for n, t in cross if not (abs(t) > 1.96)]
+    f = {"termcode": r.termcode, "converged": r.termcode == 1,
+         "stop": _TERM.get(r.termcode, r.termcode), "n_cross": len(cross),
+         "weak_cross": weak, "lr": None, "lr_df": None, "lr_p": None,
+         "hosking_p": None, "wall": bool(getattr(r, "ma_boundary", 0)),
+         "fold": [n for n, _ in folded_own_ma(L.series, r)], "not_started": False}
+    if not (L.p == 0 and L.q == 0 and L.diagcov):
+        f["lr"], f["lr_df"], f["lr_p"] = L.lr_test()
+        # BUG-0011, the rule estimation_text uses: a search that ends at its first
+        # step on the diagonal start is not an estimate, and its LR says nothing
+        if int(getattr(r, "nit", 2)) <= 1 and abs(float(f["lr"])) < 1e-6:
+            f["not_started"] = True
+            f["lr"] = f["lr_df"] = f["lr_p"] = None
+            return f
+    if r.residuals is not None and r.residuals.shape[0] > nlags + 1:
+        f["hosking_p"] = hosking_q(r.residuals, nlags, L.n_arma())[2]
+    return f
+
+
 def estimation_text(L, nlags):
     from drvarma.diagnostics import hosking_q
     r = L.result
@@ -776,8 +864,66 @@ def _rmse(v):
         f"{v:.3f}" if a >= 1 else f"{v:.4g}"
 
 
-def evaluation_text(cand, diag, label, horizons, series):
-    """cand/diag: {(series, h): {n, MAE, RMSE, MAPE}}; series: names in order."""
+def evaluation_text(cand, diag, label, horizons, series, call="NAME", spec=""):
+    """cand/diag: {(series, h): {n, MAE, RMSE, MAPE}}; series: names in order.
+
+    N5's envelope (sima.envelope): the node that decides whether the VARMA has
+    a reason to exist. Its menu used to be prose — (a) keep, (b) stay, (c)
+    another — with no call and no stop."""
+    table = [f"THE YARDSTICK — {label} against the univariates (diagonal system),",
+             "same window, parameters estimated once and held fixed, every origin.",
+             f"  {'series':<12}{'h':>4}{'n':>5}{'RMSE var':>12}{'RMSE uni':>12}"
+             f"{'ratio':>8}{'MAPE var':>10}{'MAPE uni':>10}"]
+    wins = total = 0
+    por_serie = {}
+    for s in series:
+        for h in horizons:
+            if (s, h) not in diag or (s, h) not in cand:
+                continue
+            c, u = cand[(s, h)], diag[(s, h)]
+            ratio = c["RMSE"] / u["RMSE"] if u["RMSE"] else float("nan")
+            total += 1
+            wins += ratio < 1.0
+            w, n = por_serie.get(s, (0, 0))
+            por_serie[s] = (w + (ratio < 1.0), n + 1)
+            table.append(f"  {s:<12}{h:>4}{c['n']:>5}{_rmse(c['RMSE']):>12}{_rmse(u['RMSE']):>12}"
+                         f"{ratio:>8.3f}{c['MAPE']:>10.3f}{u['MAPE']:>10.3f}")
+    shows = ["A ratio below 1 is a gain over the univariate model. The evidence is the "
+             "pattern across series and horizons, not one cell; the number of origins is "
+             "small at long horizons.",
+             "This is the school's rule 1: the univariate models are the yardstick. A "
+             "significant in-sample effect that does not forecast better is a finding, not "
+             "a model to keep."]
+    gana = [s for s, (w, n) in por_serie.items() if n and w > n / 2]
+    pierde = [s for s, (w, n) in por_serie.items() if n and w <= n / 2]
+    concl = [f"The VARMA has the lower RMSE in {wins} of {total} (series, horizon) cells."]
+    if gana:
+        concl.append(f"It gains in most horizons on {', '.join(gana)}"
+                     + (f"; not on {', '.join(pierde)}." if pierde else "."))
+    elif total:
+        concl.append("It does not gain in most horizons on any series: out of sample, the "
+                     "cross terms do not pay for themselves here.")
+    q = f'name="{call}"'
+    opts = [("keep the VARMA — for the series and horizons where it gains, if they are the "
+             "ones the analysis is about; the N6 tools (forecast, impulse_response, …) "
+             "act on it, the current model",
+             f'record_decision({q}, node="N5", decision="keep the VARMA {spec}", '
+             'reason="...")'),
+            ("stay with the univariates — if it does not gain where it matters",
+             f'record_decision({q}, node="N5", decision="the univariates", reason="...")'),
+            ("try another candidate: back to the identification (N2)",
+             f"identify_matrices({q})"),
+            ("Jenkins and Alavi's V(l): the same question in sample, with the forecast "
+             "error variances", f"forecast_uncertainty({q})")]
+    text = _env.envelope("# N5 · The yardstick — the candidate against the univariates",
+                         table, shows, concl, opts)
+    return text, {"wins": wins, "cells": total, "gains_on": gana}
+
+
+def evaluation_plain(cand, diag, label, horizons, series):
+    """The yardstick as plain text, the form the VEC's C8 embeds (mcp_vec):
+    cand/diag: {(series, h): {n, MAE, RMSE, MAPE}}; series: names in order.
+    The VARMA's N5 uses evaluation_text, the envelope."""
     out = [f"THE YARDSTICK — {label} against the univariates (diagonal system),",
            "same window, parameters estimated once and held fixed, every origin.",
            f"  {'series':<12}{'h':>4}{'n':>5}{'RMSE var':>12}{'RMSE uni':>12}"
@@ -1115,7 +1261,7 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
     lines += ["", "sima does not change any d on its own: " + (
         "it is the analyst's, in characterize." if raw else "it belongs to the `.pre`."), "",
-              "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+              _env.STOP]
     facts = {"lam": [float(v) for v in lam], "p": p_used, "p_tb": p_tb,
              "p_run": p_run, "isolated": isolated,
              "near_one": len(unit), "near_zero": len(white), "differenced": len(diffd),
@@ -1231,7 +1377,7 @@ def characterize_report(chars, freq, call, changes=()):
                  "art (outside sima)"))
     for t, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
-    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    lines += ["", _env.STOP]
     return "\n".join(lines)
 
 
@@ -1293,7 +1439,7 @@ def build_report(built, freq, call):
                  "overwrite=True)"))
     for t, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
-    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    lines += ["", _env.STOP]
     return "\n".join(lines)
 
 
@@ -1322,7 +1468,7 @@ def simplify_report(f, call, keycall):
                   "", "## 4 · DECISION — alternatives", "",
                   f"**A)** go on: `structure(name=\"{call}\")` or `evaluate(...)`",
                   f"**B)** a stricter threshold: `simplify(name=\"{call}\", t=2)`", "",
-                  "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+                  _env.STOP]
         return "\n".join(lines)
     lines.append(f"to zero ({len(f['drop'])}):")
     for nm, v, t in f["drop"]:
@@ -1365,7 +1511,7 @@ def simplify_report(f, call, keycall):
              ("keep the full model", "nothing")]
     for k, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[k]})** {what}\n   `{cl}`")
-    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    lines += ["", _env.STOP]
     return "\n".join(lines)
 
 
@@ -1423,5 +1569,5 @@ def structure_report(f, call):
     for k, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[k]})** {what}\n   `{cl}`")
     lines += ["", "sima offers the hand-back; it does not hand back on its own.", "",
-              "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+              _env.STOP]
     return "\n".join(lines)

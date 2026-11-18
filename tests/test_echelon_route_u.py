@@ -34,7 +34,10 @@ def flour():
 def test_zeros_reach_the_own_part_of_the_echelon_form(flour):
     t = _fn(M.estimate)(flour, indices="1, 1, 1", zeros=NO_MA)
     assert "is a coefficient of a univariate model" not in t
-    assert "theta_" not in t and "MA1[" not in t
+    # in the parameter TABLE: the own MAs are held at zero, so none is estimated
+    # (the evaluate call of the envelope repeats the zeros by name)
+    tabla = t.split("## 2 · WHAT IT SHOWS")[0]
+    assert "theta_" not in tabla and "MA1[" not in tabla
     assert "phi_KansasCity[B^1]" in t
     assert "exact log-likelihood -667.6772" in t
 

@@ -19,9 +19,9 @@ def test_identify_cross_proposes_the_pairs_that_showed_something():
     _fn(M.load_pre)("L1", json.dumps(M6))
     _fn(M.run_gate)("L1")
     txt = _fn(M.identify_cross)("L1")
-    assert '(d) the same orders on the pairs that showed something only:' in txt
-    assert 'links = "EU<-EA, EP<-EC, EC<-EP, EP<-EI, EI<-P"' in txt
-    assert "5 of 30 pairs" in txt
+    # the envelope's option, with its exact call
+    assert "the same orders on the pairs that showed something only (5 of 30)" in txt
+    assert 'links="EU<-EA, EP<-EC, EC<-EP, EP<-EI, EI<-P")`' in txt
 
 
 def test_estimate_with_links_carries_only_those_pairs():
