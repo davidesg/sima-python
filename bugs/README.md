@@ -4,25 +4,25 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**13 report(s), 0 open.**
+**17 report(s), 0 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
-| [BUG-0001](BUG-0001-load-pre-muestra-un-paseo-aleatorio-como-ar1.md) | fixed | low | server | load_pre muestra un paseo aleatorio (0,1,0) como «AR 1» en la tabla de los modelos | 0.1.0 |
-| [BUG-0002](BUG-0002-el-lr-dice-contra-los-univariantes-y-es-contra-el-modelo-sin-cruces.md) | fixed | low | evidence | El LR de estimate dice «against the diagonal system (the univariates)» y es contra el mismo modelo sin términos cruzados | 0.1.0 |
-| [BUG-0003](BUG-0003-zeros-rechaza-los-propios-de-la-forma-echelon-en-ruta-u.md) | fixed | medium | server | En ruta U, zeros (y simplify) rechazan los coeficientes propios de la forma echelon, que ya no son de art | 0.1.0 |
-| [BUG-0004](BUG-0004-la-vara-de-n5-en-ruta-v-son-univariantes-ligeros-sin-alternativa.md) | fixed | medium | server | En ruta V, evaluate mide contra univariantes ligeros que elige solo, sin decir cuáles son ni aceptar los del analista | 0.1.0 |
-| [BUG-0005](BUG-0005-la-eleccion-de-indices-depende-de-max-index-y-el-informe-no-da-t.md) | fixed | medium | evidence | identify_echelon cambia de elección con max_index (la muestra común encoge) sin decir sobre cuántas observaciones calcula la tabla; el MANUAL lo atribuye a la ruta U | 0.1.0 |
-| [BUG-0006](BUG-0006-rank-test-no-dice-que-el-modelo-bajo-h0-no-es-i1r.md) | fixed | medium | vec | rank_test no dice que el modelo bajo H0 no es I(1, r); lo presenta como un bootstrap fallido | 0.2.0 |
-| [BUG-0007](BUG-0007-la-ruta-u-escribe-pre-que-fue-no-lee.md) | fixed | medium | raw | La ruta U escribe .pre que fue no lee (la línea de procedencia dentro de la cabecera) | 0.2.2 |
-| [BUG-0008](BUG-0008-un-ma-propio-se-para-en-el-pliegue-y-estimate-lo-da-por-convergido.md) | fixed | medium | evidence | Un MA(1) propio se para en θ = −1, el pliegue del cast, y estimate lo da por convergido, con t significativas y «Next: evaluate» | 0.2.2 |
-| [BUG-0009](BUG-0009-platform-tier-dice-exact-en-todo-linux-x86-64-sin-mirar-la-libc.md) | fixed | low | jobs | platform_tier() dice «exact» en todo Linux x86_64 sin mirar la libc; la caché de un ejemplo se sirve en una libm que no la reproduce | 0.2.2 |
-| [BUG-0010](BUG-0010-test-never-a-partial-result-espera-un-tiempo-fijo-al-primer-progreso.md) | fixed | low | tests | test_never_a_partial_result espera 0.6 s fijos al primer progreso del job; en una máquina cargada falla | 0.2.2 |
-| [BUG-0011](BUG-0011-un-varma-que-no-salio-del-arranque-se-presenta-como-estimacion.md) | fixed | high | estimate | Un VARMA cuya búsqueda no salió del arranque diagonal se presenta como estimación, y su LR = 0 como prueba de que no hay dinámica cruzada | 0.2.3 |
-| [BUG-0012](BUG-0012-con-factores-de-reescala-distintos-la-restriccion-va-en-unidades-del-motor.md) | fixed | high | vec | Con ficheros de factores de reescala distintos, todo lo que cruza series va en unidades del motor — una β = −1 cierta se rechaza con p = 0.0000 y nada avisa | 0.2.3 |
-| [BUG-0013](BUG-0013-la-cabecera-dice-hessiano-por-diferencias-cuando-van-los-de-bfgs.md) | fixed | medium | vec | estimate_vec dice «standard errors from the finite-difference Hessian» cuando el fdhess de drvec no salió y la tabla lleva los de BFGS | 0.2.3 |
-| [BUG-0014](BUG-0014-alfa-y-su-restriccion-en-unidades-del-motor.md) | fixed | high | vec | Con factores de reescala distintos, α y su restricción (α = Aψ) iban en unidades del motor — una restricción cierta se rechaza con p = 0.0072 | 0.2.4 |
-| [BUG-0015](BUG-0015-la-clave-de-los-trabajos-lleva-la-version-de-drvarma.md) | wontfix | medium | jobs | La clave de un trabajo lleva la versión de drvarma (y de fue) — cada publicación de drvarma invalida las cachés de los ejemplos | by design |
-| [BUG-0016](BUG-0016-el-script-de-las-caches-limpia-un-trabajo-que-sigue-corriendo.md) | fixed | low | tools | tools/build_example_caches.py limpia la carpeta de un trabajo sin comprobar que ha terminado | 0.2.5 |
-| [BUG-0017](BUG-0017-una-prueba-de-cache-que-falla-deja-su-bootstrap-corriendo.md) | fixed | low | tests | Una prueba de las cachés que falla deja su bootstrap corriendo, desligado | 0.2.5 |
+| [BUG-0001](BUG-0001-load-pre-shows-a-random-walk-as-ar1.md) | fixed | low | server | load_pre shows a random walk (0,1,0) as «AR 1» in the table of the models | 0.1.0 |
+| [BUG-0002](BUG-0002-the-lr-says-against-the-univariate-models-and-is-against-the-model-without-cross-terms.md) | fixed | low | evidence | The LR of estimate says «against the diagonal system (the univariates)» and it is against the same model without cross terms | 0.1.0 |
+| [BUG-0003](BUG-0003-zeros-rejects-the-echelon-form-own-coefficients-in-route-u.md) | fixed | medium | server | In route U, zeros (and simplify) reject the own coefficients of the echelon form, which are no longer art's | 0.1.0 |
+| [BUG-0004](BUG-0004-the-n5-yardstick-in-route-v-is-light-univariate-models-with-no-alternative.md) | fixed | medium | server | In route V, evaluate measures against light univariate models it chooses on its own, without saying which they are or accepting the analyst's | 0.1.0 |
+| [BUG-0005](BUG-0005-the-choice-of-indices-depends-on-max-index-and-the-report-does-not-give-t.md) | fixed | medium | evidence | identify_echelon changes its choice with max_index (the common sample shrinks) without saying on how many observations the table is computed; the MANUAL attributes it to route U | 0.1.0 |
+| [BUG-0006](BUG-0006-rank-test-does-not-say-the-model-under-h0-is-not-i1r.md) | fixed | medium | vec | rank_test does not say that the model under H0 is not I(1, r); it presents it as a failed bootstrap | 0.2.0 |
+| [BUG-0007](BUG-0007-route-u-writes-pre-files-that-fue-does-not-read.md) | fixed | medium | raw | Route U writes .pre files that fue does not read (the provenance line inside the header) | 0.2.2 |
+| [BUG-0008](BUG-0008-an-own-ma-stops-at-the-fold-and-estimate-reports-it-as-converged.md) | fixed | medium | evidence | An own MA(1) stops at θ = −1, the fold of the cast, and estimate reports it as converged, with significant t values and «Next: evaluate» | 0.2.2 |
+| [BUG-0009](BUG-0009-platform-tier-says-exact-on-all-linux-x86-64-without-checking-the-libc.md) | fixed | low | jobs | platform_tier() says «exact» on all Linux x86_64 without checking the libc; an example's cache is served on a libm that does not reproduce it | 0.2.2 |
+| [BUG-0010](BUG-0010-test-never-a-partial-result-waits-a-fixed-time-for-the-first-progress.md) | fixed | low | tests | test_never_a_partial_result waits a fixed 0.6 s for the job's first progress; on a loaded machine it fails | 0.2.2 |
+| [BUG-0011](BUG-0011-a-varma-that-never-left-the-start-is-presented-as-an-estimate.md) | fixed | high | estimate | A VARMA whose search never left the diagonal start is presented as an estimate, and its LR = 0 as proof that there is no cross dynamics | 0.2.3 |
+| [BUG-0012](BUG-0012-with-different-rescaling-factors-the-restriction-is-in-engine-units.md) | fixed | high | vec | With files of different rescaling factors, everything that crosses series is in engine units — a true β = −1 is rejected with p = 0.0000 and nothing warns | 0.2.3 |
+| [BUG-0013](BUG-0013-the-header-says-finite-difference-hessian-when-the-bfgs-ones-are-used.md) | fixed | medium | vec | estimate_vec says «standard errors from the finite-difference Hessian» when drvec's fdhess did not come out and the table carries the BFGS ones | 0.2.3 |
+| [BUG-0014](BUG-0014-alpha-and-its-restriction-in-engine-units.md) | fixed | high | vec | With different rescaling factors, α and its restriction (α = Aψ) were in engine units — a true restriction is rejected with p = 0.0072 | 0.2.4 |
+| [BUG-0016](BUG-0016-the-caches-script-cleans-a-job-that-is-still-running.md) | fixed | low | tools | tools/build_example_caches.py cleans a job's folder without checking that it has finished — the job loses its files and fails | 0.2.5 |
+| [BUG-0017](BUG-0017-a-failing-cache-test-leaves-its-bootstrap-running.md) | fixed | low | tests | A cache test that fails leaves its bootstrap running, detached, with nothing to stop it | 0.2.5 |
+| [BUG-0015](BUG-0015-the-job-key-includes-the-drvarma-version.md) | wontfix | medium | jobs | The key of a job carries the version of drvarma (and of fue) — every drvarma release invalidates the example caches | by design (0.2.5) |
 
