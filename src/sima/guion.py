@@ -41,6 +41,7 @@ NODES = {
     "N4t": "structure: simultaneous or a transfer network",
     "N5": "the yardstick: out-of-sample against the univariates",
     "N6": "use: forecast, IRF, FEVD",
+    "N7": "the hand-over: the result, its yardstick, the caveats",
 }
 
 
