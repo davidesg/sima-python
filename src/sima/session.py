@@ -54,6 +54,27 @@ _LANES: dict = {}
 LANES = ("guided", "autonomous")
 
 
+# The model's purpose, by name for the same reason: asked with the first
+# question (P5) and recorded at N0, so that N1c (prepare_vec) inherits it
+# instead of asking again.
+_PURPOSES: dict = {}
+PURPOSES = ("forecast", "long run")
+
+
+def declare_purpose(name, purpose):
+    """Record the purpose of session `name`; "" keeps the one it has (or none).
+    Returns it (None when there is none), or raises ValueError."""
+    pur = (purpose or "").strip().lower().replace("-", " ").replace("_", " ")
+    if pur:
+        if pur not in PURPOSES:
+            raise ValueError('purpose must be "forecast" or "long run", not '
+                             f"{purpose!r}")
+        _PURPOSES[name] = pur
+        if name in _SESSIONS:
+            _SESSIONS[name].purpose = pur
+    return _PURPOSES.get(name)
+
+
 def declare_lane(name, lane):
     """Fix the lane of session `name`; "" keeps the one it has (or none).
     Returns the lane in force, or raises ValueError for an unknown one."""
@@ -69,7 +90,8 @@ def open_session(name, files):
     from drvarma.ladder import load, check_alignment
     series = load(files)
     check_alignment(series)
-    s = Session(name, list(files), series, Guion(name, list(files)))
+    s = Session(name, list(files), series, Guion(name, list(files)),
+                purpose=_PURPOSES.get(name))
     _SESSIONS[name] = s
     return s
 

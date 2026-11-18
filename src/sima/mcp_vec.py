@@ -99,7 +99,8 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
     reason written down). Feedback is not a precondition: it is tested inside
     the VEC (weak exogeneity).
 
-    `purpose` is REQUIRED and recorded at N1c: "forecast" or "long run". It
+    `purpose` is REQUIRED and recorded at N1c: "forecast" or "long run" (when
+    it was given at the load, with the first question, it is inherited). It
     decides the yardstick's role later (C8): a VETO when the purpose is to
     forecast, a CAVEAT beside a long-run claim (an equilibrium, who corrects).
 
@@ -126,6 +127,8 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
     pur = purpose.strip().lower().replace("-", " ").replace("_", " ")
     if pur in ("longrun", "long"):
         pur = "long run"
+    if not pur and s.purpose:
+        pur = s.purpose            # recorded at N0, with the first question (P5)
     if pur not in ("forecast", "long run"):
         return ("N1c needs the model's PURPOSE before the rank: purpose=\"forecast\" or "
                 "purpose=\"long run\". It decides the yardstick's role at C8: a veto when "
@@ -163,6 +166,7 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
             p_tb = None
     p_use = int(p) or (p_ml if (s.route == "V" and p_ml) or (p_ml and p_ml > p_ar) else p_ar)
     s.purpose = pur
+    _sess._PURPOSES[name] = pur
     s.vec_spec = {"p": p_use, "q": int(q), "case": str(cs), "nodrift": nd, "order": order,
                   "mixed": bool(mixed), "i0": i0}
     s.guion.add("N1c", "prepare_vec", {"purpose": pur},

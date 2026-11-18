@@ -2,6 +2,22 @@
 
 ## 0.2.5 — unreleased
 
+**P5: the first question leads to a path.** With the lane, the first exchange
+can take the model's PURPOSE (`purpose="forecast"` or `"long run"` in
+`load_pre`, `load_data`, `load_example`): N0 records it, and N1c
+(`prepare_vec`) inherits it instead of asking again; without it, N1c asks as
+before. The ORDER of the series is N0's too: `load_pre` says what it fixes
+(the Cholesky order, a VEC's normalisation, the frame of the echelon form's
+A0) and the guion records it. The instructions add both, and route U or V
+for raw data, to the first question.
+
+**P6: one order in N2.** identify_cross (route U) → identify_matrices →
+identify_echelon when an MA is in sight; route V starts at the matrices.
+`canonical_analysis` now points to the first identification of its route
+(it sent route U to the matrices, while `run_gate` sent it to the CCFs), and
+`identify_matrices` offers the echelon form whenever one of its orders has
+q > 0.
+
 **P2: the lane lives in the session.** "guided" or "autonomous" is declared
 once, with `lane=` in `load_pre`, `load_data` or `load_example`; a later load of
 the same session keeps it, and N0 (N0r) records it in the guion. One filter on

@@ -74,7 +74,22 @@ FIRST QUESTION
       hand you the path and the model."
 Both lanes walk the SAME nodes. Only who sits in the analyst's chair changes.
 
-Pass the answer ONCE, when loading: lane="guided" or lane="autonomous" in
+With the lane, in the same first exchange:
+  • THE PURPOSE — "forecast" or "long run" (an equilibrium, who corrects).
+    For a VEC it decides the yardstick's role (rule 9); pass it as purpose= at
+    the load and N1c (prepare_vec) inherits it instead of asking again. If the
+    analyst does not know yet, leave it: N1c asks.
+  • THE ORDER of the series — the order of the files in load_pre IS the
+    Cholesky order, a VEC's normalisation (beta on the last r) and the frame
+    of the echelon form's A0. Ask for it before loading (most exogenous first,
+    on theory); load_pre restates what it fixes.
+  • With RAW DATA (no univariate models), the route: "(U) build them first
+    and model the system on top of them (Jenkins and Alavi; the ladder), or
+    (V) model the vector directly, the univariate models only as the yardstick
+    (Tiao and Box). Either way every series keeps its own transformation."
+    It is taken after characterize (build_univariate or write_specs).
+
+Pass the lane ONCE, when loading: lane="guided" or lane="autonomous" in
 load_pre, load_data or load_example. It is the session's from then on; do not
 ask again. The answers follow it: in the guided lane each decision ends with
 the pause (⏸ Your decision) and you stop there; in the autonomous lane the
@@ -163,7 +178,9 @@ N1c prepare_vec       THE COINTEGRATION QUESTION, offered whenever TWO OR MORE
                       survive the conversation: job_status, job_result,
                       job_cancel, jobs. A job tool waits ~20 s, then returns the
                       job id. NOTHING PARTIAL IS EVER A RESULT.
-N2  identify_cross    the residual CCFs of the diagonal system: the evidence of
+N2  (in this order: identify_cross → identify_matrices → identify_echelon when
+    an MA is in sight; route V starts at identify_matrices)
+    identify_cross    the residual CCFs of the diagonal system: the evidence of
                       what the univariate models do NOT carry. It proposes
                       cross orders and whether the innovations correlate.
     identify_matrices Jenkins and Alavi's (1981) two identifications as
@@ -256,6 +273,12 @@ writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
                       estimate FROM THIS EVIDENCE, not from a grid. When only
                       some pairs showed anything, the restricted candidate
                       (`links`) is one of them, and the full one tests it.
+                      THE ORDER IN N2 is always the same: identify_cross (route
+                      U; the quick reading, pair by pair) → identify_matrices
+                      (Jenkins and Alavi's two methods, Tiao and Box's M(l);
+                      route V starts here, it has no univariate residuals) →
+                      identify_echelon when the orders point to an MA or a fit
+                      reaches the MA wall.
   N3/N4 estimate      one candidate at a time. A tie (LR p near 0.05, or two
                       candidates that read the same) is resolved by ESTIMATING
                       BOTH and comparing, not by choosing on paper.
@@ -701,7 +724,7 @@ def examples() -> str:
 
 @mcp.tool()
 def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
-                 lane: str = "") -> str:
+                 lane: str = "", purpose: str = "") -> str:
     """N0 for a worked example: copy its files to a working folder (`dest`,
     default ~/sima-examples/<name>; files already there are kept) and load
     them. An example from univariate models loads them as load_pre does, and
@@ -718,6 +741,10 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
     `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
     session (the first question). Undeclared, guided, and every decision says
     so; a later load of the same session keeps the lane it has.
+    `purpose`: "forecast" or "long run" -- what the model is for, asked with
+    the first question and recorded at N0. Optional here; N1c (prepare_vec)
+    inherits it instead of asking again. It decides the role of the yardstick
+    for a VEC (rule 9).
     """
     import json as _json
     import shutil
@@ -749,6 +776,7 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
     session = session or name
     try:
         _sess.declare_lane(session, lane)
+        _sess.declare_purpose(session, purpose)
     except ValueError as e:
         return str(e)
     if raw:
@@ -787,7 +815,7 @@ def _fn_load_pre(name, paths_json):
 
 @mcp.tool()
 def load_data(name: str, path: str, freq: int = 0, start: str = "",
-              lane: str = "") -> str:
+              lane: str = "", purpose: str = "") -> str:
     """N0r — RAW DATA: an analyst with series and no univariate models
     (docs/STUDY-raw-entry.md). An Excel (.xlsx/.xls) or CSV table, one column
     per series in ORIGINAL levels (never transformed or differenced), a header
@@ -802,9 +830,14 @@ def load_data(name: str, path: str, freq: int = 0, start: str = "",
     `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
     session (the first question). Undeclared, guided, and every decision says
     so; a later load of the same session keeps the lane it has.
+    `purpose`: "forecast" or "long run" -- what the model is for, asked with
+    the first question and recorded at N0. Optional here; N1c (prepare_vec)
+    inherits it instead of asking again. It decides the role of the yardstick
+    for a VEC (rule 9).
     """
     try:
         _lane_now = _sess.declare_lane(name, lane)
+        _pur_now = _sess.declare_purpose(name, purpose)
     except ValueError as e:
         return str(e)
     from . import raw
@@ -828,7 +861,7 @@ def load_data(name: str, path: str, freq: int = 0, start: str = "",
         return f"Cannot load: {e}"
     s = _sess.open_raw(name, os.path.abspath(os.path.expanduser(path)), names, data, f, st)
     s.guion.add("N0r", "load_data", {"path": path, "freq": f, "start": list(st),
-                                     "lane": _lane_now},
+                                     "lane": _lane_now, "purpose": _pur_now},
                 f"{len(names)} series, {data.shape[0]} observations")
     return (evidence.raw_table_text(names, data, f, st, nonpos, path)
             + "\n\nNo univariate models: this is the raw entry. Next: characterize — "
@@ -975,7 +1008,7 @@ def write_specs(name: str, out_dir: str = "", overwrite: bool = False) -> str:
 
 
 @mcp.tool()
-def load_pre(name: str, paths_json: str, lane: str = "") -> str:
+def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "") -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
     `paths_json` is a JSON list of paths to fue files — `.pre` (optima, from art
@@ -990,9 +1023,14 @@ def load_pre(name: str, paths_json: str, lane: str = "") -> str:
     `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
     session (the first question). Undeclared, guided, and every decision says
     so; a later load of the same session keeps the lane it has.
+    `purpose`: "forecast" or "long run" -- what the model is for, asked with
+    the first question and recorded at N0. Optional here; N1c (prepare_vec)
+    inherits it instead of asking again. It decides the role of the yardstick
+    for a VEC (rule 9).
     """
     try:
         _lane_now = _sess.declare_lane(name, lane)
+        _pur_now = _sess.declare_purpose(name, purpose)
     except ValueError as e:
         return str(e)
     try:
@@ -1011,15 +1049,32 @@ def load_pre(name: str, paths_json: str, lane: str = "") -> str:
     _notas = _sc.load_notes(s.series)
     if _notas:
         txt += "\n\n" + "\n".join("! " + n for n in _notas)
-    s.guion.add("N0", "load_pre", {"files": len(paths), "lane": _lane_now},
+    s.guion.add("N0", "load_pre", {"files": len(paths), "lane": _lane_now,
+                                   "purpose": _pur_now, "order": _names(s)},
                 f"{len(paths)} series: {', '.join(_names(s))}")
     nd = sum(int(x.model.d or 0) == 1 for x in s.series)
     coint = ("\n\nTwo or more series have d = 1: after the gate and the canonical "
              "analysis sima asks the COINTEGRATION QUESTION (N1c: the rank by drvec's "
              "parametric bootstrap) before any VARMA in differences — the same files "
              "mtram hands over with a cycle." if nd >= 2 else "")
-    return (txt + coint + "\n\nNext: run_gate — the univariate base has to be certified "
-            "before anything is built on it.\n" + _lane_line(name))
+    return (txt + coint + "\n\n" + _order_text(s) + "\n\nNext: run_gate — the univariate "
+            "base has to be certified before anything is built on it.\n" + _lane_line(name)
+            + ("\nPurpose: " + _pur_now + " (recorded at N0; N1c inherits it)." if _pur_now else ""))
+
+
+def _order_text(s):
+    """N0: the order of the series is part of the model (P5) -- said once, here,
+    where it is fixed."""
+    names = _names(s)
+    return ("THE ORDER of the series is the order of the files: "
+            + " → ".join(names) + ". It is part of the model, not a detail: it is "
+            "the Cholesky order of the impulse responses and the variance "
+            "decomposition (rule 4: reorder compares another), in a VEC the "
+            "normalisation, beta on the LAST r series (rule 11: another order is "
+            "another fit), and in the echelon form the structure of A0, which the "
+            "Kronecker indices are read against. Put first what is most exogenous on theory. To change it, "
+            "load the files again in another order, now: everything after "
+            "depends on it.")
 
 
 def _lane_line(name):
@@ -1135,7 +1190,7 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
     X = np.column_stack([v[-n:] for v in lev])          # aligned at the end
     d = [int(x.model.d or 0) for x in s.series]
     txt, facts = evidence.canonical_report(X, _names(s), d, s.series[0].freq,
-                                           int(p), float(near), call=name)
+                                           int(p), float(near), call=name, route=s.route)
     s.canonical = facts                 # for prepare_vec (p) and estimate_vec (beta)
     s.guion.add("N1b", "canonical_analysis", {"p": facts["p"], "near": near},
                 f"lam {', '.join(f'{v:.3f}' for v in facts['lam'])}; "
