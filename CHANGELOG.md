@@ -2,6 +2,24 @@
 
 ## 0.2.5 — unreleased
 
+**P4: the decisions as data.**
+- A tool that ends in a decision leaves its guion entry PENDING, with its
+  options' calls. The call that takes one closes it and notes which: the
+  letter, or "<tool>, other arguments". `record_decision` on the same node
+  closes it too. The guided lane is recorded without asking for more (art's
+  BUG-0207). The guion lists the decisions still open.
+- `adopt(name, model, why)` keeps a model (VARMA or VEC, or "univariates")
+  and makes it current. `abandon(name, model, why)` sets a candidate aside.
+  `evaluate`'s options now call them.
+- The final-stage tools (forecast, the IRF and FEVD, their plots,
+  `irf_bands`) warn when they act on a model that is not the adopted one, or
+  when the univariates were adopted. They warn; they do not refuse.
+- `record_decision` says when a node is not one of sima's.
+- Guion entries carry `status`, `proposal`, `chosen` and `closed_by`. The
+  guion loads keys it does not know, so a newer guion still opens (it used to
+  fail on `Entry(**e)`).
+- The bookkeeping never costs a tool its answer.
+
 **P5: the first question leads to a path.** With the lane, the first exchange
 can take the model's PURPOSE (`purpose="forecast"` or `"long run"` in
 `load_pre`, `load_data`, `load_example`): N0 records it, and N1c

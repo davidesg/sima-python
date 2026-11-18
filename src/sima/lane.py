@@ -93,8 +93,34 @@ def apply(out, lane, declared, name, node, evidence):
     return res
 
 
+def _bound(fn, args, kw):
+    try:
+        b = inspect.signature(fn).bind(*args, **kw)
+        b.apply_defaults()
+        return dict(b.arguments)
+    except TypeError:
+        return dict(kw)
+
+
+def _prepend(out, note):
+    if isinstance(out, str):
+        return note + "\n\n" + out
+    if isinstance(out, list) and out:
+        c = out[0]
+        if isinstance(c, str):
+            return [note + "\n\n" + c] + out[1:]
+        if getattr(c, "type", None) == "text":
+            return [type(c)(type="text", text=note + "\n\n" + c.text)] + out[1:]
+    return out
+
+
 def wrap(fn, sessions):
-    """`fn`, with its answer passed through `apply` in its session's lane."""
+    """`fn`, with its answer passed through `apply` in its session's lane; and
+    its decisions recorded as data (sima.decisions): a decision it ends in is
+    left pending, the ones it takes are closed, and a final-stage tool warns
+    when it acts on a model that is not the adopted one."""
+    from . import decisions as _dec
+
     @functools.wraps(fn)
     def tool(*args, **kw):
         name = _session_name(fn, args, kw)
@@ -109,6 +135,19 @@ def wrap(fn, sessions):
             new = s.guion.entries[n0:] if s is before else s.guion.entries
             if new:
                 node, evidence = new[-1].node, new[-1].evidence
+            # the bookkeeping never costs the answer: a failure here is the
+            # record's, and the tool's result goes out as it is
+            try:
+                if new:
+                    _dec.close(s.guion, new[0], fn.__name__, _bound(fn, args, kw))
+                    text = "\n".join(t for _, t in _texts(out)[1])
+                    if _env.STOP in text:
+                        _dec.open_pending(new[-1], text)
+                note = _dec.adoption_note(s, fn.__name__)
+                if note:
+                    out = _prepend(out, note)
+            except Exception:                                 # noqa: BLE001
+                pass
         lane = sessions._LANES.get(name, "guided")
         return apply(out, lane, name in sessions._LANES, name, node, evidence)
     return tool
