@@ -31,7 +31,10 @@ def test_the_evidence_offers_a_menu_not_a_verdict(trio_json):
     M.load_pre("m", trio_json)
     M.run_gate("m")
     txt = M.identify_cross("m")
-    assert "(a)" in txt and "(b)" in txt and "for:" in txt and "against:" in txt
+    # the envelope (sima.envelope): lettered options, each with its argument
+    # and its exact call, and the stop — a menu, not a verdict
+    assert "**A)**" in txt and "**B)**" in txt and "for:" in txt and "against:" in txt
+    assert '`estimate(name="m", p=' in txt and "⏸" in txt
     assert "recommend" not in txt.lower()
 
 
@@ -47,7 +50,7 @@ def test_a_yardstick_loss_is_named_a_finding():
     cand = {("A", 1): {"n": 40, "RMSE": 1.2, "MAPE": 1.1, "MAE": 1.0}}
     diag = {("A", 1): {"n": 40, "RMSE": 1.0, "MAPE": 1.0, "MAE": 0.9}}
     txt, facts = evidence.evaluation_text(cand, diag, "VARMA", [1], ["A"])
-    assert facts == {"wins": 0, "cells": 1}
+    assert (facts["wins"], facts["cells"], facts["gains_on"]) == (0, 1, [])
     assert "a finding, not a model to keep" in " ".join(txt.split())
 
 

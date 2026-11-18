@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from . import jobs
+from . import envelope as _env
 
 CASES = ("1", "2", "3", "pre")
 CASE_TEXT = {"1": "case 1: E[nabla Y2] = 0, E[W] = 0 (no constant)",
@@ -376,7 +377,7 @@ def rank_report(res, call, folder=None, prov_line=""):
                      f'rank_test(name="{call}", B={B}, seed=12345)'))
     for t, (what, cl) in enumerate(opts):
         L.append(f"**{'ABCDEFGH'[t]})** {what}\n   `{cl}`")
-    L += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    L += ["", _env.STOP]
     if folder:
         L += ["", f"The engine's files: {os.path.join(folder, 'rank.out')} and "
               f"{os.path.join(folder, 'rank.boot')}."]
@@ -669,7 +670,7 @@ def estimate_report(vf, call, rank_note, canon_text="", prov_line="", purpose=No
                                                   "multistart=5)"))
     for t, (what, cl) in enumerate(opts):
         L.append(f"**{'ABCDEFGH'[t]})** {what}\n   `{cl}`")
-    L += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    L += ["", _env.STOP]
     if prov_line:
         L += ["", prov_line]
     return "\n".join(L)
@@ -836,7 +837,7 @@ def restriction_report(base, rf, restr, call, label, prov_line=""):
                  + "): a transfer network on I(1) inputs, its gain the long run, "
                  "its lags the short run\n   `mtram: load_pre, then identify_link "
                  f"(output {', '.join(out_)})` (outside sima)")
-    L += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    L += ["", _env.STOP]
     if prov_line:
         L += ["", prov_line]
     return "\n".join(L), {"lr": lr_b, "df": df, "p": p_b, "ll_free": best, "ll_restricted": ll_r,
@@ -1022,7 +1023,7 @@ def long_run_report(vf, lr, call, freq=1, prov_line=""):
           "## 3 · CONCLUSIONS", "",
           "Descriptive readings of the adopted VEC, conditional on r and the restrictions; "
           "the claim 'who corrects' is the LR's (test_restriction), not these numbers'.",
-          "", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+          "", _env.STOP]
     if prov_line:
         L += ["", prov_line]
     return "\n".join(L)

@@ -15,6 +15,7 @@ from . import jobs, vec
 from . import session as _sess
 from .mcp_server import _figure, _names, mcp
 from .provenance import line as _prov_line
+from . import envelope as _env
 
 WAIT = 20.0          # the short inline wait of a job tool, in seconds
 
@@ -218,7 +219,7 @@ def prepare_vec(name: str, purpose: str = "", p: int = 0, q: int = 0, case: str 
           f"purpose=\"{pur}\", p=..., case=\"2\")`",
           f"**C)** decline the question: the univariates' differences, the VARMA on "
           f"drvarma's ladder (N2)\n   `identify_cross(name=\"{name}\")`",
-          "", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+          "", _env.STOP]
     return "\n".join(L)
 
 
@@ -789,7 +790,7 @@ def add_exogenous(name: str, series: str = "", inputs: str = "", links: str = ""
             L.append("WARNING: the bridge does not reproduce the VEC without inputs: the "
                      "LR is not against the model it claims to extend.")
     L += ["The rank stays C1's, tested without the inputs (drvec refuses a rank test "
-          "with them).", "", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+          "with them).", "", _env.STOP]
     s.guion.add("C4", "add_exogenous", {"what": label, "adopt": adopt},
                 (f"LR {rl.lr:.2f} df {rl.df} p {rl.pvalue:.4f}" if rl is not None
                  else f"logL {f.loglik:.4f}"), kind="VEC")
@@ -1146,7 +1147,7 @@ def evaluate_vec(s, estwin, H):
           sorted({1, max(1, freq // 2), freq, 2 * freq} & set(range(1, H + 1))) or [1, H])
     names = _names(s)
     label = f"VEC r={vf.r} VARMA({vf.p},{vf.q}) " + vec.CASE_TEXT[str(vf.case)].split(":")[0]
-    txt, facts = evidence.evaluation_text(cand, diag, label, hs, names)
+    txt, facts = evidence.evaluation_plain(cand, diag, label, hs, names)
     txt = (txt.replace("The VARMA has the lower RMSE", "The VEC has the lower RMSE")
            .replace("keep the VARMA", "keep the VEC"))
     mism = [k for k in diag if k in cand and diag[k]["n"] != cand[k]["n"]]
@@ -1161,7 +1162,7 @@ def evaluate_vec(s, estwin, H):
     if mism:
         L.append(f"NOTE: the origins differ in {len(mism)} cells (n): read with care.")
     if varma is not None:
-        vt, vfacts = evidence.evaluation_text(cand, varma, label, hs, names)
+        vt, vfacts = evidence.evaluation_plain(cand, varma, label, hs, names)
         vt = vt.replace("against the univariates (diagonal system),",
                         "against the VARMA in differences (the session's current VARMA),")
         vt = vt.replace("RMSE uni", "RMSE varma").replace("MAPE uni", "MAPE varma")

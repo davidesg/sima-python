@@ -68,7 +68,8 @@ def test_estimate_does_not_call_the_fold_a_convergence(tmp_path):
     assert folded == ["theta_Minneapolis[B^1]", "theta_KansasCity[B^1]"]
     assert "STOPPED AT THE FOLD OF AN OWN MA(1)" in t
     assert "converged" not in t
-    assert "Next: evaluate" not in t and "(study_estimation)" in t
+    # the envelope's first option is to study the fit, before any reading
+    assert "**A)** study the fit first" in t and "`study_estimation(name=" in t
     for nm in ("theta_Minneapolis", "theta_KansasCity"):
         row = next(ln for ln in t.splitlines() if ln.strip().startswith(nm + "[B^1]"))
         assert row.rstrip().endswith("<- fold") and "*" not in row

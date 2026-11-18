@@ -2,6 +2,32 @@
 
 ## 0.2.5 — unreleased
 
+**P1 — the VARMA core gets the envelope of a node** (`sima.envelope`), as art's
+guided lane (art BUG-0094) and as sima's own manual asked (§2.4). The tools
+that stop at a decision wrote four sections and a stop mark by hand, fifteen
+copies of it; the core — `identify_cross`, `identify_matrices`,
+`identify_echelon`, `estimate`, `study_estimation`, `evaluate` — wrote neither,
+and its menus were prose with no call. Now every node of the core ends with
+TABLE · WHAT IT SHOWS · CONCLUSIONS · DECISION and the stop, and every option
+carries its exact call on the session.
+
+- `estimate` no longer says «Next: evaluate»: its first option is N4,
+  `check_residuals` — each series' diagnosis and the CCF of every pair, with
+  their figures — then N4s `simplify` and N4t `structure`, and N5 last. The
+  guided lane used to go from the estimate to the yardstick without ever
+  showing the residuals of the estimated model.
+- `evaluate` (N5, the node that decides) closes with its four decisions, keep
+  the VARMA, stay with the univariates, another candidate, V(l), each with its
+  call; it says on which series the VARMA gains.
+- The conclusions are READINGS of the facts the tool computes (the optimiser's
+  stop, the LR, the weak cross coefficients, the residuals' Q, where it
+  gains), never a recommendation. A search that did not start (BUG-0011) still
+  gets no LR.
+- `tests/test_envelope.py` fixes the contract on Jenkins and Alavi's example:
+  the four sections in order, the stop, every option with a call to a tool
+  that exists, N4 before N5. The VEC's yardstick keeps its plain text for now
+  (`evidence.evaluation_plain`).
+
 The examples' job caches, as the tools and the suite handle them; nothing a
 user sees changes.
 

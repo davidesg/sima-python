@@ -21,6 +21,7 @@ _w.filterwarnings("ignore", module=r"pydantic_settings.*",
 from mcp.server.fastmcp import FastMCP
 
 from . import evidence, session as _sess
+from . import envelope as _env
 
 _INSTRUCTIONS = """
 You are sima — the assistant for SIMULTANEOUS multivariate models: VARMA by
@@ -1102,7 +1103,7 @@ def identify_cross(name: str, nlags: int = 0) -> str:
     freq = s.series[0].freq
     K = nlags or max(8, 2 * freq)
     txt, facts = evidence.cross_identification(L.result.residuals, _names(s), K, freq,
-                                               [x.n_arma() for x in L.series])
+                                               [x.n_arma() for x in L.series], call=name)
     s.guion.add("N2", "identify_cross", {"nlags": K},
                 f"short leads up to {facts['maxlag']}, longer {facts['longer']}, contemporaneous "
                 f"{'yes' if facts['contemporaneous'] else 'no'}")
@@ -1133,7 +1134,7 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
     K = int(nlags) or max(6, freq)
     _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
     txt, facts = evidence.ja_identification(W, L.result.residuals, _names(s), K,
-                                            int(qmax), freq, route=s.route)
+                                            int(qmax), freq, route=s.route, call=name)
     s.guion.add("N2", "identify_matrices", {"nlags": K, "qmax": qmax},
                 f"method 2: MA({facts['method2_q']}) residual model"
                 + (f", links {', '.join(facts['links'])}" if facts["links"] else "")
@@ -1229,22 +1230,32 @@ def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> st
             lines += [f"  pass {k + 1}: ({', '.join(map(str, nn))}), factors of the {src}"
                       for k, (nn, src) in enumerate(hist)]
             lines += [""]
-    lines += ["## Options", "",
-              f'(a) Fit it: estimate(name="{name}", indices="{ind}") — exact ML from the '
-              "least-squares estimates of the search; then check_residuals and evaluate.",
-              "(b) Compare it with the VARMA(p, q) of identify_matrices: both are fitted "
-              "on the same specifications, and the echelon form is identified where the "
-              "VARMA(p, q) with spare orders is not."]
+    from . import envelope as E
+    nq = f'name="{name}"'
+    concl = [f"The search chooses the Kronecker indices ({ind}) by {criterion}."
+             + (f" {other} chooses ({', '.join(map(str, alt))})." if alt != n else
+                f" {other} agrees."),
+             "The echelon form is identified where a VARMA(p, q) with spare orders is "
+             "not: both are fitted on the same specifications, so they can be compared."]
+    opts = [("fit it: exact ML from the least-squares estimates of the search; then "
+             "check_residuals and evaluate", f'estimate({nq}, indices="{ind}")')]
     if alt != n:
-        why = ("if the residuals of (a) show what it leaves out" if sum(alt) > sum(n)
-               else "if (a)'s extra terms do not pay for themselves (LR, evaluate)")
-        lines.append(f'(c) {other}\'s choice, estimate(name="{name}", '
-                     f'indices="{", ".join(map(str, alt))}"), {why}.')
+        why = ("if the residuals of (A) show what it leaves out" if sum(alt) > sum(n)
+               else "if (A)'s extra terms do not pay for themselves (LR, evaluate)")
+        opts.append((f"{other}'s choice, {why}",
+                     f'estimate({nq}, indices="{", ".join(map(str, alt))}")'))
+    opts.append(("compare with the VARMA(p, q) of the matrices", f"identify_matrices({nq})"))
+    shows = ["The Kronecker index of a series is the order of its own row; the echelon "
+             "form fixes the rest of the zeros (Lutkepohl and Poskitt 1996). The order of "
+             "the series is part of the model: A_0 is lower triangular in that order."]
     s.guion.add("N2", "identify_echelon", {"max_index": int(max_index),
                                            "criterion": criterion},
                 f"indices ({ind}) by {criterion}, long VAR({sr.h}); {other} "
                 f"({', '.join(map(str, alt))})")
-    return "\n".join(lines)
+    if lines and lines[0].startswith("# "):            # the envelope gives the title
+        lines = lines[1:]
+    return E.envelope("# N2 · The echelon form — Kronecker indices (Lutkepohl and "
+                      "Poskitt 1996)", lines, shows, concl, opts)
 
 
 # --------------------------------------------------------------------------- #
@@ -1369,16 +1380,82 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
                                    "indices": ", ".join(map(str, ech))},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason,
                 kind="VARMA")
-    nxt = "Next: evaluate — the candidate against the univariates."
-    fold = evidence.folded_own_ma(L.series, L.result)
-    if getattr(L.result, "ma_boundary", 0):
-        nxt = ("The fit stopped on the MA invertibility wall: study it before "
-               "reading its numbers (study_estimation).")
-    elif fold:
+    return _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech)
+
+
+def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
+    """N3's envelope (sima.envelope). Before, estimate ended with «Next:
+    evaluate» and the guided lane skipped N4 — the residuals of the estimated
+    model, each series' and each pair's — and N4s/N4t: whoever did not know the
+    tool went from the estimate to the yardstick without ever seeing them."""
+    from . import envelope as E
+    freq = s.series[0].freq
+    f = evidence.estimation_facts(L, max(8, 2 * freq))
+    q_ = f'name="{name}"'
+    spec = (f"p={p}, q={q}" + (", diagcov=True" if diagcov else "")
+            + (f', links="{lk}"' if lk else "")
+            + (f', cross="{cross}"' if cross != "additive" else "")
+            + (f', zeros="{", ".join(zs)}"' if zs else "")
+            + (f', indices="{", ".join(map(str, ech))}"' if ech else ""))
+    shows = ["A coefficient marked * has |t| > 1.96. The LR is against the same model "
+             "without cross terms, in sample: necessary, not sufficient — the cross terms "
+             "have to pay for themselves out of sample (N5).",
+             "The optimiser's stop says whether the point is a demonstrated maximum; the "
+             "residuals' Hosking Q is a first look at what the model leaves: check_residuals "
+             "reads them series by series and pair by pair, with their figures."]
+    if f["not_started"]:
+        # BUG-0011: no LR, no reading of a table that is the seeds
+        return E.envelope(
+            f"# N3 · NOT estimated — {_desc(s.current)}", txt,
+            ["The search ended at its first step on the diagonal start: no cross term "
+             "moved from its seed."],
+            ["Nothing is concluded about cross dynamics: there is no estimate to read."],
+            [("bring the files into the optimiser's band (art writes the factor that does "
+              "it; a series in levels may need other units or a difference)",
+              "art (outside sima)"),
+             ("start the search elsewhere", f'estimate({q_}, {spec}, start="preliminary")'),
+             ("other orders: back to the identification", f"identify_matrices({q_})")])
+    concl = []
+    if f["wall"]:
+        concl.append("The fit stopped on the MA invertibility wall: not an optimum. Its "
+                     "numbers are not to be read before studying it.")
+    elif f["fold"]:
         # BUG-0008: the fold of the cast is a wall of one coefficient
-        nxt = (f"The fit stopped at the fold of an own MA(1) ({', '.join(n for n, _ in fold)}): "
-               "not an optimum. Study it before reading its numbers (study_estimation).")
-    return txt + "\n\n" + nxt
+        concl.append(f"The fit stopped at the fold of an own MA(1) ({', '.join(f['fold'])}): "
+                     "not an optimum. Its numbers are not to be read before studying it.")
+    elif not f["converged"]:
+        concl.append(f"Optimiser: {f['stop']}. The point is not certified by the "
+                     "gradient.")
+    if f["lr_p"] is not None:
+        concl.append(f"The cross terms are {'significant' if f['lr_p'] < 0.05 else 'NOT significant'}"
+                     f" in sample against the diagonal system (LR = {f['lr']:.2f}, df = "
+                     f"{f['lr_df']}, p = {f['lr_p']:.4f})"
+                     + ("." if f["lr_p"] < 0.05 else ": the data do not ask for them here."))
+    if f["n_cross"]:
+        concl.append(f"{len(f['weak_cross'])} of {f['n_cross']} cross coefficients have "
+                     "|t| <= 1.96" + (f" ({', '.join(f['weak_cross'][:6])}"
+                                      + (", …" if len(f["weak_cross"]) > 6 else "") + ")"
+                                      if f["weak_cross"] else "") + ".")
+    if f["hosking_p"] is not None:
+        concl.append("The residuals' Hosking Q "
+                     + ("does not reject white noise" if f["hosking_p"] > 0.05 else
+                        "REJECTS white noise: the model leaves dynamics")
+                     + f" (p = {f['hosking_p']:.4f}).")
+    opts = []
+    if f["wall"] or f["fold"]:
+        opts.append(("study the fit first: restarts from other points, and the MA "
+                     "wall or the fold", f"study_estimation({q_})"))
+    opts.append(("N4 — the residuals of this model: each series' diagnosis and the CCF "
+                 "of each pair, with their figures", f"check_residuals({q_})"))
+    if f["weak_cross"]:
+        opts.append((f"N4s — simplify: drop the cross coefficients with small t "
+                     f"({len(f['weak_cross'])} here)", f"simplify({q_})"))
+    if f["n_cross"]:
+        opts.append(("N4t — the structure: which series feed which, by LR, pair by pair",
+                     f"structure({q_})"))
+    opts.append(("N5 — the yardstick: does it forecast better than the univariates?",
+                 f"evaluate({q_}, {spec}, estwin=...)"))
+    return E.envelope(f"# N3 · Estimated — {_desc(s.current)}", txt, shows, concl, opts)
 
 
 def _desc(key):
@@ -1624,7 +1701,7 @@ def check_residuals(name: str, nlags: int = 0) -> list:
                  f'forecast_uncertainty(name="{name}")'))
     for t, (what, call) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{call}`")
-    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    lines += ["", _env.STOP]
     # the figures, as drvus' diagnosis: a panel per series, a ccf per pair
     items = [(fig, f"resid_{nm}") for nm, fig in figures.residual_panels(L)]
     from drvarma.plots import ccf_default_lags
@@ -1717,6 +1794,7 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
             x, best = rk.x.copy(), rk.logL
         out += [f"RESTARTS (retreat {retreat} towards the start, re-optimise):"] + rows
         out += [f"  highest reached: logL {best:.6f}  ({best - r.logL:+.6f} over the fit)", ""]
+    i_menu = len(out)                    # the reading starts here (the envelope)
     out += ["MENU (the analyst decides):",
             "  a) Remove the near-common factor, or lower p or q, and re-estimate:",
             "     a model whose likelihood has an interior maximum.",
@@ -1758,7 +1836,31 @@ def study_estimation(name: str, restarts: int = 6, retreat: float = 0.97) -> str
                 f"fit logL {r.logL:.4f}; boundary {getattr(r, 'ma_boundary', 0)}"
                 + (f"; at the fold: {', '.join(n for n, _ in fold)}" if fold else ""),
                 "")
-    return "\n".join(out)
+    from . import envelope as E
+    nq = f'name="{name}"'
+    extra = ((", diagcov=True" if diagcov else "") + (f', links="{lk}"' if lk else "")
+             + (f', cross="{cross}"' if cross != "additive" else ""))
+    opts = []
+    if not ech:
+        if p:
+            opts.append((f"a lower AR order (p = {p - 1}): a model whose likelihood may have "
+                         "an interior maximum", f"estimate({nq}, p={p - 1}, q={q}{extra})"))
+        if q:
+            opts.append((f"a lower MA order (q = {q - 1})",
+                         f"estimate({nq}, p={p}, q={q - 1}{extra})"))
+        opts.append(("keep it, knowing where it sits, and take it to the yardstick",
+                     f"evaluate({nq}, p={p}, q={q}{extra}, estwin=...)"))
+    opts.append(("report the highest point found as such, stating that it is on the wall",
+                 f'record_decision({nq}, node="N4b", decision="...", reason="...")'))
+    if 0.0 in wall or any(f in seasonal for f in wall if f > 0):
+        opts.append(("revise the univariate model's d (or its seasonality) in art: the wall "
+                     "is its signature", "art (outside sima)"))
+    shows = ["The fit is restarted from other points and re-estimated by a second path "
+             "(Shea's likelihood): if they climb, the reported point is not the top. A root "
+             "on the invertibility wall makes the likelihood a ridge, whose point depends on "
+             "the path."]
+    return E.envelope("# N4b · Study of the fit", out[:i_menu], shows,
+                      [l.strip() for l in out[i_menu:] if l.strip()], opts)
 
 
 # --------------------------------------------------------------------------- #
@@ -1837,7 +1939,12 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
              + (f", links {lk}" if lk else "")
              + (", residual-model form" if cross == "residual" else "")
              + (f", {len(zs)} coefficients at zero" if zs else ""))
-    txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s))
+    spec = (f"p={p}, q={q}" + (", diagcov=True" if diagcov else "")
+            + (f', links="{lk}"' if lk else "")
+            + (f', cross="{cross}"' if cross != "additive" else "")
+            + (f', indices="{", ".join(map(str, ech))}"' if ech else ""))
+    txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s),
+                                          call=name, spec=spec)
     if s.route == "V":
         txt = _yardstick_text(s) + "\n\n" + txt
     s.evaluations[(p, q, diagcov, lk, cross, zs, estwin, H)] = (cand, diag)
@@ -2336,7 +2443,7 @@ def plot_identification(name: str, method: int = 2, nlags: int = 0, pairs: str =
     if facts["method2_q"] and facts["method1_p"]:
         lines.append("\nBoth readings are present: Jenkins and Alavi estimate both, "
                      "compare them, and N5 (evaluate) decides.")
-    lines += ["", "⏸ **Your decision.** (guided lane: I do not go on until you say)"]
+    lines += ["", _env.STOP]
     brief = (f"method {method}: " + (
         f"cross ccf cut-off after {facts['method2_q']} (MA residual model)" if method == 2
         else f"cross pccf cut-off after {facts['method1_p']} (cross AR)"))

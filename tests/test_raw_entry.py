@@ -243,7 +243,9 @@ def test_simplify_and_adopt(gas_v):
     s = M._sess.get("v_gf")
     n_fits = len(s.fits)
     e = _fn(M.estimate)("v_gf", 6, 0, zeros=zeros)
-    assert len(s.fits) == n_fits and "9 coefficients at zero" not in e
+    # adopting reuses the cached fit (no new fit); the envelope's title names the
+    # model adopted, with its zeros
+    assert len(s.fits) == n_fits and "9 coefficients at zero" in e.splitlines()[0]
     assert s.current[5] and "phi_CO2[B^5]" in s.current[5]
     assert "phi_CO2[B^5]" not in s.fits[s.current].result.names
     # the own zero is in the spec file, as a fixed coefficient
@@ -262,7 +264,9 @@ def test_the_echelon_form_on_the_gas_furnace(gas_v):
     the form is refused."""
     t = _fn(M.identify_echelon)("v_gf", max_index=6)
     assert "Chosen by SC: InputGasRate 2, CO2 2" in t and "HQ would choose (3, 2)" in t
-    assert 'estimate(name="v_gf", indices="3, 2"), if the residuals of (a)' in t
+    # the other criterion's choice, as an option of the envelope with its call
+    assert "HQ's choice, if the residuals of (A) show what it leaves out" in t
+    assert '`estimate(name="v_gf", indices="3, 2")`' in t
     e = _fn(M.estimate)("v_gf", indices="2, 2")
     s = M._sess.get("v_gf")
     ech = s.fits[s.current].result
