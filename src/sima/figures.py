@@ -14,7 +14,7 @@ design is the one the suite already reads:
   dashed (approved 2026-09-29): a share lives in 0-100, and the shaded area
   shows at a glance how much of that range the estimate leaves open.
 * the CCFs are GraphMaker's panel (Treadway's; the same as drvus' ccf and
-  drtran's), reused from drvarma (`plots._draw_ccf_panel`), not redrawn; so is Jenkins and Alavi's
+  drtran's), drawn by pyfug (`pyfug.graphics.ccf`, the suite's one CCF), not redrawn; so is Jenkins and Alavi's
   identification, per pair R_k over S_k, both two-sided: the CCF over its
   partial, as fue's ACF over PACF.
 * the forecast is FUF's, drawn by pyfug (fufplot.c): per
@@ -26,6 +26,7 @@ Matplotlib is imported inside each function.
 from __future__ import annotations
 
 import math
+import os
 
 import numpy as np
 
@@ -178,7 +179,7 @@ def residual_ccf_figure(L, nlags, freq=12):
     GraphMaker's panel: titled "A - B" with A leading at k > 0, Hosking's P
     below."""
     from drvarma.diagnostics import ccf, qccf
-    from drvarma.plots import _draw_ccf_panel
+    from pyfug.graphics.ccf import draw_ccf_panel as _draw_ccf_panel
     plt = _plt()
     a = np.asarray(L.result.residuals, float)
     n, m = a.shape
@@ -221,7 +222,7 @@ def identification_figure(x, names, K, method, freq=1, pairs=None, Kp=None):
     the partial panel of a pair is conditional on the other series too.
     `Kp` caps the partial's order (the VAR behind S_K has m^2 K coefficients)."""
     from drvarma import identification_mv as im
-    from drvarma.plots import _ccf_scale, _draw_ccf_panel
+    from pyfug.graphics.ccf import ccf_scale as _ccf_scale, draw_ccf_panel as _draw_ccf_panel
     plt = _plt()
     x = np.asarray(x, float)
     n, m = x.shape
@@ -378,11 +379,24 @@ def forecast_figure(L, fc, only=None):
     return fig
 
 
-def save(fig, path, dpi=130):
+def save(fig, path, dpi=130, vectors=False):
+    """Write the figure (a PNG) and close it; returns the PNG's path.
+    ``vectors=True`` also writes it in SVG and PDF next to it -- the high
+    definition the C draws in EPS (`pyfug.graphics.ccf.save_ccf`)."""
     plt = _plt()
-    fig.savefig(path, dpi=dpi, bbox_inches="tight")
+    if vectors:
+        from pyfug.graphics.ccf import save_ccf
+        path = save_ccf(fig, path, dpi=dpi)[0]
+    else:
+        fig.savefig(path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     return path
+
+
+def vector_paths(png):
+    """The SVG and PDF `save(..., vectors=True)` writes next to ``png``."""
+    base = os.path.splitext(png)[0]
+    return [base + ".svg", base + ".pdf"]
 
 
 # --------------------------------------------------------------------------- #
@@ -475,7 +489,7 @@ def residual_ccf_arrays(a, names, nlags, freq, npq):
     """residual_ccf_figure on given residuals (a VEC's, drvec's Ybar), in
     GraphMaker's panel with Hosking's P."""
     from drvarma.diagnostics import ccf, qccf
-    from drvarma.plots import _draw_ccf_panel
+    from pyfug.graphics.ccf import draw_ccf_panel as _draw_ccf_panel
     plt = _plt()
     a = np.asarray(a, float)
     n, m = a.shape

@@ -2,6 +2,15 @@
 
 ## 0.2.5 — unreleased
 
+**The CCFs are drawn by pyfug** (`pyfug.graphics.ccf`, pyfug >= 2.1.0), the
+suite's one CCF drawing. sima borrowed it from drvarma through a private
+function (`drvarma.plots._draw_ccf_panel`); the panel is identical (checked
+at monthly, quarterly and annual frequency, with the lag-varying band). The
+residual CCF (`check_residuals` and `plot_residual_ccf`, VARMA and VEC) is
+also written in SVG and PDF, the high definition the C draws in EPS; the
+answer names the three paths, and the guion keeps the vectors next to the
+PNG.
+
 **P1 — the VARMA core gets the envelope of a node** (`sima.envelope`), as art's
 guided lane (art BUG-0094) and as sima's own manual asked (§2.4). The tools
 that stop at a decision wrote four sections and a stop mark by hand, fifteen
