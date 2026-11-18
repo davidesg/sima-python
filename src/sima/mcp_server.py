@@ -1704,7 +1704,7 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     lines += ["", _env.STOP]
     # the figures, as drvus' diagnosis: a panel per series, a ccf per pair
     items = [(fig, f"resid_{nm}") for nm, fig in figures.residual_panels(L)]
-    from drvarma.plots import ccf_default_lags
+    from pyfug.graphics.ccf import ccf_default_lags
     npq = figures.residual_npq(L)
     K0 = min(ccf_default_lags(freq), n // 4)
     Kc = figures.q_lags(K0, npq, n)
@@ -2204,13 +2204,18 @@ def _figure(s, fig, kind, path, note, report=None, node=None):
             d = tempfile.gettempdir()
         path = os.path.join(d, f"sima_{s.name}_{kind}.png")
     p = path
-    figures.save(fig, p)
+    vec = kind == "ccf"                  # the CCF also in vectors (SVG, PDF)
+    figures.save(fig, p, vectors=vec)
     # the node the figure belongs to: the identification is N2; the residual
     # CCFs are in-sample evidence (N4); the IRF, the FEVD and the forecasts are
     # the use of the model (N6)
     node = node or ("N2" if kind.startswith("ident") else "N4" if kind == "ccf" else "N6")
-    s.guion.add(node, kind_tool(kind), {"png": [p]}, note, kind=s.current_kind())
-    text = f"{report or note}\nPNG: {p}"
+    files = {"png": [p]}
+    if vec:
+        files["vectors"] = figures.vector_paths(p)
+    s.guion.add(node, kind_tool(kind), files, note, kind=s.current_kind())
+    text = f"{report or note}\n" + "".join(
+        f"{v.rsplit('.', 1)[1].upper()}: {v}\n" for v in files.get("vectors", [])) + f"PNG: {p}"
     try:
         from mcp.types import ImageContent, TextContent
         with open(p, "rb") as fh:
@@ -2232,13 +2237,19 @@ def _figures(s, items, text):
         os.makedirs(d, exist_ok=True)
     except OSError:
         d = tempfile.gettempdir()
-    paths = []
+    paths, vectors = [], []
     for fig, kind in items:
         p = os.path.join(d, f"sima_{s.name}_{kind}.png")
-        figures.save(fig, p)
+        figures.save(fig, p, vectors=kind == "ccf")    # the CCF also in vectors
         paths.append(p)
-    s.guion.add("N4", "check_residuals", {"png": paths}, "diagnosis figures")
-    text = text + "\n" + "\n".join(f"PNG: {p}" for p in paths)
+        if kind == "ccf":
+            vectors += figures.vector_paths(p)
+    files = {"png": paths}
+    if vectors:
+        files["vectors"] = vectors
+    s.guion.add("N4", "check_residuals", files, "diagnosis figures")
+    text = (text + "\n" + "".join(f"{v.rsplit('.', 1)[1].upper()}: {v}\n" for v in vectors)
+            + "\n".join(f"PNG: {p}" for p in paths))
     try:
         from mcp.types import ImageContent, TextContent
         out = [TextContent(type="text", text=text)]

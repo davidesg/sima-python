@@ -158,7 +158,7 @@ def _esc(x):
 
 
 def _args(a):
-    return ", ".join(f"{k}={v}" for k, v in a.items() if k not in ("png", "decided_by", "alternatives"))
+    return ", ".join(f"{k}={v}" for k, v in a.items() if k not in ("png", "vectors", "decided_by", "alternatives"))
 
 
 def render_html(g, base_dir=None):
