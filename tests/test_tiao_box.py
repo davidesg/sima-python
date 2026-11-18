@@ -60,7 +60,7 @@ def test_the_question_of_joint_differencing_is_asked():
     assert f["near_one"] == 1 and f["near_zero"] == 2 and f["question"]
     assert "there may be 2 stationary combination(s) of the levels" in t
     assert "N1c" in t and 'prepare_vec(name="x", purpose="...")' in t
-    assert t.index("prepare_vec") < t.index("identify_matrices")
+    assert t.index("prepare_vec") < t.index("identify_cross")   # route U opens N2 with the CCFs (P6)
 
 
 def test_independent_random_walks_raise_no_question():

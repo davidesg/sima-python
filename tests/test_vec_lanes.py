@@ -32,7 +32,7 @@ def test_the_guided_lane(tmp_path, monkeypatch):
     for call in (lambda: _fn(M.run_gate)(name),):
         assert "N1c" in call()
     c = _fn(M.canonical_analysis)(name)
-    assert c.index("prepare_vec") < c.index("identify_matrices")   # the count leads with it
+    assert c.index("prepare_vec") < c.index("identify_cross")   # the count leads with it; route U opens N2 with the CCFs (P6)
     for t in (_fn(M.prepare_vec)(name, purpose="long run"),
               _fn(M.rank_test)(name, B=B, wait=900)):
         assert "⏸ **Your decision.**" in t

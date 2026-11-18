@@ -9,6 +9,7 @@ verdict is the analyst's (or, in the autonomous lane, the model's, in writing).
 """
 from __future__ import annotations
 
+import re
 import math
 import os
 
@@ -545,6 +546,12 @@ def ja_identification(w, res, names, K, qmax, freq, route="U", call="NAME"):
              "method1_pq": pq, "method1_whole": {"q": q1w, "p": p1w, "pq": pqw},
              "diagonal_left": diag_left, "tb_p": tb_p, "tb_gaps": tb_gaps,
              "tb_M": [float(v) for v in sw["M"]]}
+    # N2's order (P6): identify_cross -> identify_matrices -> identify_echelon
+    # when an MA is in sight -- the next step, offered whenever an order has q > 0
+    if any(re.search(r"\bq=[1-9]", c) for _, c in opts):
+        opts.append(("the third form, Lutkepohl and Poskitt's echelon VARMA: an MA is in "
+                     "sight, and the echelon form is how a VARMA with MA is identified "
+                     "without overparameterising", f"identify_echelon({nq})"))
     if route != "V":
         opts.append(("the first identification, the residual CCFs pair by pair",
                      f"identify_cross({nq})"))
@@ -1125,7 +1132,8 @@ def contiguous_order(sw, alpha=0.05, run=2):
     return p, [l for l, v in enumerate(pv, 1) if l > p and v < alpha]
 
 
-def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
+def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False,
+                     route="U"):
     """Box and Tiao's (1977) canonical analysis of the transformed LEVELS x
     (n x m: Box-Cox and seasonal differences, no regular ones), under a
     VAR(p) by least squares (p = 0: the last significant M(l) of Tiao and
@@ -1222,8 +1230,11 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False):
                 ("keep them: route V (the vector first, the univariates only as the "
                  "yardstick)", f'write_specs(name="{call}")')]
     else:
+        # N2's order (P6): route U opens with the residual CCFs, route V (no
+        # univariate residuals) with the matrices
+        nxt = "identify_cross" if route == "U" else "identify_matrices"
         opts = [("go on with the univariates' differences (the ladder, Jenkins and Alavi's "
-                 "assumption)", f'identify_matrices(name="{call}")' if call else "identify_matrices")]
+                 "assumption)", f'{nxt}(name="{call}")' if call else nxt)]
     i0 = [nm for nm, dd in zip(names, d) if dd == 0]
     if len(diffd) >= 2 and not raw:
         # N1c, the cointegration question (docs/PLAN-vec.md, decision 2): offered
