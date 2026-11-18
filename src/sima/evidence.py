@@ -913,13 +913,12 @@ def evaluation_text(cand, diag, label, horizons, series, call="NAME", spec=""):
     q = f'name="{call}"'
     opts = [("keep the VARMA — for the series and horizons where it gains, if they are the "
              "ones the analysis is about; the N6 tools (forecast, impulse_response, …) "
-             "act on it, the current model",
-             f'record_decision({q}, node="N5", decision="keep the VARMA {spec}", '
-             'reason="...")'),
+             "act on it",
+             f'adopt({q}, model="current", why="...")'),
             ("stay with the univariates — if it does not gain where it matters",
-             f'record_decision({q}, node="N5", decision="the univariates", reason="...")'),
-            ("try another candidate: back to the identification (N2)",
-             f"identify_matrices({q})"),
+             f'adopt({q}, model="univariates", why="...")'),
+            ("set this candidate aside, with its reason, and go back to the identification "
+             "(N2) for another", f'abandon({q}, model="current", why="...")'),
             ("Jenkins and Alavi's V(l): the same question in sample, with the forecast "
              "error variances", f"forecast_uncertainty({q})")]
     text = _env.envelope("# N5 · The yardstick — the candidate against the univariates",

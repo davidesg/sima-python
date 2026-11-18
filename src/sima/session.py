@@ -29,6 +29,9 @@ class Session:
     vec_fits: dict = field(default_factory=dict)    # VEC key -> sima.vec.VecFit
     vec_current: tuple = None          # the key of the current VEC
     irf_jobs: dict = field(default_factory=dict)    # VEC key -> irf_bands job id
+    # P4: what the analysis keeps -- ("VARMA", key), ("VEC", key) or ("UNIV", None)
+    adopted: tuple = None
+    abandoned: list = field(default_factory=list)   # [(kind, key, why)]
 
     @property
     def lane(self):

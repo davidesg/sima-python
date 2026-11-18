@@ -224,6 +224,12 @@ N5  evaluate          THE YARDSTICK: fixed-parameter forecasts from every origin
     forecast_uncertainty  Jenkins and Alavi's Table VIII: V(l) of the model
                       against the univariates, by lead (in sample; evaluate
                       is the test).
+    adopt / abandon   the decision of N5 as data: adopt(model=..., why=...)
+                      keeps a model (or "univariates"), abandon(...) sets a
+                      candidate aside with its reason. The final-stage tools
+                      warn when they act on a model that is not the adopted
+                      one. A decision a tool ends in stays OPEN in the guion
+                      until a call takes one of its options.
 N6  forecast, impulse_response, variance_decomposition — with the chosen model.
     Their figures: plot_forecast, plot_impulse_response (an ACF-like panel per
     response and shock), plot_variance_decomposition (the same layout, 0-100 %),
@@ -284,7 +290,8 @@ writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
                       BOTH and comparing, not by choosing on paper.
   N4b study_estimation if a fit stops on the MA wall. Decide from its menu and
                       write why; never report a point on the wall as an optimum.
-  N5 evaluate         every surviving candidate against the univariates, same
+  N5 evaluate         (then adopt or abandon, with why=)
+                      every surviving candidate against the univariates, same
                       window. The rule: a VARMA is kept only if it forecasts
                       better OUT OF SAMPLE. In-sample significance is necessary,
                       not sufficient. If none wins, the univariate models are
@@ -2645,7 +2652,104 @@ def record_decision(name: str, node: str, decision: str, reason: str = "",
         args["alternatives"] = alternatives
     e = s.guion.add(node, "record_decision", args, evidence,
                     decision + (f" -- because {reason}" if reason else ""))
+    from .guion import NODES
+    if node not in NODES:
+        return (f"Recorded as step {e.n}. Note: \"{node}\" is not one of sima's nodes "
+                f"({', '.join(NODES)}); the guion keeps it under its own name.")
     return f"Recorded as step {e.n}."
+
+
+def _vec_desc(vf):
+    return (f"VEC r = {vf.r}, p = {vf.p}, q = {vf.q}, case {vf.case}, order "
+            + " → ".join(vf.order) + (", restricted" if vf.restriction else ""))
+
+
+def _models(s):
+    """{description: (kind, key)} of every model fitted in the session."""
+    m = {_desc(k): ("VARMA", k) for k in s.fits}
+    m.update({_vec_desc(vf): ("VEC", k) for k, vf in s.vec_fits.items()})
+    return m
+
+
+def _which(s, model):
+    """(kind, key, description) of `model`: "current", "univariates", or a
+    description (or an unambiguous part of one) of a fitted model."""
+    from . import decisions as _dec
+    m = (model or "current").strip()
+    if m.lower() in ("univariates", "univariate", "diagonal"):
+        return "UNIV", None, "the univariate models (the diagonal system)"
+    if m.lower() == "current":
+        kind, key = _dec.model_of(s)
+        if key is None:
+            raise KeyError("there is no current model: estimate one first")
+        d = _desc(key) if kind == "VARMA" else _vec_desc(s.vec_fits[key])
+        return kind, key, d
+    ms = _models(s)
+    hit = [d for d in ms if d == m] or [d for d in ms if m.lower() in d.lower()]
+    if len(hit) != 1:
+        raise KeyError(("no fitted model matches " if not hit else "several models match ")
+                       + repr(model) + ". The session's: " + "; ".join(ms or ["none"]))
+    return ms[hit[0]] + (hit[0],)
+
+
+@mcp.tool()
+def adopt(name: str, model: str = "current", why: str = "") -> str:
+    """N5 (C8 for a VEC) — ADOPT the model the analysis keeps.
+
+    `model`: "current" (the last one estimated), "univariates" (the diagonal
+    system: no VARMA gained where it matters), or the description of a fitted
+    one as the estimates name it ("p = 1, q = 0, full covariance"; a part of
+    it that names only one fit is enough). `why` is required: the reason, with
+    its evidence (the yardstick's numbers).
+
+    The adopted model becomes the current one, and the final-stage tools
+    (forecast, impulse_response, variance_decomposition and their plots) say
+    so when they are asked about another. Adopting again replaces it."""
+    s = _sess.get(name)
+    if not why.strip():
+        return "Say why (why=...): an adoption without its reason is not documented."
+    try:
+        kind, key, d = _which(s, model)
+    except KeyError as e:
+        return f"Cannot adopt: {e.args[0]}"
+    if kind == "VARMA":
+        s.current, s.kind = key, "VARMA"
+    elif kind == "VEC":
+        s.vec_current, s.kind = key, "VEC"
+    s.adopted = (kind, key)
+    by = "LLM" if s.lane == "autonomous" else "analyst"
+    e = s.guion.add("C8" if kind == "VEC" else "N5", "adopt",
+                    {"model": d, "decided_by": by}, why, f"adopted: {d} -- because {why}",
+                    kind="" if kind == "UNIV" else kind)
+    e.status = "adopted"
+    return (f"Adopted (step {e.n}): {d}." + (
+        " The univariate models are the result: say it plainly, it is a finding." if kind == "UNIV"
+        else " It is the current model; the final-stage tools act on it.")
+        + " export_guion(name) writes the path, with the adoption marked.")
+
+
+@mcp.tool()
+def abandon(name: str, model: str = "current", why: str = "") -> str:
+    """N5 — SET ASIDE a candidate, and why (what a failed candidate contributes
+    is the reason it failed). `model` as in adopt. The fit stays in the session
+    (an LR can still use it); the guion marks it as a dead end."""
+    s = _sess.get(name)
+    if not why.strip():
+        return "Say why (why=...): a candidate set aside without its reason is lost."
+    try:
+        kind, key, d = _which(s, model)
+    except KeyError as e:
+        return f"Cannot set aside: {e.args[0]}"
+    if kind == "UNIV":
+        return "The univariates are the yardstick, not a candidate: they are not set aside."
+    s.abandoned.append((kind, key, why))
+    by = "LLM" if s.lane == "autonomous" else "analyst"
+    e = s.guion.add("C8" if kind == "VEC" else "N5", "abandon",
+                    {"model": d, "decided_by": by}, why, f"set aside: {d} -- because {why}",
+                    kind=kind)
+    e.status = "dead-end"
+    return (f"Set aside (step {e.n}): {d}. Back to the identification for another "
+            f'candidate (identify_cross or identify_matrices(name="{name}")), or adopt one.')
 
 
 @mcp.tool()

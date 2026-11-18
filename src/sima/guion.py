@@ -57,6 +57,19 @@ class Entry:
     # for a job, its engine, seed, cache key and run folder (PLAN-vec C1)
     prov: dict = field(default_factory=dict)
     kind: str = ""                     # the model's kind when it is a fit: VARMA or VEC
+    # P4 -- the decisions as data, not only as prose:
+    #   "pending"  a tool that ends in a decision left it open, with its options;
+    #   "closed"   the call that took one of them (or record_decision) closed it;
+    #   "adopted"  adopt(): the model the analysis keeps;
+    #   "dead-end" abandon(): a candidate set aside, and why.
+    status: str = ""
+    proposal: list = field(default_factory=list)   # the options' calls, A, B, ...
+    chosen: str = ""                   # which option closed it ("B", or what else)
+    closed_by: int = 0                 # the step that closed it
+
+
+STATUS_MARK = {"pending": "OPEN", "closed": "decided", "adopted": "ADOPTED",
+               "dead-end": "set aside"}
 
 
 @dataclass
@@ -73,6 +86,10 @@ class Guion:
                   prov=p, kind=kind)
         self.entries.append(e)
         return e
+
+    def pending(self):
+        """The decisions still open, oldest first."""
+        return [e for e in self.entries if e.status == "pending"]
 
     def path(self):
         if not self.files:
@@ -110,18 +127,30 @@ class Guion:
             out.append(f"    evidence: {e.evidence}")
             if e.decision:
                 out.append(f"    decision: {e.decision}")
+            if e.status:
+                out.append(f"    status: {STATUS_MARK.get(e.status, e.status)}"
+                           + (f" -- option {e.chosen}, at step {e.closed_by}"
+                              if e.status == "closed" and e.chosen else ""))
             extra = {k: e.prov[k] for k in ("engine", "seed", "key", "folder")
                      if e.prov and k in e.prov}
             if extra:
                 out.append("    provenance: " + ", ".join(f"{k} {v}" for k, v in extra.items()))
+        open_ = self.pending()
+        if open_:
+            out += ["", "OPEN DECISIONS: " + ", ".join(f"{e.node} (step {e.n}, {e.tool})"
+                                                       for e in open_)]
         return "\n".join(out)
 
 
 def load(path):
+    """A guion from its JSON. Keys this version does not know are ignored (as
+    art's `_campos_conocidos`): a guion written by a newer sima still loads."""
+    from dataclasses import fields
+    known = {f.name for f in fields(Entry)}
     with open(path) as fh:
         d = json.load(fh)
     g = Guion(d["name"], d["files"])
-    g.entries = [Entry(**e) for e in d["entries"]]
+    g.entries = [Entry(**{k: v for k, v in e.items() if k in known}) for e in d["entries"]]
     return g
 
 
@@ -186,6 +215,8 @@ def render_html(g, base_dir=None):
     for e in g.entries:
         ev = e.evidence if len(e.evidence) <= 90 else e.evidence[:90] + "…"
         dec = e.decision if len(e.decision) <= 70 else e.decision[:70] + "…"
+        if e.status:
+            dec = (dec + " " if dec else "") + f"[{STATUS_MARK.get(e.status, e.status)}]"
         L.append(f"<tr><td><a href='#s{e.n}'>{e.n}</a></td><td>{_esc(e.node)}</td>"
                  f"<td>{_esc(e.tool)}</td><td><code>{_esc(_args(e.args))}</code></td>"
                  f"<td>{_esc(ev)}</td><td>{_esc(dec)}</td></tr>")
@@ -216,6 +247,10 @@ def render_html(g, base_dir=None):
                 L.append(f"<div class='decision'><b>Decision:</b> {_esc(e.decision)}"
                          + (f"<br><span class='meta'>decided by: {_esc(by)}</span>" if by else "")
                          + "</div>")
+            if e.status:
+                L.append(f"<p class='meta'><b>{_esc(STATUS_MARK.get(e.status, e.status))}</b>"
+                         + (f" — option {_esc(e.chosen)}, at step {e.closed_by}"
+                            if e.status == "closed" and e.chosen else "") + "</p>")
             if e.args.get("alternatives"):
                 L.append(f"<div class='alt'><b>Set aside:</b> {_esc(e.args['alternatives'])}</div>")
             for p in e.args.get("png", []) or []:
