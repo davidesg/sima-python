@@ -1162,7 +1162,8 @@ def run_gate(name: str) -> str:
 # --------------------------------------------------------------------------- #
 
 @mcp.tool()
-def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
+def canonical_analysis(name: str, p: int = 0, near: float = 0.90,
+                       interventions: str = "remove") -> str:
     """N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
     (each series' Box-Cox and seasonal differences; NOT its regular ones):
     the combinations of the series ordered from least to most predictable.
@@ -1177,7 +1178,14 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
     last significant M(l) of Tiao and Box's stepwise table on the levels). Run
     it after the gate, before the identification, when two or more series are
     differenced; with raw data (load_data, characterize), right after
-    characterize, on the characterization's levels."""
+    characterize, on the characterization's levels.
+
+    The levels are read WITHOUT each model's deterministic terms (BUG-0018):
+    its deterministic seasonality always (a harmonic is predictable by
+    construction), its interventions by default (`interventions="keep"`
+    leaves them in), never mu nor a trend. The answer says what was removed
+    and, when there are interventions, gives the reading with them inside
+    too, so the difference shows without asking for it."""
     import numpy as np
     if _sess.has_raw(name) and name not in _sess.names():
         from . import raw
@@ -1195,14 +1203,55 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90) -> str:
     s = _sess.get(name)
     if s.gate is None:
         return "Run the gate first (run_gate)."
-    lev = [x.levels() for x in s.series]
-    n = min(len(v) for v in lev)
-    X = np.column_stack([v[-n:] for v in lev])          # aligned at the end
+    from . import levels as _lv
+    itv = (interventions or "remove").strip().lower()
+    if itv not in ("remove", "keep"):
+        return 'interventions must be "remove" or "keep".'
+
+    def _matrix(mode):
+        lev = [_lv.clean_levels(x, mode) for x in s.series]
+        n = min(len(v) for v in lev)
+        return np.column_stack([v[-n:] for v in lev])          # aligned at the end
+    try:
+        X = _matrix(itv)
+    except ValueError as e:
+        return f"Cannot remove the deterministic terms: {e}"
     d = [int(x.model.d or 0) for x in s.series]
+    removed = [(nm, _lv.describe(x, itv)) for nm, x in zip(_names(s), s.series)]
+    note = ("THE LEVELS READ (BUG-0018): each model's deterministic seasonality removed"
+            + (", its interventions removed too" if itv == "remove" else
+               ", its interventions KEPT (interventions=\"keep\")")
+            + "; never mu nor a trend. "
+            + "; ".join(f"{nm}: {r}" for nm, r in removed if r) + "."
+            if any(r for _, r in removed) else
+            "THE LEVELS READ: no deterministic terms in the models; the levels as they are.")
     txt, facts = evidence.canonical_report(X, _names(s), d, s.series[0].freq,
-                                           int(p), float(near), call=name, route=s.route)
+                                           int(p), float(near), call=name, route=s.route,
+                                           removed_note=note)
+    has_itv = any(t not in _lv.SEASONAL | _lv.KEPT_ALWAYS
+                  for x in s.series for t, _ in _lv._groups(x))
+    if has_itv:
+        other = "keep" if itv == "remove" else "remove"
+        try:
+            _t, f2 = evidence.canonical_report(_matrix(other), _names(s), d,
+                                               s.series[0].freq, int(p), float(near),
+                                               call=name, route=s.route)
+            cmp_ = ("With the interventions " + ("INSIDE" if other == "keep" else "REMOVED")
+                    + f" (for comparison): sqrt(lam) "
+                    + ", ".join(f"{np.sqrt(v):.3f}" for v in f2["lam"])
+                    + f"; order by M(l) {f2.get('p_run', f2['p'])} (here "
+                    + f"{facts.get('p_run', facts['p'])}). "
+                    + 'canonical_analysis(name="' + name + '", interventions="' + other
+                    + '") reads that one.')
+            anchor = "## 4 · DECISION"
+            txt = (txt.replace(anchor, cmp_ + "\n\n" + anchor, 1) if anchor in txt
+                   else txt + "\n\n" + cmp_)
+        except ValueError:
+            pass
+    facts["interventions"] = itv
     s.canonical = facts                 # for prepare_vec (p) and estimate_vec (beta)
-    s.guion.add("N1b", "canonical_analysis", {"p": facts["p"], "near": near},
+    s.guion.add("N1b", "canonical_analysis", {"p": facts["p"], "near": near,
+                                              "interventions": itv},
                 f"lam {', '.join(f'{v:.3f}' for v in facts['lam'])}; "
                 f"{facts['near_one']} near 1 of {facts['differenced']} differenced"
                 + ("; stationary combinations possible (N1c)" if facts["question"] else ""))

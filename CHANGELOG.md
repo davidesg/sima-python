@@ -2,6 +2,19 @@
 
 ## 0.2.5 — unreleased
 
+**BUG-0018: the canonical analysis reads the levels without the deterministic
+terms.** In route U it read each `.pre`'s levels with its harmonics and
+interventions inside. That inflated lam and the order by M(l), which
+`prepare_vec` proposes as p. On the US monetary VAR (the repro) the order was
+14; without the terms it is 4.
+
+Now (`sima.levels`, no new engine):
+- the seasonality is always removed;
+- the interventions are removed by default (`interventions="keep"` leaves them
+  in), and the answer gives the other reading too;
+- mu and a trend are never removed;
+- the table says what was removed, series by series.
+
 **P3: the map, and where an analysis stands.**
 - `docs/DECISION_NODES.md` (served as `sima://doc/DECISION_NODES`), in the
   style of mtram's. For each node it gives what leaves it undetermined, the

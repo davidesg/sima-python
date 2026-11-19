@@ -1132,7 +1132,7 @@ def contiguous_order(sw, alpha=0.05, run=2):
 
 
 def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False,
-                     route="U"):
+                     route="U", removed_note=None):
     """Box and Tiao's (1977) canonical analysis of the transformed LEVELS x
     (n x m: Box-Cox and seasonal differences, no regular ones), under a
     VAR(p) by least squares (p = 0: the last significant M(l) of Tiao and
@@ -1175,6 +1175,8 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False,
                   "        " + " ".join(f"   y{i + 1}(t-1)" for i in range(m)) + "     shock"]
         for j in range(m):
             lines.append(f"  y{j + 1}  " + " ".join(f"{v:10.3f}" for v in sh[j]))
+    if removed_note:
+        lines += ["", removed_note]
     lines += ["```", "", "## 2 · WHAT IT SHOWS", "",
               "lam is the share of a component's variance its own past predicts "
               "(2.2); sqrt(lam) is on the scale of a root (for an AR(1) component "
@@ -1220,8 +1222,10 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False,
                      "the joint reading.")
     lines.append("A reading, not a test: lam near 1 also comes from a nearly singular "
                  "innovation covariance (§5.1), near 0 from identities in the data "
-                 f"(§5.2); the threshold {near} on sqrt(lam) is a convention. Interventions are not "
-                 "removed from the levels.")
+                 f"(§5.2); the threshold {near} on sqrt(lam) is a convention."
+                 + ("" if removed_note else
+                    " The deterministic terms (interventions, seasonality) are not removed "
+                    "from these levels."))
     lines += ["", "## 4 · DECISION — alternatives", ""]
     if raw:
         opts = [("keep the characterization's differences: route U (the univariate "
