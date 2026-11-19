@@ -121,33 +121,70 @@ def wrap(fn, sessions):
     when it acts on a model that is not the adopted one."""
     from . import decisions as _dec
 
+    from . import telemetry as _tm
+    import time as _time
+
     @functools.wraps(fn)
     def tool(*args, **kw):
+        t0 = _time.time()
         name = _session_name(fn, args, kw)
         before = sessions._SESSIONS.get(name) if name else None
         n0 = len(before.guion.entries) if before is not None else 0
-        out = fn(*args, **kw)
-        if not name:
-            return out
-        s = sessions._SESSIONS.get(name)
-        node = evidence = None
-        if s is not None:
-            new = s.guion.entries[n0:] if s is before else s.guion.entries
-            if new:
-                node, evidence = new[-1].node, new[-1].evidence
-            # the bookkeeping never costs the answer: a failure here is the
-            # record's, and the tool's result goes out as it is
+        open0 = {e.n for e in before.guion.pending()} if before is not None else set()
+        try:
+            out = fn(*args, **kw)
+        except Exception as err:
+            if _tm.folder():
+                _tm.record(fn.__name__, _bound(fn, args, kw), name, t0, error=err)
+            raise
+        out = _finish(fn, args, kw, out, name, before, n0, sessions)
+        if _tm.folder():
             try:
-                if new:
-                    _dec.close(s.guion, new[0], fn.__name__, _bound(fn, args, kw))
-                    text = "\n".join(t for _, t in _texts(out)[1])
-                    if _env.STOP in text:
-                        _dec.open_pending(new[-1], text)
-                note = _dec.adoption_note(s, fn.__name__)
-                if note:
-                    out = _prepend(out, note)
+                s = sessions._SESSIONS.get(name) if name else None
+                new = (s.guion.entries[n0:] if s is before else s.guion.entries) if s else []
+                closed = [(e.n, e.chosen) for e in (s.guion.entries if s else [])
+                          if e.n in open0 and e.status == "closed"]
+                _, texts = _texts(out)
+                tx = [t for _, t in texts]
+                images = sum(1 for c in out if getattr(c, "type", None) == "image") \
+                    if isinstance(out, list) else 0
+                ad = getattr(s, "adopted", None) if s else None
+                _tm.record(fn.__name__, _bound(fn, args, kw), name, t0, out=out,
+                           guion_new=new, closed=closed,
+                           pending=len(s.guion.pending()) if s else 0,
+                           lane=sessions._LANES.get(name, "guided") if name else None,
+                           declared=(name in sessions._LANES) if name else None,
+                           adopted=(ad[0] if ad else None), texts=tx, images=images,
+                           ending=_tm.ends("\n".join(tx), _env.STOP, "▶ **Autonomous lane.**"))
             except Exception:                                 # noqa: BLE001
                 pass
-        lane = sessions._LANES.get(name, "guided")
-        return apply(out, lane, name in sessions._LANES, name, node, evidence)
+        return out
     return tool
+
+
+def _finish(fn, args, kw, out, name, before, n0, sessions):
+    """The answer after the session's bookkeeping and its lane (see `wrap`)."""
+    from . import decisions as _dec
+    if not name:
+        return out
+    s = sessions._SESSIONS.get(name)
+    node = evidence = None
+    if s is not None:
+        new = s.guion.entries[n0:] if s is before else s.guion.entries
+        if new:
+            node, evidence = new[-1].node, new[-1].evidence
+        # the bookkeeping never costs the answer: a failure here is the
+        # record's, and the tool's result goes out as it is
+        try:
+            if new:
+                _dec.close(s.guion, new[0], fn.__name__, _bound(fn, args, kw))
+                text = "\n".join(t for _, t in _texts(out)[1])
+                if _env.STOP in text:
+                    _dec.open_pending(new[-1], text)
+            note = _dec.adoption_note(s, fn.__name__)
+            if note:
+                out = _prepend(out, note)
+        except Exception:                                 # noqa: BLE001
+            pass
+    lane = sessions._LANES.get(name, "guided")
+    return apply(out, lane, name in sessions._LANES, name, node, evidence)

@@ -2,6 +2,23 @@
 
 ## 0.2.5 — unreleased
 
+**Local, opt-in telemetry** (`sima.telemetry`). It is OFF unless
+`SIMA_TELEMETRY` names a folder. Then every tool call leaves one JSON line,
+and its whole answer goes in `answers/<seq>-<tool>.md`. Nothing leaves the
+machine.
+
+Each line holds:
+- the session, the tool, its arguments and how long it took;
+- the lane, and how the answer ended (the pause, the autonomous call, or
+  neither);
+- the guion steps the call added, and the decisions it opened and closed;
+- the adoption;
+- any exception, with its traceback (the call still raises).
+
+The file's first line records the versions of sima and its engines. It is for
+trial runs and for teaching: the conversation records what was said, this
+records what the server did. It never changes a tool's answer.
+
 **BUG-0018: the canonical analysis reads the levels without the deterministic
 terms.** In route U it read each `.pre`'s levels with its harmonics and
 interventions inside. That inflated lam and the order by M(l), which
