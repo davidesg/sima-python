@@ -585,6 +585,18 @@ def _below_nested(s, key, L):
     return out
 
 
+def _best_start():
+    """The start sima uses for a VARMA's cross terms: "ols" -- the original
+    drvarma's init_varma in the ladder (drvarma > 0.3.4; the C's -start ols,
+    homologated) -- when the installed drvarma has it, else "preliminary"
+    (Jenkins and Alavi's; the same optimum on route U, measured 19-nov-2026)."""
+    try:
+        from drvarma.ladder import Ladder
+        return "ols" if hasattr(Ladder, "_ols_start") else "preliminary"
+    except Exception:                                        # noqa: BLE001
+        return "preliminary"
+
+
 def _fit_paths(s, key, start):
     """The fit of `key`, by the path asked, and what the report must say
     about the path (BUG-0019).
@@ -599,10 +611,18 @@ def _fit_paths(s, key, start):
     retried once from the preliminary start: an impossible point is not a
     decision for the analyst, it is a failed search."""
     want = (start or "").strip().lower() or None
+    best = _best_start()
+    if want is None and not key[6] and best == "ols":
+        # the default when the engine has it: the ladder's start plus the
+        # parameters of the relation (route U: the cross terms and Q's
+        # covariances; route V, Tiao and Box: the whole matrices)
+        want = "ols"
     notes = []
     if key in s.fits:
         L = s.fits[key]
-        if want is None or want == _start_of(L):
+        # the same start: the one ASKED for (L.start) or the one used -- an
+        # ols start that fell back to zero was asked as ols, and is reused
+        if want is None or want in (getattr(L, "start", None), _start_of(L)):
             notes.append(f"PATH: this fit was already estimated in this session (start "
                          f"\"{L.start_used}\", logL {L.result.logL:.4f}): reused, not "
                          "optimised again. Another start (start=\"preliminary\" or "
@@ -623,16 +643,16 @@ def _fit_paths(s, key, start):
         L.fit()
     if not key[6]:                                          # not the echelon form
         low = _below_nested(s, key, L)
-        if (low or _stalled(L)) and _start_of(L) != "preliminary":
+        if (low or _stalled(L)) and _start_of(L) != best:
             why = ("lies BELOW " + ", ".join(f"{_desc(k)} (logL {v:.4f})" for k, v in low)
                    + ", which it nests" if low else
                    f"stopped after {L.result.nit} iteration(s) with termcode 3")
-            L2 = _model_ladder(s, key, start="preliminary")
+            L2 = _model_ladder(s, key, start=best)
             L2.fit()
             a, b = L.result.logL, L2.result.logL
             notes.append(f"⚠ THE FIRST PATH FAILED: from the start \"{L.start_used}\" the "
                          f"fit {why} (logL {a:.4f}, {L.result.nit} iterations): not an "
-                         f"optimum. Retried from the preliminary start: logL {b:.4f} in "
+                         f"optimum. Retried from the {best} start: logL {b:.4f} in "
                          f"{L2.result.nit} iterations" + ("; kept." if b > a + 1e-3 else
                          "; no better."))
             if b > a + 1e-3:
@@ -1568,16 +1588,21 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
     q; names as in identify_cross). Empty (default): every pair. identify_cross
     proposes it as option (d) when only some pairs showed anything.
 
-    `start`: where the cross terms start — "zero" (the default for the
-    VARMA) or "preliminary", Jenkins and Alavi's preliminary estimates (the
-    cross MA from the univariate residuals' cross covariances, the cross AR
-    from Yule-Walker). Usually the same optimum in fewer iterations; on an
+    `start`: where the cross terms start — "ols", the original drvarma's
+    init_varma in the ladder: least squares of the VAR(p) seeds the cross AR
+    terms and Q's covariances (route V: the whole matrices) — the DEFAULT
+    when the installed drvarma has it (> 0.3.4); "zero"; or "preliminary",
+    Jenkins and Alavi's preliminary estimates (the cross MA from the
+    univariate residuals' cross covariances, the cross AR from Yule-Walker).
+    From zero, exact ML can stop after two iterations below the nested model
+    when the series' scales differ (drvarma BUG-0027, the US monetary VAR);
+    from ols or preliminary it does not. Usually the same optimum in fewer iterations; on an
     ill-defined estimation (the MA wall) a second path worth comparing. Asked
     for a fit already made, another start optimises again and the higher
     logL is kept, the report giving both (BUG-0019); the same start reuses it,
     and the report says so. A fit below a model it nests, or one that stalled
-    within a few iterations, is retried once from the preliminary start, and
-    the report says so. The
+    within a few iterations, is retried once from "ols" (or "preliminary"
+    with an older drvarma), and the report says so. The
     echelon form starts at Lutkepohl and Poskitt's least-squares estimates
     ("echelon", its default).
 
@@ -2024,7 +2049,7 @@ def lag_order(name: str, pmax: int = 3) -> str:
     VAR(0) is the univariate models with a full innovation covariance (the
     contemporaneous link only). Every fit goes through the paths of estimate
     (BUG-0019): a fit that lies below the one it nests, or that stalled, is
-    retried from the preliminary start, and the table says which. Only LR:
+    retried from the ols (or preliminary) start, and the table says which. Only LR:
     a Wald test rests on the Hessian, which a fit on a ridge does not give.
     The fits are cached: estimate(p=k) afterwards reuses the chosen one."""
     import numpy as np
