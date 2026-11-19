@@ -4,7 +4,7 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**17 report(s), 0 open.**
+**18 report(s), 0 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
@@ -24,5 +24,6 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0014](BUG-0014-alpha-and-its-restriction-in-engine-units.md) | fixed | high | vec | With different rescaling factors, α and its restriction (α = Aψ) were in engine units — a true restriction is rejected with p = 0.0072 | 0.2.4 |
 | [BUG-0016](BUG-0016-the-caches-script-cleans-a-job-that-is-still-running.md) | fixed | low | tools | tools/build_example_caches.py cleans a job's folder without checking that it has finished — the job loses its files and fails | 0.2.5 |
 | [BUG-0017](BUG-0017-a-failing-cache-test-leaves-its-bootstrap-running.md) | fixed | low | tests | A cache test that fails leaves its bootstrap running, detached, with nothing to stop it | 0.2.5 |
+| [BUG-0018](BUG-0018-canonical-analysis-reads-the-levels-with-the-deterministic-terms-inside.md) | fixed | medium | evidence | canonical_analysis read the levels with each model's harmonics and interventions inside; in route U it inflated lam and the order by M(l), which went on to prepare_vec as p | 0.2.5 |
 | [BUG-0015](BUG-0015-the-job-key-includes-the-drvarma-version.md) | wontfix | medium | jobs | The key of a job carries the version of drvarma (and of fue) — every drvarma release invalidates the example caches | by design (0.2.5) |
 
