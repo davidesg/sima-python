@@ -2,6 +2,24 @@
 
 ## 0.2.5 — unreleased
 
+**From the trial run** (the US monetary VAR, 19-nov):
+- **BUG-0019.** `estimate`'s cache ignored `start`, so the second path never
+  ran, and a VAR(2) that drvarma left 50 points below its VAR(1) (drvarma
+  BUG-0027) was read as an optimum. The cache now keeps the best optimum
+  known per specification:
+  - the same start reuses it and says so;
+  - another start optimises again and keeps the higher logL;
+  - a fit below a model it nests, or one that stalled, is retried once from
+    the preliminary start, and the report says so.
+- **`lag_order(name, pmax)`.** The order of the VAR by LR on the fitted models,
+  VAR(0) → … → VAR(pmax), in Tiao and Box's sequential reading. It shows their
+  least-squares M(l) beside the LR, with AIC and BIC as information. LR only.
+- **The language.** The instructions say to keep answering in the user's
+  language however much English the tools send back. The trial run drifted
+  into English after a few calls.
+- **The purpose.** For a VARMA, leave it empty rather than forcing
+  "forecast" or "long run".
+
 **Local, opt-in telemetry** (`sima.telemetry`). It is OFF unless
 `SIMA_TELEMETRY` names a folder. Then every tool call leaves one JSON line,
 and its whole answer goes in `answers/<seq>-<tool>.md`. Nothing leaves the
