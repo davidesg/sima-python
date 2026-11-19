@@ -2,6 +2,20 @@
 
 ## 0.2.5 — unreleased
 
+**The "ols" start, when drvarma has it** (drvarma > 0.3.4; the C's
+`-start ols`, homologated). It is the original drvarma's `init_varma` in the
+ladder: least squares of the VAR(p) seeds the parameters of the relation.
+- Route U: the cross AR terms and Q's covariances; the own models stay the
+  `.pre`'s.
+- Route V: the whole matrices.
+
+With such a drvarma it is sima's default start for a VARMA (not the echelon
+form) and the start the BUG-0019 guard retries from. With drvarma 0.3.4,
+nothing changes: the default stays zero, and the guard retries from
+"preliminary". A fit asked as ols and fallen back to zero (not admissible) is
+reused by the start asked for. On the US monetary VAR the zero start leaves
+two VAR(2)s 50 points below their VAR(1); from ols, none.
+
 **From the trial run** (the US monetary VAR, 19-nov):
 - **BUG-0019.** `estimate`'s cache ignored `start`, so the second path never
   ran, and a VAR(2) that drvarma left 50 points below its VAR(1) (drvarma

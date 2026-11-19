@@ -34,7 +34,9 @@ def test_another_start_optimises_again_and_reports_both(ja):
     out = _fn(M.estimate)(ja, 1, 0, start="preliminary")
     # Jenkins and Alavi's preliminary start is not admissible here: drvarma
     # falls back to zero and says why; the report carries it
-    assert 'PATH: start "' in out and 'the earlier start "zero"' in out
+    # the earlier start: zero, or the default (ols, with a drvarma that has
+    # it) fallen back to zero -- the report names it either way
+    assert 'PATH: start "' in out and 'the earlier start "zero' in out
     assert "reached logL" in out
 
 
@@ -56,6 +58,7 @@ class _Fake:
 
 
 def test_a_fit_below_its_nested_model_is_retried_from_the_preliminary_start(ja, monkeypatch):
+    monkeypatch.setattr(M, "_best_start", lambda: "preliminary")   # drvarma 0.3.4
     s = S.get(ja)
     s.fits[M._key(1, 0)] = _Fake(-100.0, 50, 1, "zero")
     paths = {None: _Fake(-150.0, 2, 3, "zero"), "preliminary": _Fake(-98.0, 140, 2,
@@ -68,6 +71,7 @@ def test_a_fit_below_its_nested_model_is_retried_from_the_preliminary_start(ja, 
 
 
 def test_still_below_says_it_is_not_an_optimum(ja, monkeypatch):
+    monkeypatch.setattr(M, "_best_start", lambda: "preliminary")
     s = S.get(ja)
     s.fits[M._key(1, 0)] = _Fake(-100.0, 50, 1, "zero")
     s.fits.pop(M._key(3, 0), None)
@@ -76,3 +80,29 @@ def test_still_below_says_it_is_not_an_optimum(ja, monkeypatch):
     monkeypatch.setattr(M, "_model_ladder", lambda s, key, start=None, **k: paths[start])
     L, note = M._fit_paths(s, M._key(3, 0), "")
     assert "NOT AN OPTIMUM" in note and "study_estimation" in note
+
+
+def test_with_ols_it_is_the_default_and_the_retry(ja, monkeypatch):
+    """A drvarma with start="ols" (> 0.3.4): sima starts there, and the guard
+    retries from there; the echelon form keeps its own start."""
+    monkeypatch.setattr(M, "_best_start", lambda: "ols")
+    asked = []
+
+    def ladder(s, key, start=None, **k):
+        asked.append(start)
+        return {"ols": _Fake(-98.0, 140, 1, "ols"), "zero": _Fake(-150.0, 2, 3, "zero"),
+                "echelon": _Fake(-97.0, 40, 1, "echelon")}[start or "zero"]
+    monkeypatch.setattr(M, "_model_ladder", ladder)
+    s = S.get(ja)
+    s.fits.pop(M._key(4, 0), None)
+    L, note = M._fit_paths(s, M._key(4, 0), "")
+    assert asked == ["ols"] and L.start_used == "ols" and not note
+    # asked for zero explicitly, it stalls: the retry is from ols
+    s.fits.pop(M._key(4, 0), None)
+    asked.clear()
+    L, note = M._fit_paths(s, M._key(4, 0), "zero")
+    assert asked == ["zero", "ols"] and "Retried from the ols start" in note
+    # the echelon form: no ols default
+    asked.clear()
+    M._fit_paths(s, M._key(0, 0, indices=(1, 1)), "")
+    assert asked == [None]
