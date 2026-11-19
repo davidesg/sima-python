@@ -7,7 +7,9 @@
 ladder: least squares of the VAR(p) seeds the parameters of the relation.
 - Route U: the cross AR terms and Q's covariances; the own models stay the
   `.pre`'s.
-- Route V: the whole matrices.
+- Route V: the same. The own models are never seeded on either route (the
+  ladder's principle, from art and mtram); on route V the diagonal fit
+  estimates them first.
 
 With such a drvarma it is sima's default start for a VARMA (not the echelon
 form) and the start the BUG-0019 guard retries from. With drvarma 0.3.4,

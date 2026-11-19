@@ -615,7 +615,8 @@ def _fit_paths(s, key, start):
     if want is None and not key[6] and best == "ols":
         # the default when the engine has it: the ladder's start plus the
         # parameters of the relation (route U: the cross terms and Q's
-        # covariances; route V, Tiao and Box: the whole matrices)
+        # covariances, on both routes: the own models are the univariate
+        # ones -- the .pre's, or route V's diagonal fit -- the ladder's principle)
         want = "ols"
     notes = []
     if key in s.fits:
@@ -1590,7 +1591,8 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
 
     `start`: where the cross terms start — "ols", the original drvarma's
     init_varma in the ladder: least squares of the VAR(p) seeds the cross AR
-    terms and Q's covariances (route V: the whole matrices) — the DEFAULT
+    terms and Q's covariances, the own models staying the univariate ones on
+    both routes (the ladder's principle) — the DEFAULT
     when the installed drvarma has it (> 0.3.4); "zero"; or "preliminary",
     Jenkins and Alavi's preliminary estimates (the cross MA from the
     univariate residuals' cross covariances, the cross AR from Yule-Walker).
