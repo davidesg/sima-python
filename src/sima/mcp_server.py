@@ -311,10 +311,11 @@ DOCUMENTATION — mandatory. After EVERY node:
 A branch you abandon is recorded too: what a failed candidate contributes is
 the reason it failed.
 
-WHAT YOU HAND OVER at the end: the guion (export_guion); the chosen model, or
-the univariate models if no VARMA beat them; the yardstick numbers (N5) that
-decided it; and the caveats that stay open (a fit on the MA wall, a moved
-file, the Cholesky order).
+WHAT YOU HAND OVER at the end: hand_over(name) gathers it — the adopted model,
+or the univariate models if no VARMA beat them; the yardstick numbers (N5) that
+decided it; the caveats that stay open (a fit on the MA wall, a moved file,
+the Cholesky order); then export_guion. At any point, where(name) says where
+the analysis stands and what is open (sima://doc/DECISION_NODES).
 
 ══════════════════════════════════════════════════════
 RULES THAT ARE NOT NEGOTIATED
@@ -361,7 +362,9 @@ RULES THAT ARE NOT NEGOTIATED
 14. Resources to ASK for when needed: sima://protocol (this text),
    sima://defects (sima's and the engine's defect registers; one report with
    sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
-   user manuals: sima://doc/MANUAL-jenkins-alavi, sima://doc/MANUAL-echelon
+   user manuals: the map of the decisions, node by node, with the autonomous
+   lane's declared defaults and the stops, sima://doc/DECISION_NODES;
+   sima://doc/MANUAL-jenkins-alavi, sima://doc/MANUAL-echelon
    and, for cointegrated systems, sima://doc/MANUAL-vec; the VEC's study and
    plan, sima://doc/STUDY-vec and sima://doc/PLAN-vec), sima://examples and
    sima://example/<name> (a worked example's tutorial).
@@ -2693,6 +2696,31 @@ def _which(s, model):
 
 
 @mcp.tool()
+def where(name: str) -> str:
+    """Where the analysis stands (P3): the path walked, the decisions still
+    OPEN with their options, what was adopted or set aside, and the protocol's
+    next node. The answer to "what now?" at any point. It informs; it does not
+    decide, and it records nothing. The map behind it:
+    sima://doc/DECISION_NODES."""
+    from . import status
+    return status.where(_sess.get(name), name, _desc, _vec_desc)
+
+
+@mcp.tool()
+def hand_over(name: str) -> str:
+    """N7 — Close the analysis (P7), in both lanes: the adopted model (or the
+    univariates), the yardstick numbers that decided it, the caveats that stay
+    open (a file not validated in art, a fit on the MA wall, the Cholesky order,
+    a rank on theory, open decisions), what was set aside, and the call that
+    writes the guion. Recorded at N7."""
+    from . import status
+    s = _sess.get(name)
+    txt, ad, ncv = status.hand_over(s, name, _desc, _vec_desc)
+    s.guion.add("N7", "hand_over", {}, f"adopted: {ad or 'nothing'}; {ncv} caveat(s) open")
+    return txt
+
+
+@mcp.tool()
 def adopt(name: str, model: str = "current", why: str = "") -> str:
     """N5 (C8 for a VEC) — ADOPT the model the analysis keeps.
 
@@ -2725,7 +2753,8 @@ def adopt(name: str, model: str = "current", why: str = "") -> str:
     return (f"Adopted (step {e.n}): {d}." + (
         " The univariate models are the result: say it plainly, it is a finding." if kind == "UNIV"
         else " It is the current model; the final-stage tools act on it.")
-        + " export_guion(name) writes the path, with the adoption marked.")
+        + f' To close the analysis: hand_over(name="{name}") — the result, its yardstick '
+        "and the caveats that stay open.")
 
 
 @mcp.tool()

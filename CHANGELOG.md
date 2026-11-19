@@ -2,6 +2,27 @@
 
 ## 0.2.5 — unreleased
 
+**P3: the map, and where an analysis stands.**
+- `docs/DECISION_NODES.md` (served as `sima://doc/DECISION_NODES`), in the
+  style of mtram's. For each node it gives what leaves it undetermined, the
+  evidence, the guided lane, and the autonomous lane's DECLARED default. It
+  separates the stops (the gate, a rank with no finished bootstrap, a
+  conditional or triangular system that is mtram's, the MA wall) and what
+  is not a node.
+- `where(name)` gives the path walked, the decisions still open with their
+  options, what was adopted or set aside, and the protocol's next node. It
+  informs and records nothing (art's BUG-0180).
+
+**P7: the close.** `hand_over(name)`, recorded at N7, in both lanes. It gives:
+- the adopted model, or the univariates, as a finding;
+- the yardstick numbers that decided it;
+- the caveats that stay open: a file not validated in art, the MA wall, the
+  Cholesky order (and whether another was compared), a rank on theory, and
+  open decisions;
+- what was set aside, and the `export_guion` call.
+
+It says so when an adopted VARMA does not win most cells (rule 1).
+
 **P4: the decisions as data.**
 - A tool that ends in a decision leaves its guion entry PENDING, with its
   options' calls. The call that takes one closes it and notes which: the
