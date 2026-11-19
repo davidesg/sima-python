@@ -1,0 +1,78 @@
+"""BUG-0019: the start is a path, not part of the model. The same start reuses
+the fit and says so; another start optimises again and keeps the higher logL;
+a fit below a model it nests, or one that stalled, is retried once from the
+preliminary start. The real case (drvarma's stall on the monetary VAR) is
+bugs/BUG-0019-repro; here the paths are checked on Jenkins and Alavi and the
+guard on simulated fits."""
+import tempfile
+import types
+import warnings
+
+import pytest
+
+import sima.mcp_server as M
+from sima import session as S
+
+_fn = lambda f: getattr(f, "fn", f)                      # noqa: E731
+
+
+@pytest.fixture(scope="module")
+def ja():
+    warnings.simplefilter("ignore")
+    _fn(M.load_example)("jenkins_alavi", session="b19", dest=tempfile.mkdtemp())
+    _fn(M.run_gate)("b19")
+    return "b19"
+
+
+def test_the_same_start_reuses_and_says_so(ja):
+    _fn(M.estimate)(ja, 1, 0)
+    out = _fn(M.estimate)(ja, 1, 0)
+    assert "PATH: this fit was already estimated" in out and "reused" in out
+
+
+def test_another_start_optimises_again_and_reports_both(ja):
+    out = _fn(M.estimate)(ja, 1, 0, start="preliminary")
+    # Jenkins and Alavi's preliminary start is not admissible here: drvarma
+    # falls back to zero and says why; the report carries it
+    assert 'PATH: start "' in out and 'the earlier start "zero"' in out
+    assert "reached logL" in out
+
+
+def test_nesting():
+    k1, k2 = M._key(1, 0), M._key(2, 0)
+    assert M._nests(k1, k2) and not M._nests(k2, k1)
+    assert M._nests(M._key(1, 0, diagcov=True), k2)
+    assert not M._nests(M._key(1, 0), M._key(2, 0, diagcov=True))
+    assert not M._nests(k1, M._key(2, 0, indices=(2, 1)))
+
+
+class _Fake:
+    def __init__(self, logL, nit, termcode, start):
+        self.result = types.SimpleNamespace(logL=logL, nit=nit, termcode=termcode)
+        self.start_used = start
+
+    def fit(self):
+        return self
+
+
+def test_a_fit_below_its_nested_model_is_retried_from_the_preliminary_start(ja, monkeypatch):
+    s = S.get(ja)
+    s.fits[M._key(1, 0)] = _Fake(-100.0, 50, 1, "zero")
+    paths = {None: _Fake(-150.0, 2, 3, "zero"), "preliminary": _Fake(-98.0, 140, 2,
+                                                                       "preliminary")}
+    monkeypatch.setattr(M, "_model_ladder", lambda s, key, start=None, **k: paths[start])
+    L, note = M._fit_paths(s, M._key(2, 0), "")
+    assert L.result.logL == -98.0 and L.start_used == "preliminary"
+    assert "THE FIRST PATH FAILED" in note and "lies BELOW" in note and "kept" in note
+    assert "NOT AN OPTIMUM" not in note
+
+
+def test_still_below_says_it_is_not_an_optimum(ja, monkeypatch):
+    s = S.get(ja)
+    s.fits[M._key(1, 0)] = _Fake(-100.0, 50, 1, "zero")
+    s.fits.pop(M._key(3, 0), None)
+    paths = {None: _Fake(-150.0, 2, 3, "zero"), "preliminary": _Fake(-140.0, 20, 2,
+                                                                       "preliminary")}
+    monkeypatch.setattr(M, "_model_ladder", lambda s, key, start=None, **k: paths[start])
+    L, note = M._fit_paths(s, M._key(3, 0), "")
+    assert "NOT AN OPTIMUM" in note and "study_estimation" in note

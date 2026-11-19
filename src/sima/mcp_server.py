@@ -36,8 +36,14 @@ on the current one.
 ══════════════════════════════════════════════════════
 LANGUAGE
 ══════════════════════════════════════════════════════
-Always answer in the user's language (English if ambiguous). Tool output is in
-English; translate it. Present equations and tables faithfully.
+Always answer in the user's language (English if ambiguous), FROM THE FIRST
+ANSWER TO THE LAST. Every tool answers in English, and that is not the user's
+choice: translate it — the narrative, the conclusions, the options — and keep
+writing in the user's language however much English the tools send back. Do
+not drift into English after a few tool calls: if the user wrote in Spanish,
+the hundredth answer is in Spanish too. Tables, equations and the calls of the
+options stay as the tools give them (a call is code); everything around them
+is translated.
 
 ══════════════════════════════════════════════════════
 WHERE YOU COME FROM: THE UNIVARIATE MODELS, OR RAW DATA
@@ -78,7 +84,10 @@ With the lane, in the same first exchange:
   • THE PURPOSE — "forecast" or "long run" (an equilibrium, who corrects).
     For a VEC it decides the yardstick's role (rule 9); pass it as purpose= at
     the load and N1c (prepare_vec) inherits it instead of asking again. If the
-    analyst does not know yet, leave it: N1c asks.
+    analyst does not know yet, leave it: N1c asks. For a VARMA it decides
+    nothing (rule 1 holds whatever the purpose): when the analysis is about
+    impulse responses or a decomposition and no VEC is in sight, LEAVE IT
+    EMPTY rather than forcing one of the two values.
   • THE ORDER of the series — the order of the files in load_pre IS the
     Cholesky order, a VEC's normalisation (beta on the last r) and the frame
     of the echelon form's A0. Ask for it before loading (most exogenous first,
@@ -197,7 +206,13 @@ N2  (in this order: identify_cross → identify_matrices → identify_echelon wh
                       then least squares per candidate, SC). The order of the
                       series is part of the model. On route U the models'
                       seasonal factors multiply their whole rows.
-N3  estimate          a candidate: cross orders p, q; full or diagonal
+N3  lag_order         the order of the VAR by LR: VAR(0) -> ... -> VAR(pmax) by
+                      exact ML, each step against the one before (Tiao and
+                      Box's sequential reading on the fitted models), their
+                      least-squares M(l) beside it, AIC and BIC as
+                      information. LR only, never Wald (a fit on a ridge gives
+                      no Hessian to trust).
+    estimate          a candidate: cross orders p, q; full or diagonal
                       covariance; optionally `links`, the cross dynamics only
                       on the pairs identify_cross found (its option (d)).
                       `indices` fits the echelon form instead (route U: with
@@ -532,6 +547,103 @@ def _indices(text):
     if not toks or re.sub(r"[\d\s,()\[\]-]", "", str(text)):
         raise ValueError(f"indices: '{text}' is not a list of integers, e.g. \"1, 2, 1\"")
     return tuple(int(k) for k in toks)
+
+
+def _nests(small, big):
+    """Does the fit key `small` nest in `big` (a restriction of it)? Only the
+    plain cases the guard needs: same form, lower or equal orders, a diagonal
+    covariance inside a full one, and no links or zeros the big one lacks."""
+    ps, qs, ds, ls, cs, zs, es = small
+    pb, qb, db, lb, cb, zb, eb = big
+    if es or eb or small == big or cs != cb:
+        return False
+    if ps > pb or qs > qb or (db and not ds):
+        return False
+    if lb and ls != lb:
+        return False
+    return set(zb) <= set(zs)
+
+
+def _start_of(L):
+    """The start a fit used, as a word: drvarma's start_used can carry why
+    ("zero (the preliminary start was not admissible ...)")."""
+    return str(getattr(L, "start_used", "") or "").split(" ")[0].strip() or "zero"
+
+
+def _stalled(L):
+    r = L.result
+    return int(r.termcode) == 3 and int(r.nit) <= 5
+
+
+def _below_nested(s, key, L):
+    """The fitted models this fit nests and lies BELOW (BUG-0019): a model
+    cannot fit worse than one it contains, so this is not an optimum."""
+    out = []
+    for k, M in s.fits.items():
+        if _nests(k, key) and M.result.logL > L.result.logL + 1e-3:
+            out.append((k, M.result.logL))
+    return out
+
+
+def _fit_paths(s, key, start):
+    """The fit of `key`, by the path asked, and what the report must say
+    about the path (BUG-0019).
+
+    The cache keeps the best optimum known for a specification; the start is a
+    PATH, not part of the model. Asked again with the same start, the fit is
+    reused, and the report says so. With another start it is optimised again
+    and the higher logL is kept, the report giving both. And a fit that lies
+    below a model it nests, or that stopped within a few iterations with
+    termcode 3 (drvarma BUG-0027: from the zero start the GS1 VAR(2) of the US
+    monetary VAR stops after 2 iterations, 50 points below its VAR(1)), is
+    retried once from the preliminary start: an impossible point is not a
+    decision for the analyst, it is a failed search."""
+    want = (start or "").strip().lower() or None
+    notes = []
+    if key in s.fits:
+        L = s.fits[key]
+        if want is None or want == _start_of(L):
+            notes.append(f"PATH: this fit was already estimated in this session (start "
+                         f"\"{L.start_used}\", logL {L.result.logL:.4f}): reused, not "
+                         "optimised again. Another start (start=\"preliminary\" or "
+                         "\"zero\") optimises again.")
+        else:
+            L2 = _model_ladder(s, key, start=want)
+            L2.fit()
+            a, b = L.result.logL, L2.result.logL
+            same = abs(a - b) < 1e-3
+            notes.append(f"PATH: start \"{L2.start_used}\" reached logL {b:.4f} in "
+                         f"{L2.result.nit} iterations; the earlier start \"{L.start_used}\""
+                         f" had {a:.4f}." + (" The same optimum by two paths." if same else
+                         f" Kept the higher ({max(a, b):.4f})."))
+            if b > a + 1e-3:
+                L = L2
+    else:
+        L = _model_ladder(s, key, start=want)
+        L.fit()
+    if not key[6]:                                          # not the echelon form
+        low = _below_nested(s, key, L)
+        if (low or _stalled(L)) and _start_of(L) != "preliminary":
+            why = ("lies BELOW " + ", ".join(f"{_desc(k)} (logL {v:.4f})" for k, v in low)
+                   + ", which it nests" if low else
+                   f"stopped after {L.result.nit} iteration(s) with termcode 3")
+            L2 = _model_ladder(s, key, start="preliminary")
+            L2.fit()
+            a, b = L.result.logL, L2.result.logL
+            notes.append(f"⚠ THE FIRST PATH FAILED: from the start \"{L.start_used}\" the "
+                         f"fit {why} (logL {a:.4f}, {L.result.nit} iterations): not an "
+                         f"optimum. Retried from the preliminary start: logL {b:.4f} in "
+                         f"{L2.result.nit} iterations" + ("; kept." if b > a + 1e-3 else
+                         "; no better."))
+            if b > a + 1e-3:
+                L = L2
+        low = _below_nested(s, key, L)
+        if low:
+            notes.append("⚠ NOT AN OPTIMUM: this fit still lies below "
+                         + ", ".join(f"{_desc(k)} (logL {v:.4f})" for k, v in low)
+                         + ", which it nests. Do not read its LR or its t: run "
+                         "study_estimation (the second path, Shea's).")
+    return L, "\n".join(notes)
 
 
 def _model_ladder(s, key, estwin=None, start=None, lik="elf"):
@@ -1460,7 +1572,12 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
     VARMA) or "preliminary", Jenkins and Alavi's preliminary estimates (the
     cross MA from the univariate residuals' cross covariances, the cross AR
     from Yule-Walker). Usually the same optimum in fewer iterations; on an
-    ill-defined estimation (the MA wall) a second path worth comparing. The
+    ill-defined estimation (the MA wall) a second path worth comparing. Asked
+    for a fit already made, another start optimises again and the higher
+    logL is kept, the report giving both (BUG-0019); the same start reuses it,
+    and the report says so. A fit below a model it nests, or one that stalled
+    within a few iterations, is retried once from the preliminary start, and
+    the report says so. The
     echelon form starts at Lutkepohl and Poskitt's least-squares estimates
     ("echelon", its default).
 
@@ -1513,11 +1630,7 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
         if s.route == "V" and cross == "residual":
             return ('cross="residual" is Jenkins and Alavi\'s model for UNIVARIATE '
                     "residuals; route V has none. Use the default.")
-        if key in s.fits:
-            L = s.fits[key]
-        else:
-            L = _model_ladder(s, key, start=start or None)
-            L.fit()
+        L, path_note = _fit_paths(s, key, start)
     except Exception as e:
         s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                        "cross": cross, "indices": ", ".join(map(str, ech))},
@@ -1528,6 +1641,8 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
     s.kind = "VARMA"
     freq = s.series[0].freq
     txt = evidence.estimation_text(L, max(8, 2 * freq))
+    if path_note:
+        txt = path_note + "\n\n" + txt
     if ech:
         factored = [x.name for x in L.series if x.has_row_factor()]
         txt = (f"ROUTE {s.route} — the ECHELON FORM with Kronecker indices "
@@ -1894,6 +2009,125 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     if not items[:-1]:
         lines.append("\n(pyfug is not installed: the per-series panels are missing.)")
     return _figures(s, items, "\n".join(lines))
+
+
+@mcp.tool()
+def lag_order(name: str, pmax: int = 3) -> str:
+    """N3 — THE ORDER OF THE VAR, by likelihood ratio: VAR(0) -> VAR(1) -> ...
+    -> VAR(pmax), each estimated by exact maximum likelihood on the same files
+    and tested against the one before it (LR, chi-squared with the
+    parameters the step adds). Tiao and Box's (1981) sequential reading — the
+    order beyond which no step is significant — on the fitted models, with
+    their least-squares M(l) beside it (identify_matrices has the whole
+    table), and AIC and BIC as information.
+
+    VAR(0) is the univariate models with a full innovation covariance (the
+    contemporaneous link only). Every fit goes through the paths of estimate
+    (BUG-0019): a fit that lies below the one it nests, or that stalled, is
+    retried from the preliminary start, and the table says which. Only LR:
+    a Wald test rests on the Hessian, which a fit on a ridge does not give.
+    The fits are cached: estimate(p=k) afterwards reuses the chosen one."""
+    import numpy as np
+    from scipy.stats import chi2
+    from drvarma.identification_mv import stepwise_ar
+    s = _sess.get(name)
+    if s.gate is None:
+        return "Run the gate first (run_gate)."
+    pmax = int(pmax)
+    if pmax < 1 or pmax > 12:
+        return "pmax: from 1 to 12."
+    rows, notes = [], []
+    for p in range(0, pmax + 1):
+        key = _key(p, 0)
+        try:
+            L, note = _fit_paths(s, key, "")
+        except Exception as e:                               # noqa: BLE001
+            return f"VAR({p}) could not be estimated: {e}"
+        s.fits[key] = L
+        r = L.result
+        rows.append({"p": p, "logL": float(r.logL), "k": int(r.npar), "nit": int(r.nit),
+                     "tc": int(r.termcode), "start": _start_of(L), "n": int(r.w.shape[0])})
+        if note and "reused" not in note:
+            notes.append(f"VAR({p}): " + note)
+    for a, b in zip(rows, rows[1:]):
+        lr = 2.0 * (b["logL"] - a["logL"])
+        df = b["k"] - a["k"]
+        b.update(lr=lr, df=df, pv=float(chi2.sf(max(lr, 0.0), df)) if df > 0 else float("nan"))
+    for r in rows:
+        r["aic"] = -2 * r["logL"] + 2 * r["k"]
+        r["bic"] = -2 * r["logL"] + r["k"] * np.log(r["n"])
+    # Tiao and Box's M(l), least squares on the stationary series
+    try:
+        D = _diagonal(s)
+        W = D.cast(D.result.x)[4]
+        sw = stepwise_ar(np.asarray(W, float), pmax)
+        tb = [(float(m), float(pv)) for m, pv in zip(sw["M"], sw["pvalue"])]
+        tb_df = sw["df"]
+    except Exception:                                        # noqa: BLE001
+        tb, tb_df = [], None
+    m = len(s.series)
+    table = [f"THE ORDER OF THE VAR — exact ML, the univariate models on the diagonal "
+             f"(route {s.route}); each step against the one before it", "```",
+             "   p      logL    k   it tc start          LR   df  p-value       AIC       BIC"
+             + ("   M(l)  p-value" if tb else "")]
+    for r in rows:
+        line = (f"  {r['p']:2d} {r['logL']:9.2f} {r['k']:4d} {r['nit']:4d} {r['tc']:2d} "
+                f"{r['start']:<11s}")
+        if "lr" in r:
+            line += f" {r['lr']:8.2f} {r['df']:4d} {r['pv']:8.4f}"
+        else:
+            line += " " * 23
+        line += f" {r['aic']:9.2f} {r['bic']:9.2f}"
+        if tb and r["p"] >= 1:
+            mm, pv = tb[r["p"] - 1]
+            line += f" {mm:7.2f} {pv:8.4f}"
+        table.append(line)
+    table.append("```")
+    if tb:
+        table.append(f"M(l): Tiao and Box's statistic (4.3), least squares on the stationary "
+                     f"series, the WHOLE matrix Phi_l ({tb_df} d.f.); the LR tests the cross "
+                     f"terms the step adds to the univariate models ({m}({m}-1) per lag in "
+                     "route U).")
+    table += notes
+    sig = [r["p"] for r in rows[1:] if r["pv"] < 0.05]
+    p_lr = max(sig) if sig else 0
+    gaps = [p for p in range(1, p_lr) if p not in sig]
+    p_aic = min(rows, key=lambda r: r["aic"])["p"]
+    p_bic = min(rows, key=lambda r: r["bic"])["p"]
+    shows = ["Each LR asks whether the lag the step adds carries cross dynamics the "
+             "previous order does not: significant, the lag is needed; not, the shorter "
+             "model holds. Tiao and Box read the column from the top and stop where no "
+             "further step is significant; an isolated significant step after a silence "
+             "is named, not taken blindly. AIC and BIC are information: BIC penalises "
+             "parameters by ln n, AIC by 2."]
+    concl = [f"By LR, the last significant step is VAR({p_lr})"
+             + (f" (not significant on the way: {', '.join(map(str, gaps))})" if gaps else "")
+             + f". AIC is lowest at VAR({p_aic}), BIC at VAR({p_bic})."]
+    if p_lr == pmax:
+        concl.append(f"The last step tested is significant: VAR({pmax + 1}) may be needed "
+                     f'(lag_order(name="{name}", pmax={pmax + 1})).')
+    if notes:
+        concl.append("Some fits needed a second path (above): their logL is the better one "
+                     "found, and the table uses it.")
+    q = f'name="{name}"'
+    cand = []
+    for p in (p_lr, p_bic, p_aic):
+        if p >= 1 and p not in cand:
+            cand.append(p)
+    opts = [(f"VAR({p})" + (" — the LR's order" if p == p_lr else "")
+             + (" — BIC's" if p == p_bic else "") + (" — AIC's" if p == p_aic else ""),
+             f"estimate({q}, p={p}, q=0)") for p in cand]
+    if p_lr == 0:
+        opts.append(("no lag carries cross dynamics: the contemporaneous link only, or the "
+                     "univariates", f"estimate({q}, p=0, q=0)"))
+    opts.append(("the identification by matrices first (Tiao and Box's whole M(l) table, "
+                 "Jenkins and Alavi's methods)", f"identify_matrices({q})"))
+    s.guion.add("N3", "lag_order", {"pmax": pmax},
+                "; ".join(f"p{r['p']} logL {r['logL']:.2f}"
+                          + (f" LR p {r['pv']:.4f}" if "pv" in r else "") for r in rows)
+                + f"; LR order {p_lr}, AIC {p_aic}, BIC {p_bic}")
+    return _env.envelope(f"# N3 · The order of the VAR, by LR — VAR(0) to VAR({pmax})",
+                         table, shows, concl, opts)
 
 
 @mcp.tool()
