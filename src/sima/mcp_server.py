@@ -378,7 +378,9 @@ RULES THAT ARE NOT NEGOTIATED
    sima://defects (sima's and the engine's defect registers; one report with
    sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
    user manuals: the map of the decisions, node by node, with the autonomous
-   lane's declared defaults and the stops, sima://doc/DECISION_NODES;
+   lane's declared defaults and the stops, sima://doc/DECISION_NODES; the
+   architecture and principles (the ladder; route U against route V, the less
+   structured one), sima://doc/ARCHITECTURE;
    sima://doc/MANUAL-jenkins-alavi, sima://doc/MANUAL-echelon
    and, for cointegrated systems, sima://doc/MANUAL-vec; the VEC's study and
    plan, sima://doc/STUDY-vec and sima://doc/PLAN-vec), sima://examples and
