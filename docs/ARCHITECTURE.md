@@ -110,9 +110,12 @@ its answer.
 ## 3. The two routes
 
 Both meet at the same session, the same nodes and the same yardstick. They
-differ in what the system is built on. The two schools disagree, and sima
-shows it rather than settling it (`STUDY-tiao-box.md` §3.1). Jenkins and
-Alavi's own advice is to use both (`DESIGN-jenkins-alavi.md` §1).
+differ in what the system is built on. **Route U is the default**, as it was
+in the earlier sima: route V is an explicit choice of the analyst, named as
+the less structured path (David, 20-nov-2026). Both schools are kept
+available: they disagree, and sima shows it rather than hiding either
+(`STUDY-tiao-box.md` §3.1). Jenkins and Alavi's own advice is to use both
+(`DESIGN-jenkins-alavi.md` §1).
 
 | | route U — the ladder (Jenkins and Alavi) | route V — the vector first (Tiao and Box) |
 |---|---|---|

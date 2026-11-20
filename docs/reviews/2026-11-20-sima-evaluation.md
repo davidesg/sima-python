@@ -111,17 +111,14 @@ What route V gives up is already documented (`STUDY-raw-entry.md` §3.4 and
   art". But a spec has no univariate model at all.
 
 On the analyst's view (20-nov), route V is the less structured path and a
-dangerous one. The suite's recorded decision is to show the two schools, not
-settle them (`STUDY-tiao-box.md` §3.1; `STUDY-raw-entry.md` decision 1, a
-neutral question). The autonomous lane already defaults to route U
-(`DECISION_NODES.md` N0).
+dangerous one. **Decided: route U is the default, as it was in the earlier
+sima**; route V is an explicit choice, named as such. Both schools stay
+available (`STUDY-tiao-box.md` §3.1).
 
 ## 6. Recommendations, in order
 
-1. **The analyst's decision.** Should the route question stop being neutral,
-   with route U the default and route V an explicit choice named as the less
-   structured path? This changes a recorded decision, so it is David's.
-   Independently of that answer:
+1. **Route U is the default** (decided 20-nov; done in the instructions and
+   `DECISION_NODES.md`). Still to do:
    - `hand_over` should list route V's caveats (no interventions, the
      yardstick's origin, every coefficient free);
    - its wrong caveat about the specs should be corrected;

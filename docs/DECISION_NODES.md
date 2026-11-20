@@ -235,8 +235,10 @@ adopted one.
 Route V (the vector first, Tiao and Box; `ARCHITECTURE.md` §3) walks the same
 nodes on specifications, not on the analyst's univariate models:
 
-- **N0.** The route itself is chosen after `characterize`. **Autonomous:**
-  route U, unless the analyst asked for V.
+- **N0.** The route itself is chosen after `characterize`. **Route U is the
+  default** in both lanes, as it was in the earlier sima (David, 20-nov-2026):
+  route V is taken only when the analyst asks for it, and it is named as the
+  less structured path.
 - **N1.** The session's gate certifies the cast only. The base specs are
   white noise, and a moved file is not a reason to go back to art: the files
   are specifications by design.
