@@ -2,13 +2,15 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**44 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**49 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
 | tool | what it answers |
 |---|---|
+| [`abandon`](#abandon) | N5 — SET ASIDE a candidate, and why (what a failed candidate contributes |
 | [`add_exogenous`](#add-exogenous) | C4 — Exogenous inputs to the current VEC, dispatched by their order of |
+| [`adopt`](#adopt) | N5 (C8 for a VEC) — ADOPT the model the analysis keeps. |
 | [`build_univariate`](#build-univariate) | N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each |
 | [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
 | [`characterize`](#characterize) | N0c — Each raw series' transformation, with art's engine and in art's |
@@ -20,6 +22,7 @@
 | [`export_guion`](#export-guion) | The path of the analysis, node by node, with its evidence and decisions. |
 | [`forecast`](#forecast) | N6 — Forecast every series in its level with the last estimated model. |
 | [`forecast_uncertainty`](#forecast-uncertainty) | N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their |
+| [`hand_over`](#hand-over) | N7 — Close the analysis (P7), in both lanes: the adopted model (or the |
 | [`identify_cross`](#identify-cross) | N2 — What the univariate models do NOT carry: residual cross-correlations. |
 | [`identify_echelon`](#identify-echelon) | N2 — the third form, the ECHELON VARMA of Lutkepohl and Poskitt (1996), |
 | [`identify_matrices`](#identify-matrices) | N2 — Jenkins and Alavi's (1981) two identifications, as matrices. |
@@ -29,6 +32,7 @@
 | [`job_result`](#job-result) | The FINAL result of a finished job, with its report: a rank test's table |
 | [`job_status`](#job-status) | A job's state — queued, running, done, failed or cancelled — its progress |
 | [`jobs`](#jobs) | Every job sima knows on this machine (the registry, ~/.sima/jobs or |
+| [`lag_order`](#lag-order) | N3 — THE ORDER OF THE VAR, by likelihood ratio: VAR(0) -> VAR(1) -> ... |
 | [`load_data`](#load-data) | N0r — RAW DATA: an analyst with series and no univariate models |
 | [`load_example`](#load-example) | N0 for a worked example: copy its files to a working folder (`dest`, |
 | [`load_pre`](#load-pre) | N0 — Start a session from the univariate models: one fue file per series. |
@@ -51,7 +55,24 @@
 | [`sweep`](#sweep) | C7 — Robustness: a grid of fits over the same files, one CACHED JOB per |
 | [`test_restriction`](#test-restriction) | C3 — A restriction on alpha, beta or Gamma of the current VEC, tested by |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
+| [`where`](#where) | Where the analysis stands (P3): the path walked, the decisions still |
 | [`write_specs`](#write-specs) | N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector |
+
+---
+
+## `abandon`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `model` | string | no | `current` |
+| `why` | string | no | `` |
+
+N5 — SET ASIDE a candidate, and why (what a failed candidate contributes
+    is the reason it failed). `model` as in adopt. The fit stays in the session
+    (an LR can still use it); the guion marks it as a dead end.
 
 ---
 
@@ -84,6 +105,30 @@ C4 — Exogenous inputs to the current VEC, dispatched by their order of
     drvec (inherited): a rank test with inputs (the rank is C1's, without
     them), -xlink with forecasts or bootstraps, -xsys with q > 0 or with a
     restriction on alpha. `adopt` makes the fit with inputs current.
+
+---
+
+## `adopt`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `model` | string | no | `current` |
+| `why` | string | no | `` |
+
+N5 (C8 for a VEC) — ADOPT the model the analysis keeps.
+
+    `model`: "current" (the last one estimated), "univariates" (the diagonal
+    system: no VARMA gained where it matters), or the description of a fitted
+    one as the estimates name it ("p = 1, q = 0, full covariance"; a part of
+    it that names only one fit is enough). `why` is required: the reason, with
+    its evidence (the yardstick's numbers).
+
+    The adopted model becomes the current one, and the final-stage tools
+    (forecast, impulse_response, variance_decomposition and their plots) say
+    so when they are asked about another. Adopting again replaces it.
 
 ---
 
@@ -125,6 +170,7 @@ N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each
 | `name` | string | yes | — |
 | `p` | integer | no | `0` |
 | `near` | number | no | `0.9` |
+| `interventions` | string | no | `remove` |
 
 N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
     (each series' Box-Cox and seasonal differences; NOT its regular ones):
@@ -141,6 +187,13 @@ N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS
     it after the gate, before the identification, when two or more series are
     differenced; with raw data (load_data, characterize), right after
     characterize, on the characterization's levels.
+
+    The levels are read WITHOUT each model's deterministic terms (BUG-0018):
+    its deterministic seasonality always (a harmonic is predictable by
+    construction), its interventions by default (`interventions="keep"`
+    leaves them in), never mu nor a trend. The answer says what was removed
+    and, when there are interventions, gives the reading with them inside
+    too, so the difference shows without asking for it.
 
 ---
 
@@ -229,11 +282,22 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     q; names as in identify_cross). Empty (default): every pair. identify_cross
     proposes it as option (d) when only some pairs showed anything.
 
-    `start`: where the cross terms start — "zero" (the default for the
-    VARMA) or "preliminary", Jenkins and Alavi's preliminary estimates (the
-    cross MA from the univariate residuals' cross covariances, the cross AR
-    from Yule-Walker). Usually the same optimum in fewer iterations; on an
-    ill-defined estimation (the MA wall) a second path worth comparing. The
+    `start`: where the cross terms start — "ols", the original drvarma's
+    init_varma in the ladder: least squares of the VAR(p) seeds the cross AR
+    terms and Q's covariances, the own models staying the univariate ones on
+    both routes (the ladder's principle) — the DEFAULT
+    when the installed drvarma has it (> 0.3.4); "zero"; or "preliminary",
+    Jenkins and Alavi's preliminary estimates (the cross MA from the
+    univariate residuals' cross covariances, the cross AR from Yule-Walker).
+    From zero, exact ML can stop after two iterations below the nested model
+    when the series' scales differ (drvarma BUG-0027, the US monetary VAR);
+    from ols or preliminary it does not. Usually the same optimum in fewer iterations; on an
+    ill-defined estimation (the MA wall) a second path worth comparing. Asked
+    for a fit already made, another start optimises again and the higher
+    logL is kept, the report giving both (BUG-0019); the same start reuses it,
+    and the report says so. A fit below a model it nests, or one that stalled
+    within a few iterations, is retried once from "ols" (or "preliminary"
+    with an older drvarma), and the report says so. The
     echelon form starts at Lutkepohl and Poskitt's least-squares estimates
     ("echelon", its default).
 
@@ -424,6 +488,22 @@ N5/N6 — Jenkins and Alavi's comparison of forecast uncertainty (their
     the first `estwin` observations of the first series, as Jenkins and Alavi
     did for their Table VIII (§6.3: the muskrat-mink models refitted on 48
     observations, the rest withheld). 0 = the last fit, on all the data.
+
+---
+
+## `hand_over`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+
+N7 — Close the analysis (P7), in both lanes: the adopted model (or the
+    univariates), the yardstick numbers that decided it, the caveats that stay
+    open (a file not validated in art, a fit on the MA wall, the Cholesky order,
+    a rank on theory, open decisions), what was set aside, and the call that
+    writes the guion. Recorded at N7.
 
 ---
 
@@ -634,6 +714,32 @@ Every job sima knows on this machine (the registry, ~/.sima/jobs or
 
 ---
 
+## `lag_order`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `pmax` | integer | no | `3` |
+
+N3 — THE ORDER OF THE VAR, by likelihood ratio: VAR(0) -> VAR(1) -> ...
+    -> VAR(pmax), each estimated by exact maximum likelihood on the same files
+    and tested against the one before it (LR, chi-squared with the
+    parameters the step adds). Tiao and Box's (1981) sequential reading — the
+    order beyond which no step is significant — on the fitted models, with
+    their least-squares M(l) beside it (identify_matrices has the whole
+    table), and AIC and BIC as information.
+
+    VAR(0) is the univariate models with a full innovation covariance (the
+    contemporaneous link only). Every fit goes through the paths of estimate
+    (BUG-0019): a fit that lies below the one it nests, or that stalled, is
+    retried from the ols (or preliminary) start, and the table says which. Only LR:
+    a Wald test rests on the Hessian, which a fit on a ridge does not give.
+    The fits are cached: estimate(p=k) afterwards reuses the chosen one.
+
+---
+
 ## `load_data`
 
 **Arguments**
@@ -644,6 +750,8 @@ Every job sima knows on this machine (the registry, ~/.sima/jobs or
 | `path` | string | yes | — |
 | `freq` | integer | no | `0` |
 | `start` | string | no | `` |
+| `lane` | string | no | `` |
+| `purpose` | string | no | `` |
 
 N0r — RAW DATA: an analyst with series and no univariate models
     (docs/STUDY-raw-entry.md). An Excel (.xlsx/.xls) or CSV table, one column
@@ -656,6 +764,14 @@ N0r — RAW DATA: an analyst with series and no univariate models
     complete on one common calendar: missing values are refused, with where.
     Next: characterize — each series' transformation with art's engine.
 
+    `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
+    session (the first question). Undeclared, guided, and every decision says
+    so; a later load of the same session keeps the lane it has.
+    `purpose`: "forecast" or "long run" -- what the model is for, asked with
+    the first question and recorded at N0. Optional here; N1c (prepare_vec)
+    inherits it instead of asking again. It decides the role of the yardstick
+    for a VEC (rule 9).
+
 ---
 
 ## `load_example`
@@ -667,6 +783,8 @@ N0r — RAW DATA: an analyst with series and no univariate models
 | `name` | string | no | `jenkins_alavi` |
 | `session` | string | no | `` |
 | `dest` | string | no | `` |
+| `lane` | string | no | `` |
+| `purpose` | string | no | `` |
 
 N0 for a worked example: copy its files to a working folder (`dest`,
     default ~/sima-examples/<name>; files already there are kept) and load
@@ -681,6 +799,14 @@ N0 for a worked example: copy its files to a working folder (`dest`,
     add after each report ("In the paper: ..."). The tools do not change in a
     tutorial; the explanation of the method is the manual it names.
 
+    `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
+    session (the first question). Undeclared, guided, and every decision says
+    so; a later load of the same session keeps the lane it has.
+    `purpose`: "forecast" or "long run" -- what the model is for, asked with
+    the first question and recorded at N0. Optional here; N1c (prepare_vec)
+    inherits it instead of asking again. It decides the role of the yardstick
+    for a VEC (rule 9).
+
 ---
 
 ## `load_pre`
@@ -691,6 +817,8 @@ N0 for a worked example: copy its files to a working folder (`dest`,
 |---|---|---|---|
 | `name` | string | yes | — |
 | `paths_json` | string | yes | — |
+| `lane` | string | no | `` |
+| `purpose` | string | no | `` |
 
 N0 — Start a session from the univariate models: one fue file per series.
 
@@ -702,6 +830,14 @@ N0 — Start a session from the univariate models: one fue file per series.
     The files are read by fue's own parser and recognised by their content. The
     series must share their frequency and their LAST date (BUG-2): different
     start dates are aligned at the end; different ends are refused.
+
+    `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
+    session (the first question). Undeclared, guided, and every decision says
+    so; a later load of the same session keeps the lane it has.
+    `purpose`: "forecast" or "long run" -- what the model is for, asked with
+    the first question and recorded at N0. Optional here; N1c (prepare_vec)
+    inherits it instead of asking again. It decides the role of the yardstick
+    for a VEC (rule 9).
 
 ---
 
@@ -897,7 +1033,8 @@ N1c/C0 — The cointegration question, and the VEC's specification with its
     reason written down). Feedback is not a precondition: it is tested inside
     the VEC (weak exogeneity).
 
-    `purpose` is REQUIRED and recorded at N1c: "forecast" or "long run". It
+    `purpose` is REQUIRED and recorded at N1c: "forecast" or "long run" (when
+    it was given at the load, with the first question, it is inherited). It
     decides the yardstick's role later (C8): a VETO when the purpose is to
     forecast, a CAVEAT beside a long-run claim (an equilibrium, who corrects).
 
@@ -1211,6 +1348,22 @@ N6 — Forecast-error variance decomposition of the last estimated model.
     With `bands` (default): 95% Monte-Carlo bands at the last horizon.
     On a VEC: the decomposition of the LEVELS' forecast errors (drvec), with
     the bootstrap's bands when irf_bands has run.
+
+---
+
+## `where`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+
+Where the analysis stands (P3): the path walked, the decisions still
+    OPEN with their options, what was adopted or set aside, and the protocol's
+    next node. The answer to "what now?" at any point. It informs; it does not
+    decide, and it records nothing. The map behind it:
+    sima://doc/DECISION_NODES.
 
 ---
 

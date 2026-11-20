@@ -48,8 +48,19 @@ numbers and never argues (`art-python/docs/ASSISTANT_LAYER_PROPOSAL.md`).
   - `vec.py` and `mcp_vec.py` hold the VEC's nodes (N1c, C0–C8);
   - `jobs.py` runs the long ones (bootstraps, sweeps) as detached, cached
     jobs;
-  - `guion.py` keeps the record;
-  - `session.py` keeps the state.
+  - `guion.py` keeps the record, and `session.py` keeps the state;
+  - `envelope.py` gives every node the same answer: table, what it shows,
+    conclusions, options with their calls;
+  - `lane.py` wraps every tool once: the session's lane (the guided pause,
+    or the autonomous record of the decision), the decisions as data
+    (`decisions.py`: pending, closed, adopted, set aside) and the opt-in
+    telemetry (`telemetry.py`);
+  - `levels.py` gives the canonical analysis the levels without the
+    deterministic terms (BUG-0018);
+  - `status.py` holds `where` and `hand_over`;
+  - `scale.py` holds the checks of units and factors at the load.
+
+The map of the principles and the two routes is `docs/ARCHITECTURE.md`.
 
 **No hard-wired recommendation.** art's `Description.recommendation` is the one
 thing the proposal says not to copy: two judges at once (a heuristic and the
@@ -59,6 +70,8 @@ with arguments for and against, never a verdict.
 ## 3. The protocol
 
 - **N0 `load_pre`:** fue's parser, alignment by date (BUG-2), the series table.
+  The lane (guided or autonomous), the purpose and the order of the series
+  are declared here, once, for the session.
 - **N1 `run_gate`:** each series alone on the common window, then the
   diagonal system evaluated at those optima. The identity is exact, and if it
   fails the analysis stops. It also says whether each file is an optimum, a
@@ -74,16 +87,24 @@ with arguments for and against, never a verdict.
   - isolated long or seasonal correlations, which point back to art: they are
     better read as something a univariate model misses than as a VAR with
     many lags.
-- **N3/N4 `estimate`:** the candidate, the LR against the univariates (in
-  sample: necessary, not sufficient), the residual portmanteau, and how the
-  optimiser stopped.
+- **N3/N4 `estimate`:** the candidate; the LR against the same model without
+  cross terms, which is the univariate models for a plain VARMA on route U
+  (in sample: necessary, not sufficient); the residual portmanteau; and how
+  the optimiser stopped. `lag_order` runs the sequence VAR(0) → VAR(pmax) by
+  LR. The start and the guard against a failed search are in
+  `ARCHITECTURE.md` §4.
 - **N5 `evaluate`:** the yardstick. The candidate and the diagonal system on
   the same estimation window, parameters fixed, forecasts from every origin,
-  and the RMSE/MAPE ratio by series and horizon.
+  and the RMSE/MAPE ratio by series and horizon. Then `adopt` or `abandon`,
+  with the reason.
 - **N6:**
   - `forecast`: every series in its level, with its own model;
   - `impulse_response` and `variance_decomposition`: Cholesky in the order of
-    the files, named as an identifying assumption.
+    the files, named as an identifying assumption. They warn when the model
+    is not the adopted one.
+- **N7 `hand_over`:** the result, the yardstick that decided it, the caveats
+  that stay open; then `export_guion`. `where` says at any point where the
+  analysis stands.
 
 ## 4. Speed
 

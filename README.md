@@ -54,12 +54,15 @@ every result.
 | C8 | `evaluate` | the yardstick for the VEC: a veto to forecast, a caveat for a long-run claim |
 | — | `job_status`, `job_result`, `job_cancel`, `jobs` | the long jobs: detached, cached by content, they outlive the conversation |
 | N2 | `identify_cross`, `identify_matrices`, `identify_echelon` | the cross dynamics: residual CCFs, Jenkins and Alavi's matrices, the Kronecker indices of the echelon form |
+| N3 | `lag_order` | the order of the VAR by LR on fitted models, VAR(0) → … → VAR(pmax), Tiao and Box's M(l) beside it |
 | N3–N4 | `estimate`, `check_residuals`, `simplify`, `structure` | a candidate and its LR, the checking, Tiao and Box's simplification, is it really simultaneous? |
 | N4b | `study_estimation` | a fit on the MA invertibility wall |
-| N5 | `evaluate`, `forecast_uncertainty` | **the yardstick**: does it forecast better than the univariates? |
+| N5 | `evaluate`, `forecast_uncertainty`, `adopt`, `abandon` | **the yardstick**: does it forecast better than the univariates? Then keep a model (or the univariates) or set one aside, with the reason |
 | N6 | `forecast`, `impulse_response`, `variance_decomposition`, `reorder` | use of the chosen model (on a VEC: the levels; `reorder` refuses) |
 | — | `plot_*` | the figures |
 | — | `examples`, `load_example` | the worked examples |
+| N7 | `hand_over` | the close: the result, the yardstick that decided it, the caveats that stay open |
+| — | `where` | where the analysis stands: the path, the open decisions, the next node |
 | — | `record_decision`, `export_guion` | the record of the analysis |
 | — | `split_inp` | out of drvarma's deprecated multivariate `.inp` |
 
@@ -75,7 +78,12 @@ The rules that shape everything:
   adopted on theory is written in the guion as such.
 - **Evidence and a menu, not a verdict.** The tools show the evidence and the
   options with their arguments for and against. The analyst decides in the
-  guided lane, and the model decides, in writing, in the autonomous lane.
+  guided lane, and the model decides, in writing, in the autonomous lane. The
+  lane is declared once, at the load, and each answer ends in the guided
+  pause or in the autonomous lane's filled-in record of the decision.
+
+The principles and the two routes (U, the ladder; V, the vector first) are
+mapped in [`docs/ARCHITECTURE.md`](https://github.com/davidesg/sima-python/blob/main/docs/ARCHITECTURE.md).
 
 See [`docs/DESIGN.md`](https://github.com/davidesg/sima-python/blob/main/docs/DESIGN.md) and the generated tool reference
 [`docs/TOOLS.md`](https://github.com/davidesg/sima-python/blob/main/docs/TOOLS.md).

@@ -62,7 +62,10 @@ hand-over lists it among the caveats.
 ## N1b — The canonical analysis · not a node
 
 Box and Tiao's reading of the levels. A reading, not a test; sima never
-changes a d. It feeds N1c.
+changes a d. It feeds N1c. On route U it reads the levels without each model's
+deterministic seasonality and, by default, without its interventions (never
+μ or a trend), and gives the other reading beside it (BUG-0018); its order by
+M(l) is prepare_vec's default p.
 
 ---
 
@@ -165,6 +168,16 @@ improve a number (rule 6).
 the same. **Both lanes:** estimate both and compare; a tie is not resolved on
 paper.
 
+**The order of a VAR:** `lag_order` runs VAR(0) → VAR(pmax) by LR on fitted
+models (Tiao and Box's sequential reading, their M(l) beside it, AIC and BIC
+as information). **Autonomous:** the last significant step, an isolated one
+after a silence named and not taken blindly.
+
+**Not a node — a failed search.** A fit that lies below a model it nests, or
+that stalled after a few iterations, is not an estimate. sima retries it from
+the preliminary estimates and says so (BUG-0019; the starts in
+`ARCHITECTURE.md` §4). If it is still below, the fit is not read: N4b.
+
 ## N4 — The in-sample evidence
 
 `check_residuals`: large residuals (with dates: the entry to interventions,
@@ -216,6 +229,30 @@ finding. The final-stage tools warn when they act on a model that is not the
 adopted one.
 
 ---
+
+## Route V — what changes
+
+Route V (the vector first, Tiao and Box; `ARCHITECTURE.md` §3) walks the same
+nodes on specifications, not on the analyst's univariate models:
+
+- **N0.** The route itself is chosen after `characterize`. **Autonomous:**
+  route U, unless the analyst asked for V.
+- **N1.** The session's gate certifies the cast only. The base specs are
+  white noise, and a moved file is not a reason to go back to art: the files
+  are specifications by design.
+- **N2** starts at `identify_matrices`: there are no univariate residuals to
+  read pair by pair.
+- **N3.** Each fit estimates every spec's own AR(p)/MA(q) first, then
+  everything jointly. Its LR is against those m own models, not against the
+  analyst's univariate models.
+- **N4s matters most here:** every coefficient is free, own ones included.
+- **N5.** The yardstick is the analyst's models when given
+  (`evaluate(yardstick=...)`), else light ones built by route U's builder, and
+  the evaluation says which. **Autonomous:** say it in the hand-over.
+- **Caveats that stay open on route V:**
+  - no interventions (`characterize` reports outliers and models none);
+  - a yardstick not reviewed in art, unless it was given;
+  - nothing reusable as a `.pre`.
 
 ## What is NOT a node
 

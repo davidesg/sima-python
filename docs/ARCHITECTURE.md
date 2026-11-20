@@ -1,228 +1,182 @@
 # sima — architecture and principles
 
-What sima is built on, in one place: the principles it inherits and keeps, the
-layers that carry them, and the two paths through a system — route U (the
-ladder, Jenkins and Alavi) and route V (the vector first, Tiao and Box) — with
-the two branches that hang off them (the echelon form, the VEC). The decision
-nodes, one by one, are in `DECISION_NODES.md`; the design of each piece in
-`DESIGN.md` and the studies; this document is the map above them. An
-evaluation of where sima stands against it is in
-`reviews/2026-11-20-sima-evaluation.md`.
+The map above sima's documents: the principles it inherits from art and mtram,
+the layers that carry them, and its two paths, route U (the ladder, Jenkins and
+Alavi) and route V (the vector first, Tiao and Box). It states each thing once
+and points to where it is argued and measured. Where the details live:
 
-## 1. Where sima sits
+- `DESIGN.md`: the rungs, the seam between engine and assistant, the protocol;
+- `DECISION_NODES.md`: node by node, with the declared autonomous defaults and
+  the stops;
+- `STUDY-raw-entry.md`: the two routes from raw data;
+- `STUDY-tiao-box.md`, `DESIGN-jenkins-alavi.md`: the two schools;
+- `MANUAL-*.md`: the methods (Jenkins and Alavi, the echelon form, the VEC).
 
-The ATSW suite is a ladder of assistants over a ladder of engines:
+The principles of the suite are argued in art (`art-python/docs/ARCHITECTURE.md`,
+`ASSISTANT_LAYER_PROPOSAL.md`) and mtram (`drtran-python/docs/DECISION_NODES.md`,
+`LADDER_AS_OPTIMISATION.md`). An evaluation of where sima stands, for people
+rather than the assistant, is in `reviews/2026-11-20-sima-evaluation.md`.
 
-| rung | assistant | engine | model |
-|---|---|---|---|
-| 1 | art | fue | one series: ARIMA with interventions |
-| 2 | mtram | drtran | a transfer network: a DAG, a triangular VARMA |
-| 3 | **sima** | **drvarma** (ladder mode) | a system: a general VARMA |
-| 3 | **sima** | **drvec** | a cointegrated system: the VARMA-VEC in levels |
+## 1. The principles
 
-Every engine is a C program with a Python port, and the two are homologated.
-The rungs talk through **files**: the `.pre` of fue.
+They come down the ladder from art and mtram. They are named, not numbered:
+"P1–P7" in sima's code and changelog are the steps of the guided lane's
+homologation with art, not these.
 
-## 2. The principles
+**The file is the contract** (art's instructions; mtram's
+`LADDER_AS_OPTIMISATION.md` §1–2).
+- A `.pre` is an optimum, rerunnable: fue on it does not move the numbers.
+  An `.inp` is a specification, and a `.pre` that is edited becomes an `.inp`.
+- Only the program that estimated may write a `.pre`. sima never writes one
+  for a system (rule 12).
+- fue's format is the base of everything. Every engine reads it as fue
+  writes it, Box-Cox included: refactor·y with λ = 1.
 
-These are not sima's choices. They come down the ladder from art and mtram,
-and sima keeps them. Where sima departs from one, it says so (route V, §5).
+**The ladder: the univariate models first** (`DESIGN.md` §1; drvarma's
+`docs/LADDER.md`; atsw-gui `engines/drvarma/docs/DESIGN-v5-ladder.md`).
+- A system starts from each series' univariate model on its diagonal. The
+  joint fit then re-estimates the own models together with the cross terms
+  (`fixarma` is off): **the own structure is the univariate model's, and its
+  values start at its optimum**.
+- The gate makes two claims (`LADDER_AS_OPTIMISATION.md` §2.1):
+  - the joint cast reproduces the univariate likelihoods (the crossing);
+  - whether the files were optima (a file that moves is a specification).
+- Starting values follow the same rule. A preliminary estimate adds only the
+  relation (cross terms, covariances); it never replaces the own models
+  (§4). The echelon form is the declared exception: its own terms come from
+  its index table (§5).
 
-**P1 — The fue format is the base of everything.**
-- A `.pre` is the optimum of a univariate model, rerunnable: run fue on it and
-  the numbers do not move. An `.inp` is a specification, with values that are
-  only seeds; a `.pre` that is edited becomes an `.inp` again.
-- Every engine reads the format as fue writes it, transformation included.
-  The Box-Cox is fue's, refactor·y with λ = 1, not the textbook
-  refactor·(y − 1) (lib/prewhiten BUG-0002, fixed on 20-nov-2026).
+**The univariate model is the yardstick** (rule 1; rule 9; `PLAN-vec.md`
+decision 6).
+- A VARMA is kept only if it forecasts better out of sample. When none does,
+  the univariate models are the result: a finding.
+- For a VEC whose purpose is the long run, the yardstick is a caveat, not a
+  veto: imposing cointegration often helps little at short horizons
+  (Christoffersen and Diebold).
 
-**P2 — The ladder: the univariate models first.**
-- A system starts from the univariate model of each series, kept on its
-  diagonal. What the system adds is only the RELATION between the series: the
-  cross dynamics and the innovation covariances.
-- **The gate** certifies the start: the joint cast (fue's) reproduces the
-  univariate models exactly, or nothing is built on it.
-- This is a commitment of the suite (art → mtram → sima), not an option of a
-  route. Even the starting values follow it: the own models are never seeded;
-  only the relation is preestimated (§6).
+**Engines ship numbers; the assistant argues** (`DESIGN.md` §2; art's
+`ASSISTANT_LAYER_PROPOSAL.md` §5).
+- Caveats travel as data, and there is no hard-wired recommendation.
+- **The engines are homologated**: the port follows the C, and a fix starts
+  in the C and both move together.
+- What works is not touched: engine defaults pinned by the batteries stay.
 
-**P3 — The univariate model is the yardstick.**
-- A VARMA is kept only if it forecasts better than the univariate models out
-  of sample (rule 1). In-sample significance is necessary, not sufficient.
-  When no system wins, the univariate models are the result, and that is a
-  finding.
-- The VEC is the one exception. With the purpose "long run" the yardstick is a
-  caveat, because the equilibrium has its own test, the rank by bootstrap.
-  For a VARMA the purpose decides nothing.
+**The decisions are the analyst's** (`DECISION_NODES.md`; art's
+`ARCHITECTURE.md` §8).
+- **The same computation in both lanes.** Guided and autonomous differ in who
+  decides, never in what is computed: with the same choices they reach the
+  same model (mtram).
+- **In the guided lane the turn ends at the pause.**
+- **The autonomous lane never makes a claim the data cannot make**
+  (mtram).
+- **Never decide nodes in batch.** art also measured "one series after
+  another"; see §6 for where sima does not yet follow it.
+- Every decision is recorded with its reason. sima keeps it as data: open,
+  closed, adopted, set aside.
 
-**P4 — Engines ship numbers; the assistant argues.**
-- The engines compute and return their caveats as data. The assistant turns
-  them into evidence and options.
-- There is no hard-wired recommendation: two judges (a heuristic and the
-  model) would contradict each other.
-- **The engines are homologated.** The port does not depart from the C, not
-  even to fix it: a fix starts in the C and both move together.
-- **What works is not touched.** A latent defect in a tested engine is bounded
-  and reported; the defaults that the reference batteries pin do not change.
+**Nothing partial is a result; a stop is not a decision.** These are listed
+in `DECISION_NODES.md`:
+- no rank without a finished bootstrap (rule 8), unless it is adopted on
+  theory and written as such;
+- a fit on the MA wall is not an optimum;
+- a fit below a model it nests is a failed search;
+- a failed gate, a model that is not I(1, r), or a triangular or conditional
+  system (which is mtram's) stops the path.
 
-**P5 — The decisions are the analyst's.**
-- **Guided lane:** the analyst decides every node.
-- **Autonomous lane:** the model sits in the analyst's chair. It walks the
-  same nodes and writes down each decision with its reason.
-- Each node answers with an envelope: table, what it shows, conclusions, and
-  options with their exact calls. It ends in the pause, or in the filled-in
-  `record_decision` call in the autonomous lane.
-- The guion records every decision as data: open, closed (with which option),
-  adopted, or set aside.
+**What the numbers can be compared with** (`LADDER_AS_OPTIMISATION.md` §6):
+- likelihoods are not comparable across different d;
+- what is reproducible is a local optimum, not a global one;
+- a test on an inadequate model is not a test (art's
+  `AUTONOMOUS_PIPELINE.md` §4).
 
-**P6 — Nothing partial is a result, and a stop is not a decision.**
-- No rank, β or equilibrium is reported without a finished bootstrap.
-- A fit on the MA wall is not an optimum.
-- A fit below a model it nests is a failed search, not an estimate.
-- Some points are stops, with nothing to weigh: a failed gate; no finished
-  bootstrap; a system that is triangular or conditional, which is mtram's
-  (offered, never taken). They are listed in `DECISION_NODES.md`.
-
-## 3. The layers
+## 2. The layers
 
 ```
- the conversation (MCP: Claude Code, Desktop, ...)
-   │  tools, resources (sima://protocol, sima://doc/...)
- ┌─┴──────────────────────────────────────────────────────────────┐
- │ sima.mcp_server / mcp_vec   the protocol: nodes, tools, instructions │
- │ sima.lane (one wrapper on every tool)                          │
- │   ├ the lane      guided pause / autonomous record call         │
- │   ├ decisions     pending → closed / adopted / dead-end         │
- │   └ telemetry     opt-in, local (SIMA_TELEMETRY)                │
- │ sima.envelope · evidence · vec · levels · status · figures      │
- │ sima.guion (the record) · session (the state) · jobs (bootstraps)│
- └─┬──────────────────────────────────────────────────────────────┘
-   │  numbers and caveats as data
- ┌─┴───────────────────────┐  ┌──────────────────────────┐
- │ drvarma (ladder) ⇄ C     │  │ drvec ⇄ C                 │
- │ fue (the cast, the format)│  │ pyfug (the figures, CCF)  │
- └─────────────────────────┘  └──────────────────────────┘
+ the conversation (MCP)        tools · sima://protocol · sima://doc/...
+ ┌──────────────────────────────────────────────────────────────────┐
+ │ mcp_server · mcp_vec        the protocol, the tools, the instructions │
+ │ lane (one wrapper on every tool): the lane · decisions · telemetry│
+ │ envelope · evidence · vec · levels · status · figures · scale     │
+ │ guion (the record) · session (the state) · jobs (bootstraps)      │
+ └──────────────────────────────────────────────────────────────────┘
+        numbers and caveats as data
+ drvarma (the ladder; C ⇄ port) · drvec (C ⇄ port) · fue (the cast) · pyfug
 ```
 
-The wrapper in `sima.lane` is the one place where the session's lane, the
-bookkeeping of decisions and the telemetry act. The tools that build the
-envelopes do not know about any of them, and a failure there never costs a
-tool its answer.
+`sima.lane` is the one place where the session's lane, the bookkeeping of
+decisions and the opt-in telemetry act. A failure there never costs a tool
+its answer.
 
-## 4. Route U — the ladder (Jenkins and Alavi)
+## 3. The two routes
 
-The structured path. It is the ladder of art and mtram, one rung up, and it
-inherits their discipline: a validated base, a gate, identification from the
-evidence, a yardstick the analyst already trusts.
+Both meet at the same session, the same nodes and the same yardstick. They
+differ in what the system is built on. The two schools disagree, and sima
+shows it rather than settling it (`STUDY-tiao-box.md` §3.1). Jenkins and
+Alavi's own advice is to use both (`DESIGN-jenkins-alavi.md` §1).
 
-| node | tool | what happens |
+| | route U — the ladder (Jenkins and Alavi) | route V — the vector first (Tiao and Box) |
 |---|---|---|
-| N0 | `load_pre` | the `.pre` files (from art: the analyst's reviewed univariate models); the lane, the purpose, the ORDER of the series (the Cholesky order) |
-| N1 | `run_gate` | the joint cast reproduces each univariate model, or STOP |
-| N1b | `canonical_analysis` | Box and Tiao on the levels, without the models' deterministic terms (BUG-0018): does the system need every difference? |
-| N1c | `prepare_vec` → `rank_test` | with two or more I(1) series: the cointegration question (§8) |
-| N2 | `identify_cross` → `identify_matrices` → `identify_echelon` | the residual CCFs pair by pair (what the univariate models do not carry), then the matrices, then the echelon form if an MA is in sight |
-| N3 | `estimate`, `lag_order` | candidates from the evidence; the own models stay the `.pre`'s; the order by LR |
-| N4 | `check_residuals`, `simplify`, `structure`, `study_estimation` | in-sample evidence; a triangular system is mtram's; the MA wall |
-| N5 | `evaluate` → `adopt` / `abandon` | the yardstick: the analyst's univariate models |
-| N6 | `impulse_response`, `variance_decomposition`, `forecast` | the use, on the adopted model |
-| N7 | `hand_over` → `export_guion` | the result, its yardstick, the caveats |
+| input | one `.pre` per series. The strong form uses the analyst's models from art; from raw data, `build_univariate` writes light ones, not reviewed in art | raw data → `characterize` → one `.inp` specification per series: λ, d, harmonics, mean, plus a free AR(p)/MA(q) per order (`STUDY-raw-entry.md` §3.4) |
+| interventions | those of the `.pre` (decided in art, in the strong form) | none: `characterize` reports outliers, models none |
+| the session's gate | certifies the univariate models | certifies the cast; the base specs are white noise (a random walk with d = 1) |
+| the own dynamics | start at the univariate optimum, structure fixed, values re-estimated jointly | each fit first estimates every spec's own AR(p)/MA(q) by exact ML (its own gate), then everything jointly |
+| identification | CCFs of the prewhitened residuals → matrices → echelon | the vector: R_k, S_k, Tiao and Box's M(l) → echelon |
+| the LR of a fit | against the univariate models (for the plain VARMA; the echelon form's is against itself without cross terms) | against the same model without cross terms: m own AR(p)/MA(q) models |
+| the yardstick (N5) | the analyst's models | the analyst's if given, else route U's builder; the evaluation says which (`_yardstick_text`) |
+| files | `.pre` in; no file for the system | `.inp` specifications that never become `.pre`; no file for the system (`STUDY-raw-entry.md` §4) |
 
-**From raw data**, route U first builds the univariate models with
-`build_univariate`: art's autonomous lane in miniature. The models are light
-and not reviewed in art, and every file, the gate and the hand-over say so.
-The strong form of route U is the one that starts from the analyst's art
-models.
+What route V gives up, it gives up knowingly, and it is where the analyst
+carries more of the judgement: no validated base until N5, no interventions,
+every coefficient free (simplification matters most here). What route U
+risks is documented too: with an AR structure, the univariate models first
+can lead towards the diagonal-AR representation and over-parameterisation
+(`DESIGN-jenkins-alavi.md` §1).
 
-## 5. Route V — the vector first (Tiao and Box)
-
-For raw data, when the analyst wants the system without univariate models
-first. **It is the less structured path, and the more dangerous one**,
-because it gives up most of what makes route U safe:
-
-| | route U | route V |
-|---|---|---|
-| the base | the analyst's univariate models, reviewed in art | specifications: only each series' transformation (λ, d, harmonics, mean) |
-| the gate | certifies the univariate models | certifies only the cast; the diagonal it checks is white noise (a random walk with d = 1) |
-| interventions | in the `.pre`, decided in art | none: `characterize` scans for outliers and reports them, but does not model them |
-| the own dynamics | fixed: the univariate optimum | estimated jointly with the cross terms, all m²(p + q) coefficients |
-| identification | CCFs of prewhitened residuals, then matrices | the vector only: R_k, S_k and Tiao and Box's M(l), by least squares |
-| the LR of a fit | against the univariate models | against the same model without cross terms (one AR(p)/MA(q) per series): a lower bar |
-| the yardstick (N5) | the analyst's models | built by route U's builder (light, not reviewed) unless the analyst provides them (BUG-0004) |
-| the files | `.pre` in, `.pre` everywhere | `.inp` specifications that never become `.pre`; the joint result lives only in the session and the guion |
-
-The ladder still applies where it can. Route V passes the gate, the diagonal
-fit estimates each specification's own model by exact ML before any cross term
-(§6), and N5 still judges by the univariate models. But the first time a
-route V system meets a validated univariate model is at the end, at N5.
-
-## 6. Starting values
+## 4. Starting values
 
 Exact ML from a poor start can stop far from the optimum. On the US monetary
-VAR, from zero, the VAR(2) stopped after two iterations, 50 points below its
-VAR(1) (drvarma BUG-0027). The cause was the scale of the cross terms, not the
-optimiser's penalty. The rule, the same in the C (`-start ols`) and the port
-(`start="ols"`):
+VAR the zero start stopped the VAR(2) after two iterations, 50 points below
+its VAR(1). The cause was the scale of the cross terms (drvarma BUG-0027).
 
-- **The own models are never seeded.** On route U they are the `.pre`'s; on
-  route V the diagonal fit has estimated them (P2).
-- **The relation is preestimated:**
-  - the cross AR terms are +Φ_k from the least squares of the VAR(p) (the Box
-    and Jenkins convention, the MA included: θ = −coefficient);
-  - Q's covariances are the residuals' correlation in the ladder's
-    normalisation, q_ij = r_ij √(Q_ii Q_jj), with Q₁₁ = 1 (Mauricio 1995) and
-    the gate's Q_ii.
-- **The engine default stays zero** (P4). sima uses `ols` when the installed
-  drvarma has it, else `preliminary` (Jenkins and Alavi's).
-- **The guard** (BUG-0019): a fit below a model it nests, or one that stalled,
-  is retried from the preliminary estimates, and the report says so.
-- **The echelon form** keeps its own start: the least squares of Lütkepohl and
-  Poskitt's stage II.
+| start | seeds | where |
+|---|---|---|
+| `zero` | nothing beyond the univariate models | C and port; **the engines' default** |
+| `ols` | the original drvarma's `init_varma` in the ladder: the cross AR terms = +Φ_k from the least squares of the VAR(p) (Box and Jenkins); Q's covariances = the residuals' correlation × √(Q_ii Q_jj), with the gate's Q_ii (Q₁₁ = 1); the cross MA terms stay at zero | C (`-start ols`) and port, homologated |
+| `preliminary` | Jenkins and Alavi's preliminary estimates of the cross terms | port only |
+| `echelon` | Lütkepohl and Poskitt's stage II least squares: own, cross, A₀, Q | port only (the echelon form) |
 
-Measured and not adopted: a multivariate Hannan-Rissanen start. It adds
-nothing where the starts agree, and on Jenkins and Alavi's VARMA(2,1) it lands
-on a worse local maximum, certified.
+- **What sima uses:** `ols` when the installed drvarma has it (drvarma >
+  0.3.4), else the engine's zero.
+- **The guard** (BUG-0019): a fit below a model it nests, or one that
+  stalled, is retried once from `ols` (or `preliminary` with an older
+  drvarma), and the report says so.
+- **When the start fails:** if a start makes the system non-stationary, it
+  falls back to zero and says so.
 
-## 7. The echelon branch (Lütkepohl and Poskitt)
+## 5. The branches
 
-The echelon form is not a third route. It is the third instrument of N2 and
-N3 in either route, for when an MA is in sight or a VARMA(p, q) is ill-defined
-on the MA wall.
+**The echelon form** (Lütkepohl and Poskitt; `MANUAL-echelon.md`) is the
+third instrument of N2–N3 in either route, for an MA or a fit on the wall.
+- Its Kronecker indices come from the data; A₀ is triangular, so the order of
+  the series is part of the model.
+- On route U its own AR(n_i)/MA(n_i) replaces each univariate model's
+  regular ARMA. This is the declared departure from the ladder. The seasonal
+  factors kept from the `.pre` multiply the whole row, and that is checked
+  by LR.
 
-- **`identify_echelon`** gives the Kronecker indices from the data: a long VAR,
-  then least squares per candidate, chosen by SC with HQ beside it.
-- **`estimate(indices=...)`** fits the echelon VARMA by exact ML from the stage
-  II least squares. A₀ is lower triangular, so **the order of the series is
-  part of the model**.
-- **On route U**, the own AR(n_i)/MA(n_i) replaces each univariate model's
-  regular ARMA. What is kept from the `.pre` — the transformation, the
-  deterministic terms, the seasonal factors — multiplies the whole row, and
-  that row factor is checked by LR (`factor_test`).
+**The VEC** (`MANUAL-vec.md`, `PLAN-vec.md`): with two or more I(1) series,
+the cointegration question comes first (N1c). The rank comes from drvec's
+bootstrap, then C2–C8.
 
-## 8. The cointegration branch (the VEC)
+## 6. Where sima departs from its inheritance, knowingly
 
-With two or more I(1) series, the cointegration question comes before any
-VARMA in differences (N1c). It is offered whatever the canonical count, and it
-is the analyst's to take.
-
-- The rank comes from drvec's parametric bootstrap, a detached job; nothing
-  partial is read.
-- Then the VEC's own nodes: C2 the roles, C3 the restrictions by LR (never
-  Wald), C4 the exogenous inputs, C5 the long run, C6 the responses in levels
-  with bootstrap bands, C7 the sweep, C8 the yardstick by purpose.
-- One session and one guion hold both kinds of fit. `docs/MANUAL-vec.md` has
-  the method.
-
-## 9. Where it lives
-
-| piece | file |
-|---|---|
-| the protocol, the instructions, the tools | `src/sima/mcp_server.py`, `src/sima/mcp_vec.py` |
-| the envelope, the lane, the decisions, the telemetry | `envelope.py`, `lane.py`, `decisions.py`, `telemetry.py` |
-| evidence and menus | `evidence.py`, `vec.py` |
-| the levels without deterministic terms | `levels.py` |
-| `where`, `hand_over` | `status.py` |
-| the record, the state, the jobs | `guion.py`, `session.py`, `jobs.py` |
-| the decision nodes | `docs/DECISION_NODES.md` |
-| the raw entry, the two routes | `docs/STUDY-raw-entry.md` |
-| the engines | drvarma (`drvarma.ladder`), drvec, fue; their C in atsw-gui `engines/` |
+- **`build_univariate` builds univariate models.** mtram's rule is that an
+  assistant one rung up does not. sima says so in every file, the gate and
+  the hand-over, and offers art for each series.
+- **`characterize` and `build_univariate` decide every series in one call.**
+  art measured "one series after another" as the safer practice. Not yet
+  followed.
+- **The lane is set per session, not per call as in art.** This is
+  deliberate: per call is what let the pause into art's autonomous lane
+  (art BUG-0181).
+- **The echelon form** (§5).

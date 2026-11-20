@@ -130,9 +130,12 @@ errors are very large for both models and the series are short.
 
 sima starts from one fue file per series: the `.pre` of the univariate model
 built in art (an optimum). Each carries the series' whole univariate model —
-Box-Cox, differencing, mean, ARMA factors — which sima keeps on the diagonal.
-There is no raw-data entry: the univariate model is the seed of the system and
-the yardstick it has to beat.
+Box-Cox, differencing, mean, ARMA factors — which sima keeps on the diagonal:
+their structure stays, and their values, started at the univariate optimum,
+are re-estimated jointly with the cross terms. The univariate model is the
+seed of the system and the yardstick it has to beat. (From raw data, route U
+builds the univariate models first with `build_univariate`: light ones, not
+reviewed in art; `docs/STUDY-raw-entry.md`.)
 
 **The gate** (N1) checks that the diagonal system reproduces the univariate
 models exactly: the sum of their log-likelihoods equals the joint one. If a
@@ -149,12 +152,14 @@ observation), its model is re-estimated on the shorter sample.
 | method 1: R_k (Bartlett), S_k, S_k(q), determinants | `identify_matrices`, `plot_identification(method=1)` | N2 |
 | preliminary estimates (3.11), (3.12) | `estimate(start="preliminary")` | N3 |
 | the residual model (3.22) | `estimate(..., cross="residual")` | N3 |
-| exact ML estimation | `estimate` | N3 |
+| exact ML estimation | `estimate`, and the order by LR with `lag_order` | N3 |
 | checking [§5.2] | `check_residuals` | N4 |
 | V(l), Table VIII [§6.2] | `forecast_uncertainty` | N5 |
 | their §6.3 refit on part of the data | `forecast_uncertainty(estwin=)` | N5 |
 | forecasting from a range of origins | `evaluate` | N5 |
+| — (the decision of N5) | `adopt`, `abandon` | N5 |
 | forecasts, impulse responses | `forecast`, `impulse_response`, `variance_decomposition` | N6 |
+| — (the close) | `hand_over`, `export_guion` | N7 |
 
 `estimate` options:
 
@@ -166,8 +171,13 @@ observation), its model is re-estimated on the shorter sample.
   multiplied by each series' univariate MA — the form (3.22). The default,
   `"additive"`, adds the cross MA; the two are the same when the univariate
   models have no MA factors;
-* `start="preliminary"`: the cross terms start at the preliminary estimates.
-  Reaching the same optimum from zero and from them confirms it;
+* `start`: where the cross terms start. sima's default is `"ols"` when the
+  installed drvarma has it — the original drvarma's start: least squares of
+  the VAR(p) for the cross AR terms and the covariances, the univariate models
+  untouched (`docs/ARCHITECTURE.md` §4) — else zero. `"preliminary"` starts at
+  Jenkins and Alavi's preliminary estimates (3.11), (3.12). Reaching the same
+  optimum from two starts confirms it, and a fit that lies below a model it
+  nests is retried from the preliminary estimates on its own (BUG-0019);
 * `diagcov=True`: a diagonal Σ, when the errors do not correlate.
 
 ### 2.3 The figures
