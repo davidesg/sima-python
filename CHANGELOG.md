@@ -2,6 +2,21 @@
 
 ## 0.2.5 — unreleased
 
+**From the evaluation of 20-nov (point 2).**
+- **Route V's caveats in `hand_over`.** It names the route and what it leaves
+  open: no validated univariate base until N5, nothing reusable as a `.pre`.
+  It also says where the yardstick came from: the analyst's models, or the
+  builder's, not reviewed in art. It no longer says a route V specification's
+  "univariate model was not validated in art"; a specification has none.
+- **characterize's outliers in the caveats**, series by series with their
+  dates. They are modelled nowhere. On route V they stay in the system's
+  dynamics, and art's guided lane is where they are decided.
+- **Two starts for a VARMA with MA.** With q > 0 and no start asked for,
+  `estimate` also fits from a second start (preliminary, or zero) and keeps
+  the higher logL. The report says whether the two agree. Jenkins and Alavi's
+  VARMA(2,1) has two maxima, −545.00 from ols and −547.94 from preliminary,
+  which the guard did not see.
+
 **The "ols" start, when drvarma has it** (drvarma > 0.3.4; the C's
 `-start ols`, homologated). It is the original drvarma's `init_varma` in the
 ladder: least squares of the VAR(p) seeds the parameters of the relation.
