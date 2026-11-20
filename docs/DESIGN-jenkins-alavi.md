@@ -96,6 +96,11 @@ needed to demonstrate the forecasting superiority" of a multivariate model.
 
 ## 2. The ladder is already Jenkins and Alavi's path
 
+*The right-hand column is sima as it was when this design was written
+(29-sep-2026). Several rows have since been built — method 1, the
+preliminary estimates, the `ols` start — and `MANUAL-jenkins-alavi.md` §2.2 is
+the current mapping.*
+
 | Jenkins and Alavi | the ladder / sima today |
 |---|---|
 | univariate models first, each series with its λ and d [§3.3, §3.4 end] | the `.pre` files from art/fue; nothing about them re-implemented |

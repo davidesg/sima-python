@@ -126,8 +126,9 @@ N0u build_univariate  route U: each series' model with art's engine (light, not
 N0  load_pre          the files, their models, the common window
 N1  run_gate          the univariate base, certified. If it FAILS, stop: the
                       joint model does not reproduce the univariate ones, and
-                      nothing on top of it can be trusted. If a file is a
-                      SPECIFICATION (it moved), offer to go back to art.
+                      nothing on top of it can be trusted. On route U, if a
+                      file is a SPECIFICATION (it moved), offer to go back to
+                      art; on route V the files are specifications by design.
 N1b canonical_analysis  when two or more series are differenced: Box and
                       Tiao's (1977) canonical analysis of the LEVELS. Fewer
                       near non-stationary components than differenced series
@@ -217,7 +218,9 @@ N3  lag_order         the order of the VAR by LR: VAR(0) -> ... -> VAR(pmax) by
                       on the pairs identify_cross found (its option (d)).
                       `indices` fits the echelon form instead (route U: with
                       the row factor's LR check).
-N4  (in estimate)     LR against the univariates, residuals, convergence.
+N4  (in estimate)     LR against the same model without cross terms (the
+                      univariates for a plain VARMA on route U), residuals,
+                      convergence.
     check_residuals   Jenkins and Alavi's checking: large residuals on the
                       uncorrelated transformed residuals (with dates, the entry
                       to interventions), the residual correlation matrices,
@@ -249,6 +252,10 @@ N6  forecast, impulse_response, variance_decomposition — with the chosen model
     Their figures: plot_forecast, plot_impulse_response (an ACF-like panel per
     response and shock), plot_variance_decomposition (the same layout, 0-100 %),
     and plot_residual_ccf for what the model leaves.
+N7  hand_over        the close: the adopted model (or the univariates), the
+                      yardstick that decided it, the caveats that stay open;
+                      then export_guion. At any point, where(name) says where
+                      the analysis stands.
 Record every decision with its reason: export_guion shows the path.
 
 ══════════════════════════════════════════════════════
@@ -378,7 +385,9 @@ RULES THAT ARE NOT NEGOTIATED
    sima://defects (sima's and the engine's defect registers; one report with
    sima://engine-defects/BUG-XXXX), sima://docs (the design documents and the
    user manuals: the map of the decisions, node by node, with the autonomous
-   lane's declared defaults and the stops, sima://doc/DECISION_NODES;
+   lane's declared defaults and the stops, sima://doc/DECISION_NODES; the
+   architecture and principles (the ladder; route U against route V, the less
+   structured one), sima://doc/ARCHITECTURE;
    sima://doc/MANUAL-jenkins-alavi, sima://doc/MANUAL-echelon
    and, for cointegrated systems, sima://doc/MANUAL-vec; the VEC's study and
    plan, sima://doc/STUDY-vec and sima://doc/PLAN-vec), sima://examples and

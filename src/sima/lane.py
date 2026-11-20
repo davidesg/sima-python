@@ -1,4 +1,4 @@
-"""The lane in the answer (docs/ESTUDIO P2): one filter on every tool's output.
+"""The lane in the answer (the guided lane's homologation with art, step P2; docs/ARCHITECTURE.md §2): one filter on every tool's output.
 
 The envelopes (sima.envelope) end a decision with the guided lane's pause,
 ``envelope.STOP``. Which lane is in force is the SESSION's, set once at the

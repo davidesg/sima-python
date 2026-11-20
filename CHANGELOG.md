@@ -26,7 +26,8 @@ two VAR(2)s 50 points below their VAR(1); from ols, none.
   - the same start reuses it and says so;
   - another start optimises again and keeps the higher logL;
   - a fit below a model it nests, or one that stalled, is retried once from
-    the preliminary start, and the report says so.
+    the preliminary start (from "ols" when drvarma has it, see above), and
+    the report says so.
 - **`lag_order(name, pmax)`.** The order of the VAR by LR on the fitted models,
   VAR(0) → … → VAR(pmax), in Tiao and Box's sequential reading. It shows their
   least-squares M(l) beside the LR, with AIC and BIC as information. LR only.
