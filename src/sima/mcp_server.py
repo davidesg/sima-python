@@ -654,6 +654,30 @@ def _fit_paths(s, key, start):
     else:
         L = _model_ladder(s, key, start=want)
         L.fit()
+        if key[1] > 0 and not key[6] and not (start or "").strip():
+            # With an MA the likelihood can have several maxima, each one
+            # certified (Jenkins and Alavi's VARMA(2,1): 15.95 from the
+            # preliminary estimates, 15.56 from ols, 13.89 from Hannan-
+            # Rissanen); the guard does not see it, none being below a nested
+            # model. So a VARMA with q > 0 is estimated from two starts and the
+            # higher is kept, and the report says whether they agree.
+            used = _start_of(L)
+            alt = "preliminary" if used != "preliminary" else "zero"
+            L2 = _model_ladder(s, key, start=None if alt == "zero" else alt)
+            L2.fit()
+            a, b = L.result.logL, L2.result.logL
+            if abs(a - b) < 1e-3:
+                notes.append(f"PATH: two starts (\"{L.start_used}\", \"{L2.start_used}\") "
+                             f"reach the same optimum, logL {max(a, b):.4f}.")
+            else:
+                hi, lo = (L, L2) if a > b else (L2, L)
+                notes.append(f"⚠ TWO STARTS, TWO MAXIMA: from \"{hi.start_used}\" logL "
+                             f"{hi.result.logL:.4f}, from \"{lo.start_used}\" "
+                             f"{lo.result.logL:.4f}; kept the higher. With an MA the "
+                             "likelihood can have several maxima: this one is the best "
+                             "found, not proved global (study_estimation, or the echelon "
+                             "form).")
+                L = hi
     if not key[6]:                                          # not the echelon form
         low = _below_nested(s, key, L)
         if (low or _stalled(L)) and _start_of(L) != best:

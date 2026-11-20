@@ -117,10 +117,48 @@ def _yardstick_lines(s):
             and (e.args.get("links") or "") == (lk or "")]
 
 
+def _raw_of(s):
+    """The raw session the system came from (load_data), or None."""
+    from . import session as _sess
+    nm = (getattr(s, "v", None) or {}).get("raw") or s.name
+    try:
+        return _sess.get_raw(nm) if _sess.has_raw(nm) else None
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+def _outliers(s):
+    """characterize's outliers, per series: reported there, modelled nowhere."""
+    r = _raw_of(s)
+    out = []
+    for nm, c in zip(getattr(r, "names", []) or [], getattr(r, "chars", None) or []):
+        o = (c or {}).get("outliers") or []
+        if o:
+            dates = ", ".join(str(d) for d, _z in o[:6]) + (" …" if len(o) > 6 else "")
+            out.append((nm, len(o), dates))
+    return out
+
+
 def caveats(s):
     from .raw import PROVENANCE
     out = []
+    route_v = getattr(s, "route", "U") == "V"
+    if route_v:
+        # Route V (Tiao and Box): the files are specifications by design --
+        # they carry no univariate model to validate, and saying they do is
+        # wrong. What stays open is the route's own (ARCHITECTURE.md §3).
+        out.append("Route V (the vector first, Tiao and Box): the system was built on "
+                   "specifications, with each series' own dynamics estimated together "
+                   "with the cross terms. No validated univariate base until N5, and "
+                   "nothing reusable as a .pre.")
+        given = bool((getattr(s, "v", None) or {}).get("yardstick"))
+        out.append("The yardstick (N5): the analyst's univariate models." if given else
+                   "The yardstick (N5): univariate models built by sima's route U builder "
+                   "for N5 only, not reviewed in art. Give yours with "
+                   "evaluate(yardstick=...) for a stronger comparison.")
     for x in s.series:
+        if route_v:
+            break
         path = getattr(x, "path", "") or ""
         try:
             with open(path) as fh:
@@ -132,6 +170,11 @@ def caveats(s):
         elif path.lower().endswith(".inp"):
             out.append(f"{x.name}: a specification (.inp), re-estimated at the load; its "
                        "univariate model was not validated in art.")
+    for nm, k, dates in _outliers(s):
+        out.append(f"{nm}: characterize flagged {k} outlier(s) ({dates}), modelled nowhere"
+                   + (": on route V they stay in the system's dynamics." if route_v else
+                      ": the models built from the raw data carry no interventions.")
+                   + " art's guided lane is where they are decided.")
     a = s.adopted
     if a and a[0] == "VARMA" and a[1] in s.fits:
         r = s.fits[a[1]].result
