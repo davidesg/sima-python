@@ -92,11 +92,14 @@ With the lane, in the same first exchange:
     Cholesky order, a VEC's normalisation (beta on the last r) and the frame
     of the echelon form's A0. Ask for it before loading (most exogenous first,
     on theory); load_pre restates what it fixes.
-  • With RAW DATA (no univariate models), the route: "(U) build them first
-    and model the system on top of them (Jenkins and Alavi; the ladder), or
-    (V) model the vector directly, the univariate models only as the yardstick
-    (Tiao and Box). Either way every series keeps its own transformation."
-    It is taken after characterize (build_univariate or write_specs).
+  • With RAW DATA (no univariate models), the route. ROUTE U IS THE DEFAULT:
+    "(U) build them first and model the system on top of them (Jenkins and
+    Alavi; the ladder) — the default, the structured path; or (V) model the
+    vector directly, the univariate models only as the yardstick (Tiao and
+    Box) — the less structured path: no validated univariate base until N5,
+    no interventions, every coefficient free. Either way every series keeps
+    its own transformation." Route V only when the analyst asks for it. It is
+    taken after characterize (build_univariate or write_specs).
 
 Pass the lane ONCE, when loading: lane="guided" or lane="autonomous" in
 load_pre, load_data or load_example. It is the session's from then on; do not
