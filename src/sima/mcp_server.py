@@ -126,7 +126,13 @@ N0v write_specs       route V: each series' spec with only its transformation;
                       free; the yardstick is built for N5 only
 N0u build_univariate  route U: each series' model with art's engine (light, not
                       reviewed in art), then the ladder session on those files
-N0  load_pre          the files, their models, the common window
+N0  load_pre          the files, their models, the common window. With
+                      route="V", the vector first THROUGH THE GATE (drvarma
+                      0.4.0): the same univariate files and the same gate;
+                      estimate(p, q) then replaces each series' regular ARMA
+                      by a free AR(p)/MA(q). The univariates give the mean,
+                      the deterministic terms, the interventions and the
+                      yardstick. Route U is the default.
 N1  run_gate          the univariate base, certified. If it FAILS, stop: the
                       joint model does not reproduce the univariate ones, and
                       nothing on top of it can be trusted. On route U, if a
@@ -481,16 +487,45 @@ def _r_doc(name: str) -> str:
     return doc(name)
 
 
+def _id_route(s):
+    """The route as the identification reads it: with univariate models in
+    the session (route U and the engine's route V) there are residuals to
+    prewhiten with; only the first route V has none."""
+    return "V" if _spec_v(s) else "U"
+
+
+def _spec_v(s):
+    """The session is the FIRST route V (write_specs): files that are
+    specifications with no univariate model, one set per order, and a
+    yardstick built aside."""
+    return s.route == "V" and bool(s.v)
+
+
+def _engine_v(s):
+    """The session is the ENGINE's route V (drvarma 0.4.0, the C's -route v):
+    the univariate models are loaded and go through the gate, as on route U;
+    past it each series' regular ARMA is replaced by a free AR(p)/MA(q). The
+    files, the yardstick and the deterministic terms are the univariates'."""
+    return s.route == "V" and not s.v
+
+
 def _ladder(files, p, q, diagcov, estwin=None, links=None, start=None,
             cross="additive", zeros=None, lik="elf", echelon=None, own="spec",
-            own_zeros=None):
-    """start None: the Ladder's default (zero; the stage II estimates for
-    the echelon form). own "free": the echelon rows' own part replaces each
-    univariate model's regular ARMA (route U); `own_zeros` holds some of its
-    lags at zero (BUG-0003)."""
+            own_zeros=None, route="u"):
+    """start None: the Ladder's default (ols with q = 0, else zero). own
+    "free": the echelon rows' own part replaces each univariate model's
+    regular ARMA (route U); `own_zeros` holds some of its lags at zero
+    (BUG-0003). route "v": the engine's route V (own_zeros are then the free
+    AR(p)/MA(q)'s lags held at zero)."""
     from drvarma.ladder import Ladder
     if echelon:
         p = q = 0                       # the indices give the orders
+    if route == "v":
+        return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
+                      links=links or None, start=start, cross=cross,
+                      zeros=list(zeros) if zeros else None, lik=lik,
+                      echelon=tuple(echelon) if echelon else None,
+                      own_zeros=own_zeros or None, route="v")
     return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
                   links=links or None, start=start, cross=cross,
                   zeros=list(zeros) if zeros else None, lik=lik,
@@ -735,6 +770,12 @@ def _model_ladder(s, key, estwin=None, start=None, lik="elf"):
     p, q, dc, lk, cr, zs, ech = key
     cross, own = _split_zeros(s, zs, echelon=bool(ech))
     files = _files_for(s, p, q, own, orders=ech or None)
+    if _engine_v(s) and (ech or p or q):
+        # the engine's route V; with p = q = 0 there is no vector part and
+        # the model is the diagonal one, the same on both routes
+        return _ladder(files, p, q, dc, estwin=estwin, links=lk, start=start, cross=cr,
+                       zeros=cross, lik=lik, echelon=ech or None,
+                       own_zeros=own or None, route="v")
     free = bool(ech) and s.route != "V"
     return _ladder(files, p, q, dc, estwin=estwin, links=lk, start=start, cross=cr,
                    zeros=cross, lik=lik, echelon=ech or None,
@@ -812,7 +853,7 @@ def _files_for(s, p, q, own=None, orders=None):
     orders p, q the ladder is the full VARMA(p, q), Tiao and Box's model.
     `orders`: one degree per series instead (the echelon form's indices:
     series i gets a free AR(n_i)/MA(n_i))."""
-    if s.route != "V":
+    if not _spec_v(s):
         return s.files
     from . import raw
     r = _sess.get_raw(s.v["raw"])
@@ -1213,7 +1254,8 @@ def write_specs(name: str, out_dir: str = "", overwrite: bool = False) -> str:
 
 
 @mcp.tool()
-def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "") -> str:
+def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
+             route: str = "U") -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
     `paths_json` is a JSON list of paths to fue files — `.pre` (optima, from art
@@ -1232,7 +1274,19 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "") -> s
     the first question and recorded at N0. Optional here; N1c (prepare_vec)
     inherits it instead of asking again. It decides the role of the yardstick
     for a VEC (rule 9).
+    `route`: "U" (default) -- each univariate model stays on the diagonal and
+    estimate adds the cross terms (Jenkins and Alavi); or "V" -- the vector
+    first (Tiao and Box) THROUGH THE SAME GATE: the univariate models are the
+    yardstick and give the mean, the deterministic terms and the stationary
+    series, and estimate(p, q) replaces each series' regular ARMA by a free
+    AR(p)/MA(q), the whole VARMA(p, q) matrix free; seasonal and
+    fixed-frequency factors multiply their rows (drvarma >= 0.4.0, the C's
+    -route v). The two routes differ only in how the matrix is seeded and in
+    what is estimated.
     """
+    rt = (route or "U").strip().upper()
+    if rt not in ("U", "V"):
+        return 'route: "U" (the univariate models on the diagonal) or "V" (the vector first).'
     try:
         _lane_now = _sess.declare_lane(name, lane)
         _pur_now = _sess.declare_purpose(name, purpose)
@@ -1249,19 +1303,25 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "") -> s
         s = _sess.open_session(name, paths)
     except Exception as e:                                # the engine says why
         return f"Cannot open the session: {e}"
+    s.route, s.v = rt, None
     txt = evidence.series_table(s.series)
     from . import scale as _sc
     _notas = _sc.load_notes(s.series)
     if _notas:
         txt += "\n\n" + "\n".join("! " + n for n in _notas)
     s.guion.add("N0", "load_pre", {"files": len(paths), "lane": _lane_now,
-                                   "purpose": _pur_now, "order": _names(s)},
-                f"{len(paths)} series: {', '.join(_names(s))}")
+                                   "purpose": _pur_now, "order": _names(s),
+                                   "route": rt},
+                f"{len(paths)} series: {', '.join(_names(s))} (route {rt})")
     nd = sum(int(x.model.d or 0) == 1 for x in s.series)
     coint = ("\n\nTwo or more series have d = 1: after the gate and the canonical "
              "analysis sima asks the COINTEGRATION QUESTION (N1c: the rank by drvec's "
              "parametric bootstrap) before any VARMA in differences — the same files "
              "mtram hands over with a cycle." if nd >= 2 else "")
+    if rt == "V":
+        coint += ("\n\nROUTE V: the univariate models go through the gate as on route U; "
+                  "past it estimate(p, q) fits the full VARMA(p, q), each series' regular "
+                  "ARMA replaced by a free AR(p)/MA(q).")
     return (txt + coint + "\n\n" + _order_text(s) + "\n\nNext: run_gate — the univariate "
             "base has to be certified before anything is built on it.\n" + _lane_line(name)
             + ("\nPurpose: " + _pur_now + " (recorded at N0; N1c inherits it)." if _pur_now else ""))
@@ -1340,14 +1400,20 @@ def run_gate(name: str) -> str:
            "cointegration question (prepare_vec: the rank by drvec's bootstrap), or "
            "identify_cross."
            if nd >= 2 else "Next: identify_cross.")
-    if s.route == "V":
+    if _engine_v(s):
+        prov += ("\n\nRoute V (the engine's): this gate is the same as route U's -- the "
+                 "univariate models are the yardstick and give the mean, the deterministic "
+                 "terms and the stationary series. Past it, estimate(p, q) replaces each "
+                 "series' regular ARMA by a free AR(p)/MA(q); its seasonal and "
+                 "fixed-frequency factors multiply its whole row.")
+    if _spec_v(s):
         prov = ("\n\nRoute V: the files are specifications with no ARMA. The gate "
                 "certifies the cast; the diagonal it checks is white noise (a random "
                 "walk where d = 1), not a model to beat — the yardstick comes at N5.")
         nxt = ("Next: canonical_analysis (the levels), then identify_matrices — "
                "method 1 and Tiao and Box's M(l) on the vector.")
     gt = evidence.gate_text(s.gate)
-    if built or s.route == "V":
+    if built or _spec_v(s):
         gt = gt.replace("the base is the analysts' models", "the base is the models in the files")
     return gt + prov + "\n\n" + nxt
 
@@ -1421,7 +1487,7 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90,
             if any(r for _, r in removed) else
             "THE LEVELS READ: no deterministic terms in the models; the levels as they are.")
     txt, facts = evidence.canonical_report(X, _names(s), d, s.series[0].freq,
-                                           int(p), float(near), call=name, route=s.route,
+                                           int(p), float(near), call=name, route=_id_route(s),
                                            removed_note=note)
     has_itv = any(t not in _lv.SEASONAL | _lv.KEPT_ALWAYS
                   for x in s.series for t, _ in _lv._groups(x))
@@ -1430,7 +1496,7 @@ def canonical_analysis(name: str, p: int = 0, near: float = 0.90,
         try:
             _t, f2 = evidence.canonical_report(_matrix(other), _names(s), d,
                                                s.series[0].freq, int(p), float(near),
-                                               call=name, route=s.route)
+                                               call=name, route=_id_route(s))
             cmp_ = ("With the interventions " + ("INSIDE" if other == "keep" else "REMOVED")
                     + f" (for comparison): sqrt(lam) "
                     + ", ".join(f"{np.sqrt(v):.3f}" for v in f2["lam"])
@@ -1505,7 +1571,7 @@ def identify_matrices(name: str, nlags: int = 0, qmax: int = 2) -> str:
     K = int(nlags) or max(6, freq)
     _mu, _phi, _theta, _qq, W, _ifa = L.cast(L.result.x)
     txt, facts = evidence.ja_identification(W, L.result.residuals, _names(s), K,
-                                            int(qmax), freq, route=s.route, call=name)
+                                            int(qmax), freq, route=_id_route(s), call=name)
     s.guion.add("N2", "identify_matrices", {"nlags": K, "qmax": qmax},
                 f"method 2: MA({facts['method2_q']}) residual model"
                 + (f", links {', '.join(facts['links'])}" if facts["links"] else "")
@@ -1751,7 +1817,22 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
                "come at N5.\n\n" + txt)
         if factored:
             txt += "\n\n" + _factor_check(s, L)
-    elif s.route == "V":
+    elif _engine_v(s) and (p or q):
+        notes = [str(n) for n in (getattr(L, "route_notes", None) or [])]
+        factored = [x.name for x in L.series if x.has_row_factor()]
+        txt = (f"ROUTE V — the full VARMA({p},{q}) through the gate: the univariate models "
+               "give the mean, the deterministic terms and the stationary series, and each "
+               f"series' regular ARMA is replaced by a free AR({p})/MA({q}), estimated "
+               "jointly with the cross terms."
+               + (f" The seasonal and fixed-frequency factors of {', '.join(factored)} "
+                  "multiply their whole rows (the row FACTOR)." if factored else "")
+               + " The LR below is against the same model without cross terms (the engine's "
+               "base on route V), not against the univariate models; those are the "
+               "yardstick at N5."
+               + ("".join("\n⚠ " + n for n in notes)) + "\n\n" + txt)
+        if factored:
+            txt += "\n\n" + _factor_check(s, L)
+    elif _spec_v(s):
         txt = (f"ROUTE V — the full VARMA({p},{q}) of Tiao and Box: each series' own "
                f"AR({p})/MA({q}) estimated jointly with the cross terms. The LR below is "
                f"against the same model without cross terms (one AR({p})/MA({q}) per "
@@ -1985,7 +2066,7 @@ def structure(name: str, alpha: float = 0.05) -> str:
                 orders.append(t)
     except Exception as e:                                   # noqa: BLE001
         return f"A restricted fit failed: {e}"
-    pre = _yardstick_files(s) if s.route == "V" else s.files
+    pre = _yardstick_files(s) if _spec_v(s) else s.files
     f = {"desc": _desc(key), "alpha": float(alpha), "pairs": pairs, "orders": orders,
          "pre": pre}
     stand = [t["label"] for t in (orders or []) if t["df"] == 0 or t["p"] >= alpha]
@@ -2407,9 +2488,9 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
         from .mcp_vec import evaluate_vec
         return evaluate_vec(s, int(estwin), int(horizon))
     if yardstick.strip():
-        if s.route != "V":
-            return ("On route U the yardstick is the univariate models loaded with "
-                    "load_pre: there is nothing to give.")
+        if not _spec_v(s):
+            return ("The yardstick is the univariate models loaded with load_pre (route "
+                    "U and the engine's route V): there is nothing to give.")
         try:
             _set_yardstick(s, yardstick)
         except Exception as e:                               # noqa: BLE001
@@ -2424,7 +2505,7 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
                            estwin=estwin)
         Lc.fit()
         _rows, cand = Lc.recursive(H)
-        Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
+        Ld = _ladder(_yardstick_files(s) if _spec_v(s) else s.files, 0, 0, True,
                      estwin=estwin)
         Ld.fit()
         _rows, diag = Ld.recursive(H)
@@ -2447,7 +2528,7 @@ def evaluate(name: str, p: int = 0, q: int = 0, estwin: int = 0, horizon: int = 
             + (f', indices="{", ".join(map(str, ech))}"' if ech else ""))
     txt, facts = evidence.evaluation_text(cand, diag, label, hs, _names(s),
                                           call=name, spec=spec)
-    if s.route == "V":
+    if _spec_v(s):
         txt = _yardstick_text(s) + "\n\n" + txt
     s.evaluations[(p, q, diagcov, lk, cross, zs, estwin, H)] = (cand, diag)
     s.guion.add("N5", "evaluate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
@@ -2520,7 +2601,7 @@ def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
             L = _model_ladder(s, s.current, estwin=int(estwin),
                               start=None if s.current[6] else _best_start())
             L.fit()
-            Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
+            Ld = _ladder(_yardstick_files(s) if _spec_v(s) else s.files, 0, 0, True,
                          estwin=int(estwin))
             Ld.fit()
         else:

@@ -2,6 +2,18 @@
 
 ## 0.2.5 — unreleased
 
+**Route V through the gate (the engine's route V, drvarma 0.4.0).**
+- **`load_pre(route="V")`.** The univariate models go through the gate as on
+  route U; past it `estimate(p, q)` replaces each series' regular ARMA by a
+  free AR(p)/MA(q), the whole VARMA(p, q) matrix free (the C's `-route v`).
+  The univariates give the mean, the deterministic terms, the interventions
+  and the yardstick: no file per order, no yardstick built aside. The report
+  carries the engine's warnings when p or q is below a univariate's order,
+  and the row factor's check. Own lags can be held at zero (`zeros`), and the
+  echelon form runs on it. Route U stays the default.
+- The first route V (`write_specs`, from raw data) is untouched; it is to be
+  replaced by this one (`ARCHITECTURE.md` §3.1).
+
 **With drvarma 0.4.0 (the engine re-homologated against the C).**
 - **No `preliminary` start by sima's choice.** drvarma 0.4.0 deprecates it (it
   is not in the C engine). The second start of a VARMA with an MA is now

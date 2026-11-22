@@ -822,6 +822,7 @@ N0 for a worked example: copy its files to a working folder (`dest`,
 | `paths_json` | string | yes | — |
 | `lane` | string | no | `` |
 | `purpose` | string | no | `` |
+| `route` | string | no | `U` |
 
 N0 — Start a session from the univariate models: one fue file per series.
 
@@ -841,6 +842,15 @@ N0 — Start a session from the univariate models: one fue file per series.
     the first question and recorded at N0. Optional here; N1c (prepare_vec)
     inherits it instead of asking again. It decides the role of the yardstick
     for a VEC (rule 9).
+    `route`: "U" (default) -- each univariate model stays on the diagonal and
+    estimate adds the cross terms (Jenkins and Alavi); or "V" -- the vector
+    first (Tiao and Box) THROUGH THE SAME GATE: the univariate models are the
+    yardstick and give the mean, the deterministic terms and the stationary
+    series, and estimate(p, q) replaces each series' regular ARMA by a free
+    AR(p)/MA(q), the whole VARMA(p, q) matrix free; seasonal and
+    fixed-frequency factors multiply their rows (drvarma >= 0.4.0, the C's
+    -route v). The two routes differ only in how the matrix is seeded and in
+    what is estimated.
 
 ---
 
