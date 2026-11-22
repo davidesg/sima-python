@@ -175,7 +175,7 @@ after a silence named and not taken blindly.
 
 **Not a node — a failed search.** A fit that lies below a model it nests, or
 that stalled after a few iterations, is not an estimate. sima retries it from
-the preliminary estimates and says so (BUG-0019; the starts in
+the `ols` start and says so (BUG-0019; the starts in
 `ARCHITECTURE.md` §4). If it is still below, the fit is not read: N4b.
 
 ## N4 — The in-sample evidence

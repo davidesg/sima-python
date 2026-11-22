@@ -70,7 +70,7 @@ def _session_with(monkeypatch, fits):
 def test_two_starts_two_maxima_keeps_the_higher_and_says_so(monkeypatch):
     monkeypatch.setattr(M, "_best_start", lambda: "ols")
     s = _session_with(monkeypatch, {"ols": _Fake(-545.0, "ols"),
-                                    "preliminary": _Fake(-547.9, "preliminary")})
+                                    "zero": _Fake(-547.9, "zero")})
     L, note = M._fit_paths(s, M._key(2, 1), "")
     assert L.result.logL == -545.0 and "TWO STARTS, TWO MAXIMA" in note
 
@@ -78,7 +78,7 @@ def test_two_starts_two_maxima_keeps_the_higher_and_says_so(monkeypatch):
 def test_two_starts_that_agree_say_so(monkeypatch):
     monkeypatch.setattr(M, "_best_start", lambda: "ols")
     s = _session_with(monkeypatch, {"ols": _Fake(-551.38, "ols"),
-                                    "preliminary": _Fake(-551.38, "preliminary")})
+                                    "zero": _Fake(-551.38, "zero")})
     _L, note = M._fit_paths(s, M._key(1, 1), "")
     assert "two starts" in note and "reach the same optimum" in note
 

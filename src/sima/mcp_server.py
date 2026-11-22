@@ -600,13 +600,15 @@ def _below_nested(s, key, L):
 def _best_start():
     """The start sima uses for a VARMA's cross terms: "ols" -- the original
     drvarma's init_varma in the ladder (drvarma > 0.3.4; the C's -start ols,
-    homologated) -- when the installed drvarma has it, else "preliminary"
-    (Jenkins and Alavi's; the same optimum on route U, measured 19-nov-2026)."""
+    homologated) -- when the installed drvarma has it, else "zero". Jenkins
+    and Alavi's "preliminary" start is deprecated in drvarma 0.4.0 (it is not
+    in the C engine): sima no longer chooses it; asked for by name, it is
+    passed on and the engine says so."""
     try:
         from drvarma.ladder import Ladder
-        return "ols" if hasattr(Ladder, "_ols_start") else "preliminary"
+        return "ols" if hasattr(Ladder, "_ols_start") else "zero"
     except Exception:                                        # noqa: BLE001
-        return "preliminary"
+        return "zero"
 
 
 def _fit_paths(s, key, start):
@@ -638,7 +640,7 @@ def _fit_paths(s, key, start):
         if want is None or want in (getattr(L, "start", None), _start_of(L)):
             notes.append(f"PATH: this fit was already estimated in this session (start "
                          f"\"{L.start_used}\", logL {L.result.logL:.4f}): reused, not "
-                         "optimised again. Another start (start=\"preliminary\" or "
+                         "optimised again. Another start (start=\"ols\" or "
                          "\"zero\") optimises again.")
         else:
             L2 = _model_ladder(s, key, start=want)
@@ -656,14 +658,15 @@ def _fit_paths(s, key, start):
         L.fit()
         if key[1] > 0 and not key[6] and not (start or "").strip():
             # With an MA the likelihood can have several maxima, each one
-            # certified (Jenkins and Alavi's VARMA(2,1): 15.95 from the
+            # certified (Jenkins and Alavi's VARMA(2,1): 15.95 from their
             # preliminary estimates, 15.56 from ols, 13.89 from Hannan-
             # Rissanen); the guard does not see it, none being below a nested
-            # model. So a VARMA with q > 0 is estimated from two starts and the
-            # higher is kept, and the report says whether they agree.
+            # model. So a VARMA with q > 0 is estimated from two starts, ols
+            # and zero (the two the C engine has), and the higher is kept; the
+            # report says whether they agree.
             used = _start_of(L)
-            alt = "preliminary" if used != "preliminary" else "zero"
-            L2 = _model_ladder(s, key, start=None if alt == "zero" else alt)
+            alt = "zero" if used != "zero" else best
+            L2 = _model_ladder(s, key, start=alt)
             L2.fit()
             a, b = L.result.logL, L2.result.logL
             if abs(a - b) < 1e-3:
@@ -677,6 +680,29 @@ def _fit_paths(s, key, start):
                              "likelihood can have several maxima: this one is the best "
                              "found, not proved global (study_estimation, or the echelon "
                              "form).")
+                L = hi
+    if (key[6] and key not in s.fits and not (start or "").strip()
+            and _start_of(L) != "echelon"):
+        # The echelon form: the engine starts at zero (drvarma 0.4.0, as the
+        # C); its stage-II start ("echelon") can end higher or far lower,
+        # depending on the indices. Both are run and the higher is kept.
+        L2 = _model_ladder(s, key, start="echelon")
+        try:
+            L2.fit()
+        except Exception as e:                               # noqa: BLE001
+            notes.append(f"PATH: the stage-II start failed ({e}); kept the fit from "
+                         f"\"{L.start_used}\".")
+        else:
+            a, b = L.result.logL, L2.result.logL
+            if abs(a - b) < 1e-3:
+                notes.append(f"PATH: two starts (\"{L.start_used}\", \"{L2.start_used}\") "
+                             f"reach the same optimum, logL {max(a, b):.4f}.")
+            else:
+                hi, lo = (L, L2) if a > b else (L2, L)
+                notes.append(f"⚠ TWO STARTS, TWO END POINTS: from \"{hi.start_used}\" logL "
+                             f"{hi.result.logL:.4f}, from \"{lo.start_used}\" "
+                             f"{lo.result.logL:.4f}; kept the higher. The best found, "
+                             "not proved global.")
                 L = hi
     if not key[6]:                                          # not the echelon form
         low = _below_nested(s, key, L)
@@ -1629,20 +1655,23 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
     init_varma in the ladder: least squares of the VAR(p) seeds the cross AR
     terms and Q's covariances, the own models staying the univariate ones on
     both routes (the ladder's principle) — the DEFAULT
-    when the installed drvarma has it (> 0.3.4); "zero"; or "preliminary",
-    Jenkins and Alavi's preliminary estimates (the cross MA from the
-    univariate residuals' cross covariances, the cross AR from Yule-Walker).
+    when the installed drvarma has it (> 0.3.4); or "zero". ("preliminary",
+    Jenkins and Alavi's preliminary estimates, is deprecated in drvarma 0.4.0:
+    it is not in the C engine. Asked for by name it is still passed on, and
+    the engine says so; sima no longer chooses it.)
     From zero, exact ML can stop after two iterations below the nested model
     when the series' scales differ (drvarma BUG-0027, the US monetary VAR);
-    from ols or preliminary it does not. Usually the same optimum in fewer iterations; on an
+    from ols it does not. With an MA (q > 0) both starts are run and the
+    higher logL is kept, the report saying whether they agree. Usually the same optimum in fewer iterations; on an
     ill-defined estimation (the MA wall) a second path worth comparing. Asked
     for a fit already made, another start optimises again and the higher
     logL is kept, the report giving both (BUG-0019); the same start reuses it,
     and the report says so. A fit below a model it nests, or one that stalled
-    within a few iterations, is retried once from "ols" (or "preliminary"
-    with an older drvarma), and the report says so. The
-    echelon form starts at Lutkepohl and Poskitt's least-squares estimates
-    ("echelon", its default).
+    within a few iterations, is retried once from "ols", and the report says
+    so. The echelon form is estimated from two starts, zero (the engine's
+    default since drvarma 0.4.0, as the C) and Lutkepohl and Poskitt's
+    stage-II least squares ("echelon"), and the higher is kept; a start asked
+    for by name is the only one run.
 
     `cross`: how the cross MA enters — "additive" (default: a cross polynomial
     beside the univariate operators) or "residual", Jenkins and Alavi's form
@@ -1767,7 +1796,7 @@ def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
             [("bring the files into the optimiser's band (art writes the factor that does "
               "it; a series in levels may need other units or a difference)",
               "art (outside sima)"),
-             ("start the search elsewhere", f'estimate({q_}, {spec}, start="preliminary")'),
+             ("start the search elsewhere", f'estimate({q_}, {spec}, start="zero")'),
              ("other orders: back to the identification", f"identify_matrices({q_})")])
     concl = []
     if f["wall"]:
@@ -2489,7 +2518,7 @@ def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
         H = int(horizon) or max(s.series[0].freq, 4)
         if estwin:
             L = _model_ladder(s, s.current, estwin=int(estwin),
-                              start=None if s.current[6] else "preliminary")
+                              start=None if s.current[6] else _best_start())
             L.fit()
             Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
                          estwin=int(estwin))

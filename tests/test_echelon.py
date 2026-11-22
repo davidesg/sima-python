@@ -67,7 +67,10 @@ def test_estimate_fits_the_echelon_form(ech):
     s = M._sess.get("e10")
     assert s.current[6] == (1, 0)
     L = s.fits[s.current]
-    assert L.start_used.startswith("echelon")
+    # drvarma 0.4.0 starts the echelon form at zero, as the C; sima also runs
+    # the stage-II start and keeps the higher: here both end at the same point
+    assert L.start_used.split(" ")[0] in ("zero", "echelon")
+    assert 'PATH: two starts ("zero", "echelon") reach the same optimum' in e
     x = dict(zip(L.result.names, L.result.x))
     se = dict(zip(L.result.names, L.result.std_errors))
     assert abs(x["AR0[y2<-y1]"] - 0.5) < 3 * se["AR0[y2<-y1]"]

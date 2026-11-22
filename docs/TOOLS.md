@@ -286,20 +286,23 @@ N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
     init_varma in the ladder: least squares of the VAR(p) seeds the cross AR
     terms and Q's covariances, the own models staying the univariate ones on
     both routes (the ladder's principle) — the DEFAULT
-    when the installed drvarma has it (> 0.3.4); "zero"; or "preliminary",
-    Jenkins and Alavi's preliminary estimates (the cross MA from the
-    univariate residuals' cross covariances, the cross AR from Yule-Walker).
+    when the installed drvarma has it (> 0.3.4); or "zero". ("preliminary",
+    Jenkins and Alavi's preliminary estimates, is deprecated in drvarma 0.4.0:
+    it is not in the C engine. Asked for by name it is still passed on, and
+    the engine says so; sima no longer chooses it.)
     From zero, exact ML can stop after two iterations below the nested model
     when the series' scales differ (drvarma BUG-0027, the US monetary VAR);
-    from ols or preliminary it does not. Usually the same optimum in fewer iterations; on an
+    from ols it does not. With an MA (q > 0) both starts are run and the
+    higher logL is kept, the report saying whether they agree. Usually the same optimum in fewer iterations; on an
     ill-defined estimation (the MA wall) a second path worth comparing. Asked
     for a fit already made, another start optimises again and the higher
     logL is kept, the report giving both (BUG-0019); the same start reuses it,
     and the report says so. A fit below a model it nests, or one that stalled
-    within a few iterations, is retried once from "ols" (or "preliminary"
-    with an older drvarma), and the report says so. The
-    echelon form starts at Lutkepohl and Poskitt's least-squares estimates
-    ("echelon", its default).
+    within a few iterations, is retried once from "ols", and the report says
+    so. The echelon form is estimated from two starts, zero (the engine's
+    default since drvarma 0.4.0, as the C) and Lutkepohl and Poskitt's
+    stage-II least squares ("echelon"), and the higher is kept; a start asked
+    for by name is the only one run.
 
     `cross`: how the cross MA enters — "additive" (default: a cross polynomial
     beside the univariate operators) or "residual", Jenkins and Alavi's form
