@@ -2,6 +2,18 @@
 
 ## 0.2.5 — unreleased
 
+**With drvarma 0.4.0 (the engine re-homologated against the C).**
+- **No `preliminary` start by sima's choice.** drvarma 0.4.0 deprecates it (it
+  is not in the C engine). The second start of a VARMA with an MA is now
+  `zero` beside `ols`; `forecast`'s refit on a shorter window starts at `ols`.
+  Asked for by name, `preliminary` is passed on and the engine says so.
+- **The echelon form from two starts.** The engine now starts it at zero, as
+  the C. sima also runs the stage-II start and keeps the higher, saying
+  whether they agree.
+- **m6's cross identification moves**: the gate re-estimates the deterministic
+  terms of a series whose window is trimmed, so the residuals and their CCFs
+  are those of the common window (6 pairs show something, not 5).
+
 **From the evaluation of 20-nov (point 2).**
 - **Route V's caveats in `hand_over`.** It names the route and what it leaves
   open: no validated univariate base until N5, nothing reusable as a `.pre`.

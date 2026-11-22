@@ -102,7 +102,13 @@ def test_with_ols_it_is_the_default_and_the_retry(ja, monkeypatch):
     asked.clear()
     L, note = M._fit_paths(s, M._key(4, 0), "zero")
     assert asked == ["zero", "ols"] and "Retried from the ols start" in note
-    # the echelon form: no ols default
+    # the echelon form: no ols default; the engine's start (zero) and the
+    # stage-II start, the higher kept (drvarma 0.4.0)
     asked.clear()
-    M._fit_paths(s, M._key(0, 0, indices=(1, 1)), "")
-    assert asked == [None]
+    L, note = M._fit_paths(s, M._key(0, 0, indices=(1, 1)), "")
+    assert asked == [None, "echelon"]
+    assert L.start_used == "echelon" and "TWO STARTS, TWO END POINTS" in note
+    # asked for a start by name: that one only
+    asked.clear()
+    M._fit_paths(s, M._key(0, 0, indices=(1, 1)), "zero")
+    assert asked == ["zero"]

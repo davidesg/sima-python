@@ -145,14 +145,16 @@ its VAR(1). The cause was the scale of the cross terms (drvarma BUG-0027).
 |---|---|---|
 | `zero` | nothing beyond the univariate models | C and port; **the engines' default** |
 | `ols` | the original drvarma's `init_varma` in the ladder: the cross AR terms = +Φ_k from the least squares of the VAR(p) (Box and Jenkins); Q's covariances = the residuals' correlation × √(Q_ii Q_jj), with the gate's Q_ii (Q₁₁ = 1); the cross MA terms stay at zero | C (`-start ols`) and port, homologated |
-| `preliminary` | Jenkins and Alavi's preliminary estimates of the cross terms | port only |
-| `echelon` | Lütkepohl and Poskitt's stage II least squares: own, cross, A₀, Q | port only (the echelon form) |
+| `preliminary` | Jenkins and Alavi's preliminary estimates of the cross terms | port only; **deprecated in drvarma 0.4.0**: sima passes it on when asked by name and never chooses it |
+| `echelon` | Lütkepohl and Poskitt's stage II least squares: own, cross, A₀, Q | C (`-start echelon`) and port, homologated (the echelon form) |
 
 - **What sima uses:** `ols` when the installed drvarma has it (drvarma >
-  0.3.4), else the engine's zero.
+  0.3.4), else the engine's zero. With an MA, `ols` and `zero`, the higher
+  kept. For the echelon form, `zero` (the engines' default) and `echelon`,
+  the higher kept: the stage-II start can end higher or far lower, depending
+  on the indices.
 - **The guard** (BUG-0019): a fit below a model it nests, or one that
-  stalled, is retried once from `ols` (or `preliminary` with an older
-  drvarma), and the report says so.
+  stalled, is retried once from `ols`, and the report says so.
 - **When the start fails:** if a start makes the system non-stationary, it
   falls back to zero and says so.
 

@@ -20,8 +20,11 @@ def test_identify_cross_proposes_the_pairs_that_showed_something():
     _fn(M.run_gate)("L1")
     txt = _fn(M.identify_cross)("L1")
     # the envelope's option, with its exact call
-    assert "the same orders on the pairs that showed something only (5 of 30)" in txt
-    assert 'links="EU<-EA, EP<-EC, EC<-EP, EP<-EI, EI<-P")`' in txt
+    # (with drvarma 0.4.0 the gate re-estimates the deterministic terms of the
+    # series whose window is trimmed, as the C: the residuals and their CCFs
+    # are those of the common window)
+    assert "the same orders on the pairs that showed something only (6 of 30)" in txt
+    assert 'links="EI<-EC, EP<-EC, EC<-EP, EP<-EI, EI<-EU, EI<-P")`' in txt
 
 
 def test_estimate_with_links_carries_only_those_pairs():
