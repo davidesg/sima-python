@@ -20,8 +20,9 @@ pytestmark = pytest.mark.skipif(
     reason="needs drvarma >= 0.4.0 (route='v')")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-JA = sorted(glob.glob(os.path.join(HERE, "..", "src", "sima", "material", "examples",
-                                   "jenkins_alavi", "art", "*.pre")))
+JA = sorted(glob.glob(os.path.join(HERE, "..", "examples", "jenkins_alavi", "art",
+                                   "*.pre")))
+assert len(JA) == 2, "the muskrat and mink models of examples/jenkins_alavi/art"
 
 
 def _fn(tool):
