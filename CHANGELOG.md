@@ -2,6 +2,17 @@
 
 ## 0.2.5 — unreleased
 
+**No fold with drvarma 0.4.0.** The engine no longer casts each series with
+fue's flip (its BUG-0030: the C's ladder builds the polynomial from the
+parameters as they are and refuses a non-invertible MA operator; the port now
+does the same). The "fold of an own MA(1)" that sima read (BUG-0008) was a
+property of that flip: with this engine there is none, and
+`evidence.folded_own_ma` returns nothing. The flour prices' echelon form
+(1, 1, 1), which stopped at the fold on glibc and on the wall on macOS, now
+ends on the MA invertibility wall on every platform, at the C's number
+(−658.9552), and sima says so. The reading of the fold stays for an older
+drvarma.
+
 **Route V through the gate (the engine's route V, drvarma 0.4.0).**
 - **`load_pre(route="V")`.** The univariate models go through the gate as on
   route U; past it `estimate(p, q)` replaces each series' regular ARMA by a

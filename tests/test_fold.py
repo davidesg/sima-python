@@ -1,10 +1,15 @@
 """BUG-0008: an own MA(1) that stops at the fold of the cast (theta = -1).
 
-fue's cast reads a regular MA(1) with |theta| > 1 as 1/theta, so the
-likelihood is symmetric about |theta| = 1 and its gradient vanishes there: the
-optimiser stops and says "converged". With free cross MA terms the joint MA
-need not be on the wall (ma_boundary 0), so sima reads the fold itself.
-The case: the flour prices, route V, the echelon form (1, 1, 1).
+With a drvarma that casts each series with fue's flip (< 0.4.0), a regular
+MA(1) with |theta| > 1 was read as 1/theta: the likelihood was symmetric
+about |theta| = 1, its gradient vanished there and the optimiser stopped and
+said "converged". sima read that fold itself.
+
+drvarma 0.4.0 does not flip (its BUG-0030: the C's ladder never did, and the
+port now follows it): there is no fold. The same fit -- the flour prices,
+route V, the echelon form (1, 1, 1) -- ends on the joint MA's invertibility
+wall, where the C ends, and sima says that. The reading of the fold stays
+for the older engine, and stands down with this one.
 """
 from types import SimpleNamespace as NS
 
@@ -27,7 +32,23 @@ def _result(values):
     return NS(names=list(values), x=np.array(list(values.values()), float))
 
 
-def test_the_fold_is_read_from_the_own_ma1_only():
+def _flips():
+    from drvarma.ladder import LadderSeries
+    return hasattr(LadderSeries, "canonicalize")
+
+
+def test_with_an_engine_that_does_not_flip_nothing_is_folded():
+    if _flips():
+        pytest.skip("this drvarma still flips (< 0.4.0)")
+    ser = [_series("A")]
+    assert evidence.folded_own_ma(ser, _result({"theta_A[B^1]": -1.0})) == []
+    assert evidence.folded_own_ma(ser, _result({"theta_A[B^1]": -1.25})) == []
+
+
+def test_the_fold_is_read_from_the_own_ma1_only(monkeypatch):
+    from drvarma.ladder import LadderSeries
+    if not _flips():                                     # the reading, as with the older engine
+        monkeypatch.setattr(LadderSeries, "canonicalize", lambda self: False, raising=False)
     ser = [_series("A"), _series("B"), _series("C", ma=((0.0,), (0.0, 0.0))),
            _series("D", ma=(), ma_f=[NS(freq=0.25, free=True)])]
     r = _result({"theta_A[B^1]": -1.0, "theta_B[B^1]": 0.99999,
@@ -45,7 +66,7 @@ def test_the_fold_is_read_from_the_own_ma1_only():
 pytest.importorskip("art", reason="the raw entry uses art's engine")
 
 
-def test_estimate_does_not_call_the_fold_a_convergence(tmp_path):
+def test_estimate_does_not_call_the_wall_a_convergence(tmp_path):
     _fn(M.load_example)("lutkepohl_poskitt", session="fold", dest=str(tmp_path))
     _fn(M.characterize)("fold")
     _fn(M.write_specs)("fold", overwrite=True)
@@ -53,26 +74,22 @@ def test_estimate_does_not_call_the_fold_a_convergence(tmp_path):
     t = _fn(M.estimate)("fold", indices="1, 1, 1")
     s = M._sess.get("fold")
     r = s.fits[s.current].result
-    # Where the optimiser stops is the platform's. On glibc it stops at the
-    # fold of the two own MA(1) (termcode 1, ma_boundary 0): the case of
-    # BUG-0008. On macOS the same fit ends on the joint MA's invertibility wall
-    # instead (termcode 3, ma_boundary 2), and no own MA(1) is at the fold.
-    # Either way sima must not call it a convergence; the fold's own text is
-    # checked where the fold happens.
-    folded = [n for n, _ in evidence.folded_own_ma(s.fits[s.current].series, r)]
     assert "converged" not in t
-    if not folded:
-        assert r.ma_boundary > 0 and "STOPPED AT THE MA INVERTIBILITY BOUNDARY" in t
-        pytest.skip(f"this platform's optimiser does not stop at the fold here "
-                    f"(termcode {r.termcode}, ma_boundary {r.ma_boundary})")
-    assert folded == ["theta_Minneapolis[B^1]", "theta_KansasCity[B^1]"]
-    assert "STOPPED AT THE FOLD OF AN OWN MA(1)" in t
-    assert "converged" not in t
-    # the envelope's first option is to study the fit, before any reading
-    assert "**A)** study the fit first" in t and "`study_estimation(name=" in t
-    for nm in ("theta_Minneapolis", "theta_KansasCity"):
-        row = next(ln for ln in t.splitlines() if ln.strip().startswith(nm + "[B^1]"))
-        assert row.rstrip().endswith("<- fold") and "*" not in row
-    # an own MA(1) inside keeps its inference
-    row = next(ln for ln in t.splitlines() if ln.strip().startswith("phi_Buffalo[B^1]"))
-    assert row.rstrip().endswith("*")
+    if _flips():
+        # the older engine: the fold on glibc, the wall on macOS (BUG-0008)
+        folded = [n for n, _ in evidence.folded_own_ma(s.fits[s.current].series, r)]
+        assert folded or r.ma_boundary > 0
+        return
+    # drvarma 0.4.0, on every platform what the C gives for the same files
+    # (drvarma -echelon 1,1,1: -658.955160, stopped at the MA invertibility
+    # boundary after 240 iterations; from the stage-II start, -665.062491)
+    assert r.logL == pytest.approx(-658.955160, abs=1e-4)
+    assert r.ma_boundary == 2 and "STOPPED AT THE MA INVERTIBILITY BOUNDARY" in t
+    assert "STOPPED AT THE FOLD" not in t and "<- fold" not in t
+    assert evidence.folded_own_ma(s.fits[s.current].series, r) == []
+    assert "TWO STARTS, TWO END POINTS" in t and "-665.06" in t
+    # own MA coefficients beyond the unit circle are ordinary coordinates
+    # here: what is judged is the system's MA operator, whole
+    at = dict(zip(r.names, r.x))
+    assert at["theta_Minneapolis[B^1]"] == pytest.approx(-1.173472, abs=1e-4)
+    assert at["theta_KansasCity[B^1]"] == pytest.approx(-1.246373, abs=1e-4)

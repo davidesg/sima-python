@@ -681,7 +681,20 @@ def folded_own_ma(series, r):
     boundary, not an interior maximum, and the joint MA wall (ma_boundary) need
     not see it when cross MA terms are free. Returns [(name, value)] of the free
     foldable coefficients within MA_WALL_TOL of the fold, in the order of
-    ``r.names``. The engine is read here, not fixed."""
+    ``r.names``. The engine is read here, not fixed.
+
+    Since drvarma 0.4.0 the ladder does not flip (drvarma BUG-0030: the C's
+    ladder builds the polynomial from the parameters as they are, and refuses
+    a non-invertible MA operator): there is no fold, the likelihood is not
+    symmetric about |theta| = 1, and an own MA beyond the unit circle is an
+    ordinary coordinate of a system whose MA operator is judged whole (the
+    wall, ``ma_boundary``). With such an engine nothing is folded."""
+    try:
+        from drvarma.ladder import LadderSeries
+        if not hasattr(LadderSeries, "canonicalize"):
+            return []
+    except Exception:                                        # noqa: BLE001
+        pass
     at = dict(zip(r.names, np.asarray(r.x, float)))
     out = []
     for s in series:
