@@ -1133,7 +1133,7 @@ def evaluate_vec(s, estwin, H):
         s0 = s.series[0]
         last = s0.date_of(s0.nobs_full)
         cand = vec.summary_on(vrows)
-        Ld = _ladder(_yardstick_files(s) if s.route == "V" else s.files, 0, 0, True,
+        Ld = _ladder(_yardstick_files(s) if (s.route == "V" and s.v) else s.files, 0, 0, True,
                      estwin=int(estwin))
         Ld.fit()
         rows, _sm = Ld.recursive(int(H))

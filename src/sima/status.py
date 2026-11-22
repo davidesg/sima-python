@@ -55,7 +55,7 @@ def next_step(s, name):
         if i1 >= 2 and "N1b" not in nodes and s.route == "U":
             return ("N1b — the canonical analysis of the levels, then the cointegration "
                     "question", f"canonical_analysis({q})")
-        if s.route == "V":
+        if s.route == "V" and s.v:
             return ("N2 — the identification, route V: the matrices", f"identify_matrices({q})")
         return ("N2 — the identification, in its order: the residual CCFs first",
                 f"identify_cross({q})")
@@ -142,7 +142,14 @@ def _outliers(s):
 def caveats(s):
     from .raw import PROVENANCE
     out = []
-    route_v = getattr(s, "route", "U") == "V"
+    # the first route V only (specifications); the engine's route V has the
+    # univariate models loaded, so its caveats are route U's plus one line
+    route_v = getattr(s, "route", "U") == "V" and bool(getattr(s, "v", None))
+    if getattr(s, "route", "U") == "V" and not route_v:
+        out.append("Route V (the vector first, through the gate): each series' regular "
+                   "ARMA was replaced by a free AR(p)/MA(q) estimated with the cross "
+                   "terms; the univariate models gave the mean, the deterministic terms "
+                   "and the yardstick.")
     if route_v:
         # Route V (Tiao and Box): the files are specifications by design --
         # they carry no univariate model to validate, and saying they do is

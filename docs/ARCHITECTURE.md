@@ -128,6 +128,33 @@ available: they disagree, and sima shows it rather than hiding either
 | the yardstick (N5) | the analyst's models | the analyst's if given, else route U's builder; the evaluation says which (`_yardstick_text`) |
 | files | `.pre` in; no file for the system | `.inp` specifications that never become `.pre`; no file for the system (`STUDY-raw-entry.md` §4) |
 
+### 3.1 Route V through the gate (the engine's, drvarma 0.4.0)
+
+The table above describes the FIRST route V, the one from raw data
+(`write_specs`). Since drvarma 0.4.0 the engine has its own route V (the C's
+`-route v`, homologated), and sima offers it with `load_pre(route="V")`. Its
+principle is the ladder's: **the univariate models always come first,
+through the same gate**. They are the yardstick and they give the mean, the
+deterministic terms, the interventions and the stationary series. Past the
+gate, the two routes differ only in how the VARMA matrix is seeded and in
+what is estimated:
+
+| | route U | route V through the gate |
+|---|---|---|
+| input | one `.pre` per series | the same files |
+| the gate | certifies the univariate models | the same gate |
+| interventions and deterministic terms | the univariates' | the univariates' |
+| the own dynamics | each univariate ARMA, re-estimated jointly | a free AR(p)/MA(q) replaces each series' regular ARMA; its seasonal and fixed-frequency factors multiply its whole row, with an LR check |
+| the LR of a fit | against the univariate models | against the same model without cross terms (the engine's base) |
+| orders below a univariate's | not possible | allowed, with the engine's warning |
+| the yardstick (N5) | the loaded models | the loaded models |
+| files | the session's | the session's: nothing is written per order |
+
+It needs no yardstick built aside and no file per order, and it carries the
+interventions. The first route V stays as it is for now; it is to be
+replaced by this one, its two worked examples (Tiao and Box, Lütkepohl and
+Poskitt) with it.
+
 What route V gives up, it gives up knowingly, and it is where the analyst
 carries more of the judgement: no validated base until N5, no interventions,
 every coefficient free (simplification matters most here). What route U
