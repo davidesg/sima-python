@@ -1887,6 +1887,11 @@ def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
         # BUG-0008: the fold of the cast is a wall of one coefficient
         concl.append(f"The fit stopped at the fold of an own MA(1) ({', '.join(f['fold'])}): "
                      "not an optimum. Its numbers are not to be read before studying it.")
+    elif f.get("own_ma_outside"):
+        concl.append("An own MA factor ended outside the unit circle read alone ("
+                     + ", ".join(f"{o[0]}, modulus {o[4]:.4f}" for o in f["own_ma_outside"])
+                     + "): the optimiser stopped, but this is not a model to read. "
+                     "Another start, or another model.")
     elif not f["converged"]:
         concl.append(f"Optimiser: {f['stop']}. The point is not certified by the "
                      "gradient.")
