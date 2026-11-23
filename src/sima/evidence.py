@@ -716,6 +716,20 @@ def folded_own_ma(series, r):
     return sorted(out, key=lambda t: order[t[0]])
 
 
+def own_ma_outside_text(own):
+    """The line that says an own MA factor ended outside the unit circle read
+    alone (drvarma's own_ma_outside, the C's and the port's), or ''."""
+    if not own:
+        return ""
+    return ("OWN MA FACTOR OUTSIDE THE UNIT CIRCLE, READ ALONE: "
+            + ", ".join(f"{o[0]} {o[1]}({o[2]})" + (f" {o[3]}" if o[3] else "")
+                        + f", inverse root modulus {o[4]:.4f}" for o in own)
+            + ". The system's MA operator is invertible (the likelihood is evaluated "
+            "only there), so this is a point of the joint model; but that factor, read "
+            "as a univariate model, is not invertible, which fue never estimates. Not a "
+            "convergence to read: another start, or another model.")
+
+
 def fold_text(fold):
     """The line that says a fit stopped at the fold (BUG-0008), or ''."""
     if not fold:
@@ -745,7 +759,10 @@ def estimation_facts(L, nlags):
          "stop": _TERM.get(r.termcode, r.termcode), "n_cross": len(cross),
          "weak_cross": weak, "lr": None, "lr_df": None, "lr_p": None,
          "hosking_p": None, "wall": bool(getattr(r, "ma_boundary", 0)),
-         "fold": [n for n, _ in folded_own_ma(L.series, r)], "not_started": False}
+         "fold": [n for n, _ in folded_own_ma(L.series, r)], "not_started": False,
+         "own_ma_outside": list(getattr(r, "own_ma_outside", None) or [])}
+    if f["own_ma_outside"]:
+        f["converged"] = False
     if not (L.p == 0 and L.q == 0 and L.diagcov):
         f["lr"], f["lr_df"], f["lr_p"] = L.lr_test()
         # BUG-0011, the rule estimation_text uses: a search that ends at its first
@@ -805,14 +822,19 @@ def estimation_text(L, nlags):
               + " (the other pairs carry no cross dynamics)"] if links is not None else []),
            f"optimiser: "
            + ("stopped where the gradient vanishes at the fold of an own MA(1) (see below)"
-              if fold and r.termcode == 1 else _TERM.get(r.termcode, r.termcode))
+              if fold and r.termcode == 1 else
+              "stopped with an own MA factor outside the unit circle (see below)"
+              if getattr(r, "own_ma_outside", None) and r.termcode in (1, 2) else
+              _TERM.get(r.termcode, r.termcode))
            + f" ({r.nit} iterations"
            + (f"; cross terms started at {L.start_used}" if getattr(L, "start_used", None)
               and L.start_used != "zero" else "") + ")"
            + (f"\n  STOPPED AT THE MA INVERTIBILITY BOUNDARY: "
               f"{r.ma_boundary} of {r.ma_nroots} MA inverse roots within 5e-5 of the unit circle"
               if getattr(r, "ma_boundary", 0) else "")
-           + (f"\n  {fold_text(fold)}" if fold else ""),
+           + (f"\n  {fold_text(fold)}" if fold else "")
+           + (f"\n  {own_ma_outside_text(getattr(r, 'own_ma_outside', None))}"
+              if getattr(r, "own_ma_outside", None) else ""),
            f"  {'parameter':<34}{'estimate':>12}{'s.e.':>12}{'t':>9}"]
     cov = []
     from . import scale as _sc

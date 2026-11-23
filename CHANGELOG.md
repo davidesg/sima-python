@@ -2,6 +2,11 @@
 
 ## 0.2.5 — unreleased
 
+**An own MA factor outside the circle, said.** With a drvarma that reports
+`own_ma_outside` (the engine's warning: an own MA factor, read alone, ended
+outside the unit circle, which fue never estimates), `estimate` says it in
+the table and in the conclusions, and does not call that stop a convergence.
+
 **No fold with drvarma 0.4.0.** The engine no longer casts each series with
 fue's flip (its BUG-0030: the C's ladder builds the polynomial from the
 parameters as they are and refuses a non-invertible MA operator; the port now
