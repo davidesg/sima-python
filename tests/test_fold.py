@@ -8,9 +8,12 @@ said "converged". sima read that fold itself.
 drvarma 0.4.0 does not flip (its BUG-0030: the C's ladder never did, and the
 port now follows it): there is no fold. The same fit -- the flour prices,
 route V, the echelon form (1, 1, 1) -- ends on the joint MA's invertibility
-wall, where the C ends, and sima says that. The reading of the fold stays
+wall, and sima says that. Where on the wall depends on the platform's
+arithmetic; on Linux x86-64, where the C was run, it is the C's point. The reading of the fold stays
 for the older engine, and stands down with this one.
 """
+import platform
+import sys
 from types import SimpleNamespace as NS
 
 import numpy as np
@@ -80,13 +83,23 @@ def test_estimate_does_not_call_the_wall_a_convergence(tmp_path):
         folded = [n for n, _ in evidence.folded_own_ma(s.fits[s.current].series, r)]
         assert folded or r.ma_boundary > 0
         return
-    # drvarma 0.4.0, on every platform what the C gives for the same files
-    # (drvarma -echelon 1,1,1: -658.955160, stopped at the MA invertibility
-    # boundary after 240 iterations; from the stage-II start, -665.062491)
-    assert r.logL == pytest.approx(-658.955160, abs=1e-4)
-    assert r.ma_boundary == 2 and "STOPPED AT THE MA INVERTIBILITY BOUNDARY" in t
+    # drvarma 0.4.0: no fold on any platform, and the fit is on the joint MA's
+    # invertibility wall, said as such
+    assert r.ma_boundary > 0 and "STOPPED AT THE MA INVERTIBILITY BOUNDARY" in t
     assert "STOPPED AT THE FOLD" not in t and "<- fold" not in t
     assert evidence.folded_own_ma(s.fits[s.current].series, r) == []
+    # WHERE on the wall is the platform's. There is no interior maximum
+    # there, so the point reached is the path's, and the path follows the
+    # sixteenth digit of the compiler's and the C library's arithmetic:
+    # measured on CI, -658.9552 on Linux, -659.2055 on Windows, -659.7980 on
+    # macOS. The C engine was built and run on Linux x86-64, and there the
+    # port gives its number, digit for digit (drvarma -echelon 1,1,1:
+    # -658.955160 after 240 iterations; -665.062491 from the stage-II start).
+    if not (sys.platform.startswith("linux") and platform.machine() in ("x86_64", "AMD64")):
+        assert -662.0 < r.logL < -657.0
+        return
+    assert r.logL == pytest.approx(-658.955160, abs=1e-4)
+    assert r.ma_boundary == 2
     assert "TWO STARTS, TWO END POINTS" in t and "-665.06" in t
     # own MA coefficients beyond the unit circle are ordinary coordinates
     # here: what is judged is the system's MA operator, whole
