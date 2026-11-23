@@ -9,8 +9,10 @@ does the same). The "fold of an own MA(1)" that sima read (BUG-0008) was a
 property of that flip: with this engine there is none, and
 `evidence.folded_own_ma` returns nothing. The flour prices' echelon form
 (1, 1, 1), which stopped at the fold on glibc and on the wall on macOS, now
-ends on the MA invertibility wall on every platform, at the C's number
-(−658.9552), and sima says so. The reading of the fold stays for an older
+ends on the MA invertibility wall on every platform, and sima says so. Where
+on the wall is the platform's (there is no maximum there, and the path
+follows the last digit of each platform's arithmetic): −658.9552 on Linux,
+the C's number digit for digit; −659.2055 on Windows; −659.7980 on macOS. The reading of the fold stays for an older
 drvarma.
 
 **Route V through the gate (the engine's route V, drvarma 0.4.0).**
