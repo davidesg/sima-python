@@ -8,7 +8,7 @@
   "manual": "STUDY-tiao-box",
   "plan": [
     "N0c characterize — the levels, as Tiao and Box",
-    "N0v write_specs, N1 run_gate — route V: the vector first",
+    "N0u build_univariate(route=\"V\"), N1 run_gate — route V: the vector first, through the gate",
     "N2 identify_matrices — Tiao and Box's stepwise M(l): an AR(6) (their Table 12)",
     "N3 estimate, N4t structure — the VAR(6): no feedback, the gas drives the CO2",
     "N3 estimate, N4t structure at AR(2) — the spurious feedback of their Table 14",

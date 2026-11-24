@@ -25,7 +25,7 @@ pip install sima-tseries            # from univariate models (.pre / .inp files)
 pip install "sima-tseries[raw]"     # also from raw data: adds art-tseries, pandas, openpyxl
 ```
 
-The raw entry (`load_data`, `characterize`, `build_univariate`, `write_specs`)
+The raw entry (`load_data`, `characterize`, `build_univariate`)
 uses art's engine, so it needs the `raw` extra; so do the worked examples that
 start from the data (`lutkepohl_poskitt`, `tiao_box`).
 
@@ -41,7 +41,7 @@ every result.
 | node | tool | what it answers |
 |---|---|---|
 | N0r–N0c | `load_data`, `characterize` | raw data: the table, and each series' λ, d and seasonality (art's engine) |
-| N0u / N0v | `build_univariate` / `write_specs` | route U (the univariate models first) or route V (the vector first) |
+| N0u | `build_univariate` | the univariate models from raw data, then the session on route U (the default) or V (`route="V"`, the vector first) |
 | N0 | `load_pre` | the univariate models, the common window |
 | N1 | `run_gate` | does the joint model reproduce the univariate ones? (it stops the analysis if not) |
 | N1b | `canonical_analysis` | Box and Tiao's canonical analysis of the levels |

@@ -13,13 +13,16 @@ yardstick.
 
 **Route V.** Lütkepohl and Poskitt build no univariate models: the rates of
 change (first differences of the logs) are modelled as a vector from the
-start. So the example starts from the raw table, and the univariate models
-appear only at the end, as the yardstick.
+start. So the example starts from the raw table. sima's route V still builds
+the univariate models first and puts them through the gate; past it each
+series' own ARMA is the vector's, and the univariate models are the means
+and the yardstick.
 
 **What it reproduces** (their Tables 1 and 2):
 - the index search: SC and HQ choose (0, 0, 0), with (1, 1, 1) second; AIC
   chooses (1, 1, 1);
-- the unrestricted (1, 1, 1): log|Σ̃| 4.744 against their 4.725;
+- the unrestricted (1, 1, 1): log|Σ̃| 4.760 against their 4.725, on the MA
+  invertibility wall;
 - the restricted VAR(1) and MA(1) with five coefficients: the same estimates
   and standard errors to the second decimal, log|Σ̃| 5.000 and 5.027 against
   4.985 and 5.004.
@@ -34,7 +37,7 @@ assistant follows `TUTORIAL.md` (`sima://example/lutkepohl_poskitt`).
     python3 examples/lutkepohl_poskitt/run.py            # the whole walkthrough
     python3 examples/lutkepohl_poskitt/run.py --upto 5   # up to the index search
 
-Reports go to `out/NN_<tool>.md`; the specifications and the guion are written
+Reports go to `out/NN_<tool>.md`; the univariate models and the guion are written
 to `data/flour_prices_sima/`.
 
 > H. Lütkepohl and D. S. Poskitt (1996), "Specification of echelon-form VARMA

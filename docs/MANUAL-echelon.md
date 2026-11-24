@@ -72,8 +72,9 @@ seed found the indices in 0–49 % of simulated systems
 
 ### 2.1 Both routes, and the row factor
 
-On route V (`write_specs`) each series' file carries its transformation, and
-the system gives it a free AR(n_i)/MA(n_i) of its own.
+On route V (`build_univariate(route="V")` or `load_pre(..., route="V")`) each
+series' univariate model goes through the gate, and past it the system gives
+the series a free AR(n_i)/MA(n_i) of its own in place of its regular ARMA.
 
 On route U each series brings its univariate model, and two things change
 (drvarma `docs/ECHELON_PLAN.md` §4).
@@ -173,7 +174,7 @@ change (first differences of logarithms)" and build no univariate models:
 route V.
 
     load_example("lutkepohl_poskitt")          # the table, loaded
-    characterize(...); write_specs(...); run_gate(...)
+    characterize(...); build_univariate(..., route="V"); run_gate(...)
 
 ### 3.2 The indices
 
@@ -223,7 +224,7 @@ Box:
 
     load_data("gf", "gas_furnace.csv", freq=1, start="1000")
     characterize("gf", set="InputGasRate: d=0; CO2: lam=1, d=0")
-    write_specs("gf"); run_gate("gf")
+    build_univariate("gf", route="V"); run_gate("gf")
 
 ### 4.2 The indices
 

@@ -39,7 +39,7 @@ What was read for it:
   guion (`record_decision`, `export_guion`, JSON + HTML) and four worked examples.
 - **Three entries, not one.** Univariate files from art, the same files from
   mtram when its network has a cycle, and **raw data** (`load_data` →
-  `characterize` → route U `build_univariate` or route V `write_specs`).
+  `characterize` → `build_univariate`, route U or V).
   PROCESOS §5.1 argued for a fourth assistant because "drvec starts from `.pre`,
   sima from raw series". The 2026-10-13 decision already corrected that. Today sima's
   normal input is the `.pre`.

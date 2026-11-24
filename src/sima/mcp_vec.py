@@ -1116,7 +1116,7 @@ def evaluate_vec(s, estwin, H):
     univariates (and the VARMA in differences, if one was estimated) on the
     same origins; the rule per the purpose recorded at N1c."""
     from . import evidence
-    from .mcp_server import _ladder, _model_ladder, _yardstick_files
+    from .mcp_server import _ladder, _model_ladder
     vf = s.vec_fits[s.vec_current]
     if not estwin:
         return "Give estwin: the observations of the first series to estimate on."
@@ -1133,7 +1133,7 @@ def evaluate_vec(s, estwin, H):
         s0 = s.series[0]
         last = s0.date_of(s0.nobs_full)
         cand = vec.summary_on(vrows)
-        Ld = _ladder(_yardstick_files(s) if (s.route == "V" and s.v) else s.files, 0, 0, True,
+        Ld = _ladder(s.files, 0, 0, True,
                      estwin=int(estwin))
         Ld.fit()
         rows, _sm = Ld.recursive(int(H))

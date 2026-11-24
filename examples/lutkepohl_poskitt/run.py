@@ -49,7 +49,7 @@ def main():
         sys.exit("sima is not importable: pip install sima-tseries (or run from the repo "
                  "with PYTHONPATH=src)")
     os.makedirs(os.path.join(OUT, "figs"), exist_ok=True)
-    # route V writes its specifications next to the data: start clean
+    # the univariate models are written next to the data: start clean
     shutil.rmtree(os.path.join(HERE, "data", "flour_prices_sima"), ignore_errors=True)
     count = [0]
 
@@ -86,11 +86,11 @@ def main():
             _fn(M.record_decision)(NAME, node, decision, reason=reason, evidence=evidence,
                                    alternatives=alternatives, decided_by="analyst")
 
-    # N0: the table, each series' transformation, the specifications
+    # N0: the table, each series' transformation, the univariate models
     step("N0r the raw table", M.load_data, NAME, DATA)
     step("N0c the transformation: rates of change, as Lutkepohl and Poskitt",
          M.characterize, NAME, set=LOGDIFF)
-    step("N0v route V: the specifications", M.write_specs, NAME)
+    step("N0u route V: the univariate models, through the gate", M.build_univariate, NAME, route="V")
     # (the guion opens with the specifications: the transformation's reason goes here)
     decide("N0c", "the first differences of the logs, for the three cities",
            "Lutkepohl and Poskitt (1996, §4.1): 'Because the original series appear to "

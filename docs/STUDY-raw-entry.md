@@ -106,6 +106,15 @@ the node says so, and offers each series to art's guided lane.
 
 ### 3.4 Route V — the vector first (Tiao and Box)
 
+> **Superseded in sima 0.2.5.** What this section designed — specifications
+> with no univariate model (`write_specs`), a yardstick built aside, the gate
+> going round them — was retired. Route V now goes through the gate on the
+> univariate models (`build_univariate(route="V")`, `load_pre(...,
+> route="V")`; drvarma >= 0.4.0, the C's `-route v`): they give the means,
+> the deterministic terms and the yardstick, and past the gate each series'
+> regular ARMA is replaced by the vector's free AR(p)/MA(q). See
+> `ARCHITECTURE.md` §3. The section is kept as the record of the design.
+
 **The current `.inp` is enough.** Route V's files are ordinary fue `.inp`
 specifications, one per series, carrying:
 - λ, d, and D or the seasonal harmonics;

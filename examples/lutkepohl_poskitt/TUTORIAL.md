@@ -42,13 +42,15 @@ If the analyst wants to fix it explicitly, as `run.py` does:
 
     characterize("lutkepohl_poskitt", set="Buffalo: lam=0, d=1; Minneapolis: lam=0, d=1; KansasCity: lam=0, d=1")
 
-## Step 2 · N0v and N1 — route V, the gate
+## Step 2 · N0u and N1 — route V, the gate
 
-    write_specs("lutkepohl_poskitt"); run_gate("lutkepohl_poskitt")
+    build_univariate("lutkepohl_poskitt", route="V"); run_gate("lutkepohl_poskitt")
 
-Route V: the vector first. Each series gets a specification with only its
-transformation, and no univariate model enters the system. The gate passes;
-its diagonal is three random walks in the logs, not a yardstick.
+Route V: the vector first, through the gate. sima's builder writes each
+series' univariate model (art's engine, light: a random walk for Buffalo, an
+MA(1) for Minneapolis and Kansas City, the first of a tie in art's ranking),
+and the session opens on them. They give the means and the yardstick; past
+the gate each series' own ARMA is the vector's. The gate passes.
 
 **In the paper:** Lütkepohl and Poskitt build no univariate models. The
 echelon form, like Tiao and Box's method, is specified on the vector.
@@ -91,14 +93,21 @@ logL: the next fits are tested against it.
     estimate("lutkepohl_poskitt", indices="1, 1, 1")
 
 With equal indices the echelon form is the full VARMA(1, 1): 18 coefficients,
-logL −659.17, log|Σ̃| 4.744. The echelon start was not admissible, so it
-starts from zero and converges in 268 iterations. Most coefficients are small
-against their s.e. Two own MA coefficients end at −1.000, and the MA matrix
-has a pair of roots at modulus 0.999: nearly non-invertible. This is the
-overfitting they warned of.
+logL −660.00, log|Σ̃| 4.760. sima runs two starts: from zero the search stops
+on the MA invertibility wall after 206 iterations (two of the MA matrix's
+three roots on the unit circle); from the stage-II least squares it ends at
+−665.06; it keeps the higher, and says so. Most coefficients are small
+against their s.e., and two own MA coefficients end outside the unit circle
+read alone (Buffalo 1.12, Minneapolis −1.77): the report says it, and it is
+not a model to read. This is the overfitting they warned of.
+
+Until sima 0.2.4 this fit gave −659.17 and 4.744: route V then estimated on
+specifications with no univariate model, and the engine took the invertible
+form of an own MA(1) in its cast, which the C engine never did (drvarma
+BUG-0030).
 
 **In the paper (Table 2):** det Σ̃ = 1.127 × 10⁻¹⁰, which is 4.725 on sima's
-scale (sima 4.744). "Clearly the unrestricted VARMA(1, 1) model contains a
+scale (sima 4.760). "Clearly the unrestricted VARMA(1, 1) model contains a
 substantial number of insignificant coefficients."
 
 ## Step 6 · N3 — the VAR(1), and its simplification
@@ -161,13 +170,12 @@ against Buffalo −0.71. That is the contrast between markets of the
 
     evaluate("lutkepohl_poskitt", 1, 0, 72, horizon=6, zeros="phi_KansasCity[B^1], AR1[Buffalo<-KansasCity], AR1[Minneapolis<-KansasCity], AR1[KansasCity<-Buffalo]")
 
-The yardstick is univariate models built by route U's builder on the same
-transformation, and the report names them: a random walk for Buffalo and an
-MA(1) for Minneapolis and Kansas City, the first of a tie in art's ranking.
-The restricted VAR(1) gains little: RMSE ratios 1.03, 0.94 and 1.00 at one
-step, about 1.00 at six. The ratios depend on the yardstick: with the
-analyst's models from art as the yardstick (`yardstick=` with their `.pre`,
-an AR(1) for Minneapolis and Kansas City) Minneapolis's 0.94 becomes 1.00.
+The yardstick is the univariate models the session was opened on (step 2):
+a random walk for Buffalo and an MA(1) for Minneapolis and Kansas City. The
+restricted VAR(1) gains little: RMSE ratios 1.03, 0.94 and 1.00 at one step,
+about 1.00 at six. The ratios depend on the yardstick: with the analyst's
+models from art (an AR(1) for Minneapolis and Kansas City), loaded with
+`load_pre(..., route="V")`, Minneapolis's 0.94 becomes 1.00.
 
 **In the paper:** they leave the comparison to Grubb (1992), who favoured a
 VAR(1) for the undifferenced data, and in whose comparison "the MA(1) model

@@ -2,7 +2,7 @@
 models go through the gate as on route U, and past it each series' regular
 ARMA is replaced by a free AR(p)/MA(q). In sima: load_pre(route="V"). The
 session's files, the yardstick and the deterministic terms are the
-univariates'; the first route V (write_specs) is untouched."""
+univariates'. (The first route V, write_specs, was retired in 0.2.5.)"""
 import glob
 import json
 import os
@@ -39,7 +39,7 @@ def v():
 def test_the_load_says_the_route_and_keeps_the_univariate_files(v):
     t, g = v
     s = M._sess.get("rv")
-    assert s.route == "V" and not s.v and M._engine_v(s) and not M._spec_v(s)
+    assert s.route == "V" and not s.v and M._engine_v(s)
     assert [os.path.basename(f) for f in s.files] == ["MINK_m02.pre", "MUSKRAT_m03.pre"]
     assert "ROUTE V: the univariate models go through the gate as on route U" in t
     assert "Route V (the engine's): this gate is the same as route U's" in g

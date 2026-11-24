@@ -117,47 +117,38 @@ available: they disagree, and sima shows it rather than hiding either
 (`STUDY-tiao-box.md` §3.1). Jenkins and Alavi's own advice is to use both
 (`DESIGN-jenkins-alavi.md` §1).
 
+Both routes start from the univariate models and put them through the same
+gate (the ladder's principle, David 20-nov-2026): they are the yardstick and
+they give the mean, the deterministic terms, the interventions and the
+stationary series. Past the gate the routes differ only in how the VARMA
+matrix is seeded and in what is estimated (drvarma >= 0.4.0, the C's
+`-route v`, homologated):
+
 | | route U — the ladder (Jenkins and Alavi) | route V — the vector first (Tiao and Box) |
 |---|---|---|
-| input | one `.pre` per series. The strong form uses the analyst's models from art; from raw data, `build_univariate` writes light ones, not reviewed in art | raw data → `characterize` → one `.inp` specification per series: λ, d, harmonics, mean, plus a free AR(p)/MA(q) per order (`STUDY-raw-entry.md` §3.4) |
-| interventions | those of the `.pre` (decided in art, in the strong form) | none: `characterize` reports outliers, models none |
-| the session's gate | certifies the univariate models | certifies the cast; the base specs are white noise (a random walk with d = 1) |
-| the own dynamics | start at the univariate optimum, structure fixed, values re-estimated jointly | each fit first estimates every spec's own AR(p)/MA(q) by exact ML (its own gate), then everything jointly |
-| identification | CCFs of the prewhitened residuals → matrices → echelon | the vector: R_k, S_k, Tiao and Box's M(l) → echelon |
-| the LR of a fit | against the univariate models (for the plain VARMA; the echelon form's is against itself without cross terms) | against the same model without cross terms: m own AR(p)/MA(q) models |
-| the yardstick (N5) | the analyst's models | the analyst's if given, else route U's builder; the evaluation says which (`_yardstick_text`) |
-| files | `.pre` in; no file for the system | `.inp` specifications that never become `.pre`; no file for the system (`STUDY-raw-entry.md` §4) |
-
-### 3.1 Route V through the gate (the engine's, drvarma 0.4.0)
-
-The table above describes the FIRST route V, the one from raw data
-(`write_specs`). Since drvarma 0.4.0 the engine has its own route V (the C's
-`-route v`, homologated), and sima offers it with `load_pre(route="V")`. Its
-principle is the ladder's: **the univariate models always come first,
-through the same gate**. They are the yardstick and they give the mean, the
-deterministic terms, the interventions and the stationary series. Past the
-gate, the two routes differ only in how the VARMA matrix is seeded and in
-what is estimated:
-
-| | route U | route V through the gate |
-|---|---|---|
-| input | one `.pre` per series | the same files |
+| how | `load_pre(...)` or `build_univariate(...)` | `load_pre(..., route="V")` or `build_univariate(..., route="V")` |
+| input | one `.pre` per series. The strong form uses the analyst's models from art; from raw data, `build_univariate` writes light ones, not reviewed in art | the same files |
 | the gate | certifies the univariate models | the same gate |
 | interventions and deterministic terms | the univariates' | the univariates' |
 | the own dynamics | each univariate ARMA, re-estimated jointly | a free AR(p)/MA(q) replaces each series' regular ARMA; its seasonal and fixed-frequency factors multiply its whole row, with an LR check |
-| the LR of a fit | against the univariate models | against the same model without cross terms (the engine's base) |
+| identification | CCFs of the prewhitened residuals → matrices → echelon | the whole matrices: R_k, S_k, Tiao and Box's M(l) → echelon |
+| the LR of a fit | against the univariate models (for the plain VARMA; the echelon form's is against itself without cross terms) | against the same model without cross terms (the engine's base) |
 | orders below a univariate's | not possible | allowed, with the engine's warning |
 | the yardstick (N5) | the loaded models | the loaded models |
-| files | the session's | the session's: nothing is written per order |
+| files | the session's; no file for the system | the same; nothing is written per order |
 
-It needs no yardstick built aside and no file per order, and it carries the
-interventions. The first route V stays as it is for now; it is to be
-replaced by this one, its two worked examples (Tiao and Box, Lütkepohl and
-Poskitt) with it.
+**The first route V was retired in sima 0.2.5.** It wrote specifications
+with no univariate model (`write_specs`), built a yardstick aside and went
+round the gate. `write_specs` now calls `build_univariate(route="V")` and
+says so. Its two worked examples (Tiao and Box, Lütkepohl and Poskitt) run
+on the new route: Tiao and Box's numbers are the same both ways; Lütkepohl
+and Poskitt's unrestricted (1, 1, 1) moves, because the univariate models
+now give the means, and because drvarma no longer takes the invertible
+form of an own MA in its cast (its BUG-0030).
 
 What route V gives up, it gives up knowingly, and it is where the analyst
-carries more of the judgement: no validated base until N5, no interventions,
-every coefficient free (simplification matters most here). What route U
+carries more of the judgement: every coefficient of the vector's own ARMA
+free (simplification matters most here). What route U
 risks is documented too: with an AR structure, the univariate models first
 can lead towards the diagonal-AR representation and over-parameterisation
 (`DESIGN-jenkins-alavi.md` §1).
