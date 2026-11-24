@@ -49,20 +49,29 @@ correct. Tiao and Box, like Box and Jenkins, work in levels:
 
     characterize("tiao_box", set="InputGasRate: lam=1, d=0; CO2: lam=1, d=0")
 
-## Step 2 · N0v and N1 — route V, the gate
+## Step 2 · N0u and N1 — route V, the gate
 
-    write_specs("tiao_box"); run_gate("tiao_box")
+    build_univariate("tiao_box", route="V"); run_gate("tiao_box")
 
-Route V: each series gets a specification with only its transformation and
-its mean. No univariate model enters the system. The gate passes; its
-diagonal is white noise around the means, not a yardstick.
+Route V: the vector first, through the gate. sima's builder writes each
+series' univariate model (art's engine, light), and the session opens on
+them as on route U: they give the means and the yardstick. Past the gate,
+each `estimate(p, q)` replaces the series' own ARMA by the vector's free
+AR(p)/MA(q), so what Tiao and Box estimate is what sima estimates. The gate
+passes.
+
+Until sima 0.2.4, route V wrote specifications with no univariate model and
+went round the gate. The numbers of this tutorial are the same both ways:
+the gas furnace's models carry nothing the vector's own ARMA does not
+replace.
 
 ## Step 3 · N2 — Tiao and Box's stepwise M(l)
 
     identify_matrices("tiao_box", nlags=11)
 
-Method 2 does not apply on route V: there are no univariate models to
-prewhiten with. Look at method 1 and the stepwise table:
+Method 2 is not route V's reading: each series' own ARMA is the vector's
+here, so the whole matrices are read. Look at method 1 and the stepwise
+table:
 * M(l) = 1649.7, 665.1, 31.7, 22.5, 5.6, 12.8, 1.8, 8.0, …: significant up
   to **l = 6**, with l = 5 not significant on the way;
 * the diagonal of Σ̃ settles after lag 3 for the gas (1022, 369, 358, 356)

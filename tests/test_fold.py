@@ -72,7 +72,7 @@ pytest.importorskip("art", reason="the raw entry uses art's engine")
 def test_estimate_does_not_call_the_wall_a_convergence(tmp_path):
     _fn(M.load_example)("lutkepohl_poskitt", session="fold", dest=str(tmp_path))
     _fn(M.characterize)("fold")
-    _fn(M.write_specs)("fold", overwrite=True)
+    _fn(M.build_univariate)("fold", overwrite=True, route="V")
     _fn(M.run_gate)("fold")
     t = _fn(M.estimate)("fold", indices="1, 1, 1")
     s = M._sess.get("fold")
@@ -92,17 +92,20 @@ def test_estimate_does_not_call_the_wall_a_convergence(tmp_path):
     # there, so the point reached is the path's, and the path follows the
     # sixteenth digit of the compiler's and the C library's arithmetic:
     # measured on CI, -658.9552 on Linux, -659.2055 on Windows, -659.7980 on
-    # macOS. The C engine was built and run on Linux x86-64, and there the
-    # port gives its number, digit for digit (drvarma -echelon 1,1,1:
-    # -658.955160 after 240 iterations; -665.062491 from the stage-II start).
+    # macOS (sima 0.2.4, on the first route V's specifications). The C engine
+    # was built and run on Linux x86-64, and there the port gives its number,
+    # digit for digit. Since sima 0.2.5 route V goes through the gate, on the
+    # univariate models sima's builder writes (with their means): drvarma
+    # -route v -echelon 1,1,1 on those files gives -660.000819 after 206
+    # iterations from zero, -665.062491 after 85 from the stage-II start.
     if not (sys.platform.startswith("linux") and platform.machine() in ("x86_64", "AMD64")):
         assert -662.0 < r.logL < -657.0
         return
-    assert r.logL == pytest.approx(-658.955160, abs=1e-4)
-    assert r.ma_boundary == 2
+    assert r.logL == pytest.approx(-660.000819, abs=1e-4) and r.nit == 206
     assert "TWO STARTS, TWO END POINTS" in t and "-665.06" in t
     # own MA coefficients beyond the unit circle are ordinary coordinates
     # here: what is judged is the system's MA operator, whole
+    # (and drvarma >= 0.4.0 says so: own_ma_outside)
     at = dict(zip(r.names, r.x))
-    assert at["theta_Minneapolis[B^1]"] == pytest.approx(-1.173472, abs=1e-4)
-    assert at["theta_KansasCity[B^1]"] == pytest.approx(-1.246373, abs=1e-4)
+    assert at["theta_Buffalo[B^1]"] == pytest.approx(1.121785, abs=1e-4)
+    assert at["theta_Minneapolis[B^1]"] == pytest.approx(-1.766582, abs=1e-4)

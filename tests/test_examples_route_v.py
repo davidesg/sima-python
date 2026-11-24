@@ -32,7 +32,7 @@ def test_lutkepohl_poskitt_in_real_time(tmp_path):
     assert (tmp_path / "TUTORIAL.md").exists()
     c = _fn(M.characterize)("lp")
     assert "Buffalo              0   1" in c and "KansasCity           0   1" in c
-    _fn(M.write_specs)("lp")
+    _fn(M.build_univariate)("lp", route="V")
     assert "GATE: PASSED" in _fn(M.run_gate)("lp")
     i = _fn(M.identify_echelon)("lp", max_index=6)
     assert "Chosen by SC: Buffalo 0, Minneapolis 0, KansasCity 0" in i
@@ -59,7 +59,7 @@ def test_tiao_box_in_real_time(tmp_path):
     t = _fn(M.load_example)("tiao_box", session="tb", dest=str(tmp_path))
     assert 'Next: characterize("tb")' in t and "2 series, 296 observations" in t
     _fn(M.characterize)("tb", set="InputGasRate: lam=1, d=0; CO2: lam=1, d=0")
-    _fn(M.write_specs)("tb")
+    _fn(M.build_univariate)("tb", route="V")
     assert "GATE: PASSED" in _fn(M.run_gate)("tb")
     i = _fn(M.identify_matrices)("tb", nlags=11)
     assert "1649.7" in i and "665.1" in i and "M(l) is significant up to l = 6" in i

@@ -8,7 +8,7 @@
   "manual": "MANUAL-echelon",
   "plan": [
     "N0c characterize — the rates of change (logs, d = 1), their transformation",
-    "N0v write_specs, N1 run_gate — route V: the vector first",
+    "N0u build_univariate(route=\"V\"), N1 run_gate — route V: the vector first, through the gate",
     "N2 identify_echelon — the Kronecker indices: (0, 0, 0) by SC and HQ, (1, 1, 1) by AIC, as their Table 1",
     "N3 estimate(indices=) — (0, 0, 0), then their (1, 1, 1): 18 coefficients, MA roots at 0.999",
     "N3 simplify, estimate(zeros=) — their restricted VAR(1) and MA(1), five coefficients each (Table 2)",

@@ -55,7 +55,7 @@ def next_step(s, name):
         if i1 >= 2 and "N1b" not in nodes and s.route == "U":
             return ("N1b — the canonical analysis of the levels, then the cointegration "
                     "question", f"canonical_analysis({q})")
-        if s.route == "V" and s.v:
+        if s.route == "V":
             return ("N2 — the identification, route V: the matrices", f"identify_matrices({q})")
         return ("N2 — the identification, in its order: the residual CCFs first",
                 f"identify_cross({q})")
@@ -142,30 +142,12 @@ def _outliers(s):
 def caveats(s):
     from .raw import PROVENANCE
     out = []
-    # the first route V only (specifications); the engine's route V has the
-    # univariate models loaded, so its caveats are route U's plus one line
-    route_v = getattr(s, "route", "U") == "V" and bool(getattr(s, "v", None))
-    if getattr(s, "route", "U") == "V" and not route_v:
+    if getattr(s, "route", "U") == "V":
         out.append("Route V (the vector first, through the gate): each series' regular "
                    "ARMA was replaced by a free AR(p)/MA(q) estimated with the cross "
                    "terms; the univariate models gave the mean, the deterministic terms "
                    "and the yardstick.")
-    if route_v:
-        # Route V (Tiao and Box): the files are specifications by design --
-        # they carry no univariate model to validate, and saying they do is
-        # wrong. What stays open is the route's own (ARCHITECTURE.md §3).
-        out.append("Route V (the vector first, Tiao and Box): the system was built on "
-                   "specifications, with each series' own dynamics estimated together "
-                   "with the cross terms. No validated univariate base until N5, and "
-                   "nothing reusable as a .pre.")
-        given = bool((getattr(s, "v", None) or {}).get("yardstick"))
-        out.append("The yardstick (N5): the analyst's univariate models." if given else
-                   "The yardstick (N5): univariate models built by sima's route U builder "
-                   "for N5 only, not reviewed in art. Give yours with "
-                   "evaluate(yardstick=...) for a stronger comparison.")
     for x in s.series:
-        if route_v:
-            break
         path = getattr(x, "path", "") or ""
         try:
             with open(path) as fh:
@@ -173,14 +155,15 @@ def caveats(s):
         except OSError:
             txt = ""
         if PROVENANCE in txt:
-            out.append(f"{x.name}: its model was built by sima's route U, not reviewed in art.")
+            out.append(f"{x.name}: its model was built by sima's raw entry, not reviewed in art.")
         elif path.lower().endswith(".inp"):
             out.append(f"{x.name}: a specification (.inp), re-estimated at the load; its "
                        "univariate model was not validated in art.")
     for nm, k, dates in _outliers(s):
         out.append(f"{nm}: characterize flagged {k} outlier(s) ({dates}), modelled nowhere"
-                   + (": on route V they stay in the system's dynamics." if route_v else
-                      ": the models built from the raw data carry no interventions.")
+                   + ": the models built from the raw data carry no interventions"
+                   + (", and on route V the outliers stay in the system's dynamics."
+                      if getattr(s, "route", "U") == "V" else ".")
                    + " art's guided lane is where they are decided.")
     a = s.adopted
     if a and a[0] == "VARMA" and a[1] in s.fits:

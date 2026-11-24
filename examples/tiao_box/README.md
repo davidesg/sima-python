@@ -12,7 +12,9 @@ vector model on their own example, from the raw table to the yardstick.
 
 **Route V.** Tiao and Box fit the vector directly, "where no distinction is
 made between an input and output variable". So the example starts from the
-raw table, and univariate models appear only at the end, as the yardstick.
+raw table. sima's route V still builds the univariate models first, and
+puts them through the gate, but past it each series' own ARMA is the
+vector's: they give the means and the yardstick.
 
 **What it reproduces:**
 - M(l) of their Table 12 (1650, 665, 31.7, 22.5, 5.6, 12.9, …);
@@ -33,7 +35,7 @@ analysis goes on node by node from `characterize`, and the assistant follows
     python3 examples/tiao_box/run.py            # the whole walkthrough
     python3 examples/tiao_box/run.py --upto 7   # up to the structure of the VAR(6)
 
-Reports go to `out/NN_<tool>.md`; the specifications and the guion are written
+Reports go to `out/NN_<tool>.md`; the univariate models and the guion are written
 to `data/gas_furnace_sima/`.
 
 > G. C. Tiao and G. E. P. Box (1981), "Modeling multiple time series with

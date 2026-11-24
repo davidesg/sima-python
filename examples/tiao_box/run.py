@@ -50,7 +50,7 @@ def main():
         sys.exit("sima is not importable: pip install sima-tseries (or run from the repo "
                  "with PYTHONPATH=src)")
     os.makedirs(os.path.join(OUT, "figs"), exist_ok=True)
-    # route V writes its specifications next to the data: start clean
+    # the univariate models are written next to the data: start clean
     shutil.rmtree(os.path.join(HERE, "data", "gas_furnace_sima"), ignore_errors=True)
     count = [0]
 
@@ -87,12 +87,12 @@ def main():
             _fn(M.record_decision)(NAME, node, decision, reason=reason, evidence=evidence,
                                    alternatives=alternatives, decided_by="analyst")
 
-    # N0: the table, each series' transformation, the specifications
+    # N0: the table, each series' transformation, the univariate models
     step("N0r the raw table (no dates: an index from 1000)", M.load_data, NAME, DATA,
          freq=1, start="1000")
     step("N0c the transformation: the levels, as Tiao and Box", M.characterize, NAME,
          set=LEVELS)
-    step("N0v route V: the specifications", M.write_specs, NAME)
+    step("N0u route V: the univariate models, through the gate", M.build_univariate, NAME, route="V")
     decide("N0c", "both series in levels, no transformation",
            "Tiao and Box (and Box and Jenkins) model the furnace in levels: a stationary "
            "engineering system. art's engine proposes logs for the CO2 from the domain "

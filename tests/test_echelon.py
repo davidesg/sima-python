@@ -36,7 +36,7 @@ def ech(tmp_path_factory):
     np.savetxt(path, y, delimiter=",", header="y1,y2", comments="", fmt="%.10f")
     _fn(M.load_data)("e10", str(path), freq=1, start="1000")
     _fn(M.characterize)("e10", set="y1: lam=1, d=0; y2: lam=1, d=0")
-    _fn(M.write_specs)("e10")
+    _fn(M.build_univariate)("e10", route="V")
     assert "GATE: PASSED" in _fn(M.run_gate)("e10")
     return d
 

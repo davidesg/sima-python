@@ -143,30 +143,43 @@ GAS = os.path.join(ROOT, "tests", "data", "gas_furnace.csv")
 
 @pytest.fixture(scope="module")
 def gas_v(tmp_path_factory):
-    """Series J from the raw table, in levels (d = 0, lambda = 1), route V."""
+    """Series J from the raw table, in levels (d = 0, lambda = 1), route V:
+    the univariate models first (sima's builder), through the gate."""
     import shutil
     d = tmp_path_factory.mktemp("gas")
     shutil.copy(GAS, d)
     _fn(M.load_data)("v_gf", str(d / "gas_furnace.csv"), freq=1, start="1000")
     _fn(M.characterize)("v_gf", set="InputGasRate: d=0; CO2: lam=1, d=0")
-    t = _fn(M.write_specs)("v_gf")
+    t = _fn(M.build_univariate)("v_gf", route="V")
     return d, t
 
 
-def test_route_v_opens_on_specifications(gas_v):
+def test_route_v_opens_on_the_univariate_models(gas_v):
     d, t = gas_v
-    assert "ROUTE V" in t and "No univariate models enter the system" in t
-    assert raw.V_PROVENANCE in (d / "gas_furnace_sima" / "CO2_v.inp").read_text()
+    assert "ROUTE V (Tiao and Box): these models go through the gate" in t
+    assert raw.PROVENANCE in (d / "gas_furnace_sima" / "CO2_u.pre").read_text()
+    s = M._sess.get("v_gf")
+    assert s.route == "V" and all(f.endswith("_u.pre") for f in s.files)
     g = _fn(M.run_gate)("v_gf")
-    assert "GATE: PASSED" in g and "Route V: the files are specifications" in g
-    assert "the analysts' models" not in g
+    assert "GATE: PASSED" in g and "this gate is the same as route U's" in g
+    assert "identify_matrices" in g and "the analysts' models" not in g
+
+
+def test_write_specs_is_retired_and_says_so(tmp_path):
+    import shutil
+    shutil.copy(GAS, tmp_path)
+    _fn(M.load_data)("v_old", str(tmp_path / "gas_furnace.csv"), freq=1, start="1000")
+    _fn(M.characterize)("v_old", set="InputGasRate: d=0; CO2: lam=1, d=0")
+    t = _fn(M.write_specs)("v_old")
+    assert t.startswith("write_specs is retired (sima 0.2.5)")
+    assert M._sess.get("v_old").route == "V"
 
 
 def test_route_v_identification_is_tiao_and_box(gas_v):
     """M(l) from the raw table is their Table 12(b); method 2 is not read."""
     i = _fn(M.identify_matrices)("v_gf", nlags=11)
     assert "ROUTE V — the vector first" in i
-    assert "METHOD 2 — not in route V" in i and "R_k(a):" not in i
+    assert "METHOD 2 — not the reading of route V" in i and "R_k(a):" not in i
     assert "1649.7" in i and "665.1" in i
     assert "(a) Tiao and Box's order: M(l) is significant up to l = 6" in i
     assert "cross AR of order" not in i
@@ -196,17 +209,15 @@ def test_route_v_full_var6(gas_v):
     assert x["AR3[CO2<-InputGasRate]"] * 100 == pytest.approx(P[2, 1, 0] * 100, abs=5)
 
 
-def test_route_v_yardstick_is_built_for_n5_only(gas_v):
-    """The univariates come from route U's builder and never enter the system;
-    the VAR(6) forecasts the CO2 better (the input helps), not the gas."""
-    d, _t = gas_v
+def test_route_v_yardstick_is_the_sessions_univariates(gas_v):
+    """The yardstick is the univariate models the session was opened on; the
+    VAR(6) forecasts the CO2 better (the input helps), not the gas."""
     ev = _fn(M.evaluate)("v_gf", 6, 0, 200, horizon=3)
-    assert "ROUTE V: the yardstick is univariate models built by route U's builder" in ev
-    assert (d / "gas_furnace_sima" / "CO2_u.pre").exists()
     s = M._sess.get("v_gf")
     cand, diag = list(s.evaluations.values())[-1]
     assert cand[("CO2", 3)]["RMSE"] < 0.8 * diag[("CO2", 3)]["RMSE"]
-    assert all(f.endswith("_v.inp") for f in s.files)
+    assert "nothing to give" in _fn(M.evaluate)("v_gf", 6, 0, 200, horizon=3,
+                                                yardstick="x.pre")
 
 
 # ── B and C: structure and simplification (Tiao and Box) ─────────────────────
@@ -248,9 +259,6 @@ def test_simplify_and_adopt(gas_v):
     assert len(s.fits) == n_fits and "9 coefficients at zero" in e.splitlines()[0]
     assert s.current[5] and "phi_CO2[B^5]" in s.current[5]
     assert "phi_CO2[B^5]" not in s.fits[s.current].result.names
-    # the own zero is in the spec file, as a fixed coefficient
-    d = M._sess.get("v_gf").v["dir"]
-    assert os.path.exists(os.path.join(d, "CO2_v_p6q0_zar5.inp"))
 
 
 # ── the echelon form (Lutkepohl and Poskitt) ────────────────────────────────

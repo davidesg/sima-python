@@ -233,28 +233,27 @@ adopted one.
 ## Route V — what changes
 
 Route V (the vector first, Tiao and Box; `ARCHITECTURE.md` §3) walks the same
-nodes on specifications, not on the analyst's univariate models:
+nodes on the same univariate models, through the same gate:
 
-- **N0.** The route itself is chosen after `characterize`. **Route U is the
-  default** in both lanes, as it was in the earlier sima (David, 20-nov-2026):
-  route V is taken only when the analyst asks for it, and it is named as the
-  less structured path.
-- **N1.** The session's gate certifies the cast only. The base specs are
-  white noise, and a moved file is not a reason to go back to art: the files
-  are specifications by design.
-- **N2** starts at `identify_matrices`: there are no univariate residuals to
-  read pair by pair.
-- **N3.** Each fit estimates every spec's own AR(p)/MA(q) first, then
-  everything jointly. Its LR is against those m own models, not against the
-  analyst's univariate models.
-- **N4s matters most here:** every coefficient is free, own ones included.
-- **N5.** The yardstick is the analyst's models when given
-  (`evaluate(yardstick=...)`), else light ones built by route U's builder, and
-  the evaluation says which. **Autonomous:** say it in the hand-over.
-- **Caveats that stay open on route V:**
-  - no interventions (`characterize` reports outliers and models none);
-  - a yardstick not reviewed in art, unless it was given;
-  - nothing reusable as a `.pre`.
+- **N0.** The route is chosen at the load: `load_pre(..., route="V")` or
+  `build_univariate(..., route="V")`. **Route U is the default** in both
+  lanes (David, 20-nov-2026): route V is taken only when the analyst asks for
+  it.
+- **N1.** The same gate as route U: it certifies the univariate models, which
+  give the means, the deterministic terms, the interventions and the
+  yardstick.
+- **N2** starts at `identify_matrices`: past the gate each series' own ARMA is
+  the vector's, so the whole matrices are read (Tiao and Box's M(l)).
+- **N3.** `estimate(p, q)` replaces each series' regular ARMA by a free
+  AR(p)/MA(q); seasonal and fixed-frequency factors multiply their rows, with
+  an LR check. The LR of a fit is against the same model without cross terms
+  (the engine's base), not against the univariate models. An order below a
+  univariate's is allowed, with the engine's warning.
+- **N4s matters most here:** every coefficient of the vector's own ARMA is
+  free.
+- **N5.** The yardstick is the session's univariate models, as on route U.
+- Until sima 0.2.4 route V wrote specifications with no univariate model
+  (`write_specs`) and went round the gate; that route was retired.
 
 ## What is NOT a node
 

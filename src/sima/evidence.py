@@ -393,9 +393,9 @@ def ja_identification(w, res, names, K, qmax, freq, route="U", call="NAME"):
                         for i in range(m) if S2[k, i, i] != "."})
     r0 = np.corrcoef(res.T)
     if route == "V":
-        out += ["METHOD 2 — not in route V: there are no univariate models to prewhiten "
-                "with (the 'residuals' of these specifications are the series themselves). "
-                "The vector is read by method 1, below.",
+        out += ["METHOD 2 — not the reading of route V: each series' own ARMA is the "
+                "vector's here, so the whole matrices are read, by method 1 and Tiao and "
+                "Box's M(l), below (the univariate models give the gate and the yardstick).",
                 "  lag 0: correlations " + ", ".join(
                     f"{names[i]}-{names[j]} {r0[i, j]:+.2f}" for i in range(m)
                     for j in range(i + 1, m))]
@@ -1432,7 +1432,7 @@ def characterize_report(chars, freq, call, changes=()):
 
 def build_report(built, freq, call):
     """Route U's report: the univariate models sima built, art's four sections."""
-    lines = ["# Route U — the univariate models, built by sima (art's engine, light)",
+    lines = ["# The univariate models, built by sima (art's engine, light)",
              "*(art's first-ranked orders on each series' characterization, fitted with "
              "fue; not reviewed in art)*", "", "## 1 · TABLE", "",
              "_[Claude: show the block below AS IT IS; do not build your own table]_", "", "```"]

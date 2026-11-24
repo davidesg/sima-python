@@ -11,7 +11,7 @@
 | [`abandon`](#abandon) | N5 — SET ASIDE a candidate, and why (what a failed candidate contributes |
 | [`add_exogenous`](#add-exogenous) | C4 — Exogenous inputs to the current VEC, dispatched by their order of |
 | [`adopt`](#adopt) | N5 (C8 for a VEC) — ADOPT the model the analysis keeps. |
-| [`build_univariate`](#build-univariate) | N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each |
+| [`build_univariate`](#build-univariate) | N0u — from raw data (docs/STUDY-raw-entry.md): build each series' |
 | [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
 | [`characterize`](#characterize) | N0c — Each raw series' transformation, with art's engine and in art's |
 | [`check_residuals`](#check-residuals) | N4 — Check the last estimated model as Jenkins and Alavi (1981, §5.2) do, |
@@ -56,7 +56,7 @@
 | [`test_restriction`](#test-restriction) | C3 — A restriction on alpha, beta or Gamma of the current VEC, tested by |
 | [`variance_decomposition`](#variance-decomposition) | N6 — Forecast-error variance decomposition of the last estimated model. |
 | [`where`](#where) | Where the analysis stands (P3): the path walked, the decisions still |
-| [`write_specs`](#write-specs) | N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector |
+| [`write_specs`](#write-specs) | N0v — DEPRECATED (sima 0.2.5): route V from raw data is now |
 
 ---
 
@@ -141,16 +141,22 @@ N5 (C8 for a VEC) — ADOPT the model the analysis keeps.
 | `name` | string | yes | — |
 | `out_dir` | string | no | `` |
 | `overwrite` | boolean | no | `False` |
+| `route` | string | no | `U` |
 
-N0u — ROUTE U from raw data (docs/STUDY-raw-entry.md): build each
-    series' univariate model with art's engine, then climb the ladder as
-    always (Jenkins and Alavi: the univariate models first).
+N0u — from raw data (docs/STUDY-raw-entry.md): build each series'
+    univariate model with art's engine, then climb the ladder as always (the
+    univariate models first, on both routes).
+
+    `route`: "U" (default, Jenkins and Alavi: each univariate model stays on
+    the diagonal and estimate adds the cross terms) or "V" (Tiao and Box: the
+    same models through the same gate; estimate(p, q) replaces each series'
+    regular ARMA by the vector's free AR(p)/MA(q)). As load_pre(route=...).
 
     On each series' characterization (characterize): the orders art ranks
     first, the mean (d = D = 0) or a drift kept only if |t| >= 2, a fue fit,
     a residual check; `<SERIES>_u.inp/.pre/.out` written to `out_dir`
     (default: `<data>_sima/` next to the table). Every .pre carries the line
-    "Built by sima's raw entry (route U), not reviewed in art". This is art's
+    "Built by sima's raw entry, not reviewed in art". This is art's
     autonomous lane in miniature — no over-parameterisation, calendar
     effects, formal tests or interventions: the report offers art for any
     series with a tie or a residual problem.
@@ -408,12 +414,8 @@ N5 — The yardstick: does the candidate forecast better than the univariates?
     a CAVEAT (always reported) for a "long run" claim. p, q and the VARMA
     arguments are then ignored.
 
-    `yardstick` (route V): the analyst's univariate models, one fue file per
-    series (a JSON list or comma-separated paths), e.g. their `.pre` from art.
-    Without it the yardstick is route U's light builder, which takes the first
-    of a tie in art's ranking; the report names the models either way. Once
-    given it stays for the session (forecast_uncertainty and structure use it).
-    On route U the yardstick is already the loaded files.
+    `yardstick`: retired with the first route V (sima 0.2.5). The yardstick is
+    the univariate models the session was opened on, on both routes.
 
 ---
 
@@ -1390,20 +1392,13 @@ Where the analysis stands (P3): the path walked, the decisions still
 | `out_dir` | string | no | `` |
 | `overwrite` | boolean | no | `False` |
 
-N0v — ROUTE V from raw data (docs/STUDY-raw-entry.md): the vector
-    first, as Tiao and Box (1981). No univariate models: each series gets a
-    fue .inp with ONLY its characterization — lambda, d, D or harmonics, the
-    mean when d = D = 0 — in `out_dir` (default `<data>_sima/`), and the
-    ladder session opens on them (the guion goes on).
+N0v — DEPRECATED (sima 0.2.5): route V from raw data is now
+    build_univariate(route="V"). It is called here, and the answer says so.
 
-    Then: run_gate (it certifies the cast; the diagonal here is white noise,
-    or a random walk for d = 1, not a yardstick), canonical_analysis and
-    identify_matrices' method 1 (R_k, S_k, Tiao and Box's M(l)) on the
-    vector. estimate(p, q) in this route writes each series' spec with a FREE
-    AR(p)/MA(q) of its own and fits the full VARMA(p, q): the diagonal is
-    estimated with the cross terms. evaluate compares it with univariate
-    models built by route U's builder, for the yardstick only. Route V writes
-    no .pre for the system: its estimates are rows of the system, not
-    univariate optima.
+    The first route V wrote specifications with no univariate model and went
+    round the gate. Route V now goes through it, as route U: the univariate
+    models come first and give the mean, the deterministic terms, the
+    interventions and the yardstick; estimate(p, q) replaces each series'
+    regular ARMA by the vector's free AR(p)/MA(q).
 
 ---

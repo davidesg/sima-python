@@ -28,7 +28,7 @@ def gas_v(tmp_path_factory):
     shutil.copy(GAS, d)
     _fn(M.load_data)("cv_gas", str(d / "gas_furnace.csv"), freq=1, start="1000")
     _fn(M.characterize)("cv_gas", set="InputGasRate: d=0; CO2: lam=1, d=0")
-    _fn(M.write_specs)("cv_gas")
+    _fn(M.build_univariate)("cv_gas", route="V")
     _fn(M.run_gate)("cv_gas")
     _fn(M.estimate)("cv_gas", 1, 0)
     return "cv_gas"
@@ -37,8 +37,9 @@ def gas_v(tmp_path_factory):
 def test_route_v_hand_over_names_the_route_and_the_yardstick(gas_v):
     cv = ST.caveats(S.get(gas_v))
     text = "\n".join(cv)
-    assert "Route V (the vector first, Tiao and Box)" in text
-    assert "built by sima's route U builder" in text and "evaluate(yardstick=" in text
+    assert "Route V (the vector first, through the gate)" in text
+    assert "built by sima's raw entry, not reviewed in art" in text
+    assert "evaluate(yardstick=" not in text
     assert "its univariate model was not validated in art" not in text
 
 
@@ -48,7 +49,7 @@ def test_characterize_outliers_are_carried_to_the_caveats(gas_v, monkeypatch):
                                      for i, c in enumerate(r.chars)])
     text = "\n".join(ST.caveats(S.get(gas_v)))
     assert f"{r.names[0]}: characterize flagged 1 outlier(s) (1012)" in text
-    assert "they stay in the system's dynamics" in text
+    assert "on route V the outliers stay in the system's dynamics" in text
 
 
 class _Fake:

@@ -2,6 +2,23 @@
 
 ## 0.2.5 — unreleased
 
+**The first route V is retired.** It wrote specifications with no univariate
+model (`write_specs`), built a yardstick aside and went round the gate.
+Route V now goes through the gate on both entries: `load_pre(..., route="V")`
+with the analyst's models, or `build_univariate(..., route="V")` from raw
+data, sima's builder first. `write_specs` calls the latter and says it is
+retired; `evaluate(yardstick=...)` has nothing to take (the yardstick is the
+session's univariate models on both routes). The per-order specification
+files, the yardstick built aside and their texts are gone.
+- The worked examples `tiao_box` and `lutkepohl_poskitt` run on the new
+  route. Tiao and Box's numbers are the same both ways (the VAR(6), the
+  VAR(2) and their restricted AR(6) give the same likelihoods). Lütkepohl and
+  Poskitt's unrestricted (1, 1, 1) moves from −659.17 to −660.00: the
+  univariate models now give the means, and drvarma no longer flips an own
+  MA in its cast. The C engine gives the same number on the same files.
+- The identification of route V reads the whole matrices (Tiao and Box), as
+  before; its text no longer says there are no univariate models.
+
 **An own MA factor outside the circle, said.** With a drvarma that reports
 `own_ma_outside` (the engine's warning: an own MA factor, read alone, ended
 outside the unit circle, which fue never estimates), `estimate` says it in
