@@ -2,7 +2,7 @@
 
 *Generated from the docstrings by `tools/gen_tools_md.py`. Do not edit by hand — edit the docstring.*
 
-**49 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
+**50 tools.** In an MCP server the docstring is what the model reads, so this page and the instruction the model receives are the same text by construction.
 
 ---
 
@@ -11,6 +11,7 @@
 | [`abandon`](#abandon) | N5 — SET ASIDE a candidate, and why (what a failed candidate contributes |
 | [`add_exogenous`](#add-exogenous) | C4 — Exogenous inputs to the current VEC, dispatched by their order of |
 | [`adopt`](#adopt) | N5 (C8 for a VEC) — ADOPT the model the analysis keeps. |
+| [`art_brief`](#art-brief) | N0a — The brief for building each series' univariate model IN ART, the |
 | [`build_univariate`](#build-univariate) | N0u — from raw data (docs/STUDY-raw-entry.md): build each series' |
 | [`canonical_analysis`](#canonical-analysis) | N1b — Box and Tiao's (1977) canonical analysis of the transformed LEVELS |
 | [`characterize`](#characterize) | N0c — Each raw series' transformation, with art's engine and in art's |
@@ -129,6 +130,37 @@ N5 (C8 for a VEC) — ADOPT the model the analysis keeps.
     The adopted model becomes the current one, and the final-stage tools
     (forecast, impulse_response, variance_decomposition and their plots) say
     so when they are asked about another. Adopting again replaces it.
+
+---
+
+## `art_brief`
+
+**Arguments**
+
+| name | type | required | default |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `out_dir` | string | no | `` |
+
+N0a — The brief for building each series' univariate model IN ART, the
+    analyst's tool, instead of sima's light builder (build_univariate). After
+    characterize; mostly for route V (Tiao and Box), whose univariate models
+    are the gate, the means, the deterministic terms and the yardstick.
+
+    sima does not call art: the agent that has both servers walks art's lane
+    series by series, ONE AFTER ANOTHER (art's rule: never in parallel), with
+    this brief, then loads the adopted .pre files with load_pre(name, ...,
+    route="V"). The brief is the same every time: the table and the column,
+    the characterization sima made (evidence, not orders), the purpose
+    (objetivo="multivariante": deterministic seasonality, never a seasonal unit
+    root), the analyst's bias for the orders (a pure AR unless the MA is very
+    clear: an instruction to the agent, not an option of art), the stop rule,
+    and a folder per series (`out_dir`, default `<data>_art/`).
+
+    In the autonomous lane the agent decides art's nodes; in the guided lane
+    the analyst does, in art's guided lane, and the biases are proposals.
+    Measured cost of art's autonomous lane (22-nov-2026, the US monetary
+    VAR): 2 to 4 minutes and 105,000 to 144,000 tokens per series.
 
 ---
 

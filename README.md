@@ -42,6 +42,7 @@ every result.
 |---|---|---|
 | N0r–N0c | `load_data`, `characterize` | raw data: the table, and each series' λ, d and seasonality (art's engine) |
 | N0u | `build_univariate` | the univariate models from raw data, then the session on route U (the default) or V (`route="V"`, the vector first) |
+| N0a | `art_brief` | or the univariate models built in art: the brief per series, one after another, then `load_pre` |
 | N0 | `load_pre` | the univariate models, the common window |
 | N1 | `run_gate` | does the joint model reproduce the univariate ones? (it stops the analysis if not) |
 | N1b | `canonical_analysis` | Box and Tiao's canonical analysis of the levels |
