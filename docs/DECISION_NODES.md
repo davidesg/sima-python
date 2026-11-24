@@ -36,10 +36,21 @@ analyst arrives with.
   (`purpose=` at the load) or at N1c. For a VARMA it decides nothing: rule 1
   holds whatever the purpose (decision of 18-nov-2026).
 - **With raw data, the route**: (U) the univariate models first, then the
-  system (Jenkins and Alavi; the ladder), or (V) the vector first, the
-  univariates only as the yardstick (Tiao and Box). Taken after `characterize`.
+  system (Jenkins and Alavi; the ladder), or (V) the vector first (Tiao and
+  Box), on the same univariate models through the same gate. Taken after
+  `characterize`.
+- **With raw data, who builds the univariate models** (N0a): sima's light
+  builder (`build_univariate`, art's engine, not reviewed in art), or art
+  itself, the analyst's tool (`art_brief`: the brief per series, art's lane
+  one series after another, then `load_pre` on the adopted `.pre`). The
+  brief carries the decision of 22-nov-2026 for a system: objetivo
+  "multivariante" (deterministic seasonality) and a pure AR unless the MA is
+  very clear, as an instruction to the agent. Say the cost before starting:
+  2-4 minutes and 105,000-144,000 tokens per series in art's autonomous
+  lane.
 
-**Guided:** ask the three before loading; the order first.
+**Guided:** ask the three before loading; the order first. With raw data and
+art connected, offer art for the univariate models, with its cost.
 **Autonomous:** the order the files come in, and say it is an assumption; the
 purpose only if the analyst gave it (N1c records it otherwise, with its
 reason); route U, the ladder, unless the analyst asked for V.

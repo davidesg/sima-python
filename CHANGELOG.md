@@ -2,6 +2,17 @@
 
 ## 0.2.5 — unreleased
 
+**N0a, `art_brief`: the univariate models built in art.** From raw data,
+instead of sima's light builder, the agent can build each series' model in
+art, the analyst's tool, one series after another (art's rule), and load the
+adopted `.pre` files with `load_pre(..., route=...)`. `art_brief` gives the
+brief: the cost (2-4 minutes and 105,000-144,000 tokens per series, measured
+in art's autonomous lane), the rules for every series once (art's protocol,
+the lane, `objetivo="multivariante"`, a pure AR unless the MA is very clear,
+the stop rule) and, per series, its folder, its `load_data` call and sima's
+characterization as evidence. sima does not call art. `load_pre` goes on
+with the raw entry's guion when the session has the same name.
+
 **The first route V is retired.** It wrote specifications with no univariate
 model (`write_specs`), built a yardstick aside and went round the gate.
 Route V now goes through the gate on both entries: `load_pre(..., route="V")`

@@ -66,7 +66,11 @@ You arrive here in one of three ways:
     Alavi) with build_univariate, or (V) the vector first (Tiao and Box) with
     build_univariate(route="V"): the same univariate models, through the
     same gate, and estimate(p, q) replaces each series' regular ARMA by the
-    vector's free AR(p)/MA(q). The
+    vector's free AR(p)/MA(q). When art is connected, offer to build them IN
+    ART instead (art_brief: the brief per series, art's lane one series
+    after another, then load_pre(route=...) with the adopted .pre files);
+    say its cost first (2-4 minutes and ~105,000-144,000 tokens per series in
+    art's autonomous lane). The
     univariate models are art's autonomous lane in miniature: say it, and offer art
     for any series with a tie or a residual problem. With two or more differenced series, offer
     canonical_analysis on the levels right after characterize.
@@ -127,6 +131,9 @@ N0c characterize      each series' lambda, d, seasonality, outliers (art's engin
 N0u build_univariate  each series' model with art's engine (light, not
                       reviewed in art), then the ladder session on those
                       files; route="V" opens it on route V
+N0a art_brief         or each series' model IN ART, the analyst's tool: the
+                      brief per series (one after another, never in
+                      parallel), then load_pre(route=...) on the .pre files
 N0  load_pre          the files, their models, the common window. With
                       route="V", the vector first THROUGH THE GATE (drvarma
                       0.4.0): the same univariate files and the same gate;
@@ -1106,6 +1113,87 @@ def build_univariate(name: str, out_dir: str = "", overwrite: bool = False,
 
 
 @mcp.tool()
+def art_brief(name: str, out_dir: str = "") -> str:
+    """N0a — The brief for building each series' univariate model IN ART, the
+    analyst's tool, instead of sima's light builder (build_univariate). After
+    characterize; mostly for route V (Tiao and Box), whose univariate models
+    are the gate, the means, the deterministic terms and the yardstick.
+
+    sima does not call art: the agent that has both servers walks art's lane
+    series by series, ONE AFTER ANOTHER (art's rule: never in parallel), with
+    this brief, then loads the adopted .pre files with load_pre(name, ...,
+    route="V"). The brief is the same every time: the table and the column,
+    the characterization sima made (evidence, not orders), the purpose
+    (objetivo="multivariante": deterministic seasonality, never a seasonal unit
+    root), the analyst's bias for the orders (a pure AR unless the MA is very
+    clear: an instruction to the agent, not an option of art), the stop rule,
+    and a folder per series (`out_dir`, default `<data>_art/`).
+
+    In the autonomous lane the agent decides art's nodes; in the guided lane
+    the analyst does, in art's guided lane, and the biases are proposals.
+    Measured cost of art's autonomous lane (22-nov-2026, the US monetary
+    VAR): 2 to 4 minutes and 105,000 to 144,000 tokens per series."""
+    try:
+        r = _sess.get_raw(name)
+    except KeyError as e:
+        return str(e)
+    if r.chars is None:
+        return f'Characterize the series first (characterize("{name}")).'
+    d = os.path.expanduser(out_dir) if out_dir else os.path.splitext(r.path)[0] + "_art"
+    lane = _sess._LANES.get(name, "guided")
+    auto = lane == "autonomous"
+    y0, p0 = r.start
+    n = len(r.names)
+    lines = [f"ART'S {'AUTONOMOUS' if auto else 'GUIDED'} LANE, ONE SERIES AFTER ANOTHER "
+             f"({n} series, never in parallel)",
+             f"Cost, measured in the autonomous lane: 2-4 minutes and 105,000-144,000 "
+             f"tokens per series; for {n} series about {2 * n}-{4 * n} minutes and "
+             f"{105 * n:,},000-{144 * n:,},000 tokens.",
+             ""]
+    lines += ["FOR EVERY SERIES:",
+              "  - protocolo_autonomo() first if its section is not in view; follow it "
+              "node by node." if auto else
+              "  - art's guided lane: the analyst decides each node.",
+              "  - modo=\"autonomo\" in every tool that takes it; never con_figuras=True."
+              if auto else "  - modo=\"guiado\" (the default).",
+              "  - objetivo=\"multivariante\": deterministic seasonality (harmonics), never "
+              "a seasonal unit root — the series enters a system.",
+              "  - the orders: prefer a pure AR over an ARMA or MA unless the MA is very "
+              "clear (an ACF that cuts off with a slowly decaying PACF, and an AR that "
+              "would need three or more extra parameters or leaves the residuals dirty). "
+              "In a tie, estimate both as art's rule asks, then apply this; say it at the "
+              "node." + ("" if auto else " (A proposal to the analyst.)"),
+              "  - interventions: art's protocol. Outside information about an event only "
+              "from the analyst; if you use your own knowledge, say so at the node.",
+              "  - stop when the diagnosis is clean (then the formal tests), or after two "
+              "reformulations that do not improve it (then say so: the model is handed "
+              "back with its caveat).",
+              "  - hand back the adopted model's .pre, in the series' folder.",
+              ""]
+    for j, (nm, c) in enumerate(zip(r.names, r.chars), 1):
+        folder = os.path.join(d, nm)
+        seas = ("seasonality detected: deterministic, harmonics" if c.get("harmonics")
+                else "no seasonality detected" if r.freq > 1 else "annual data")
+        outl = c.get("outliers") or []
+        lines += [f"SERIES {nm} ({j} of {n}) — folder {folder}",
+                  f"  load_data(source_path=\"{r.path}\", output_inp=\"{folder}/{nm}.inp\", "
+                  f"column=\"{nm}\", freq={r.freq}, start_year={y0}, start_period={p0})",
+                  f"  sima's characterization, evidence and not orders: lambda {c['lam']:g}, "
+                  f"d {c['d']}, {seas}"
+                  + (f"; outliers flagged at {', '.join(str(o[0]) for o in outl[:6])}"
+                     if outl else "") + ".",
+                  ""]
+    lines += ["WHEN EVERY SERIES HAS ITS .pre: "
+              f'load_pre(name="{name}", paths_json=<the {n} .pre files, in this order: '
+              f'{", ".join(r.names)}>, route="V") — or route="U" for the ladder.',
+              "The guion of the raw entry goes on in that session."]
+    r.guion.add("N0a", "art_brief", {"out_dir": d, "lane": lane, "series": n},
+                f"univariate models to be built in art's {lane} lane, one after another: "
+                "objetivo=multivariante, a pure AR unless the MA is very clear")
+    return "\n".join(lines)
+
+
+@mcp.tool()
 def write_specs(name: str, out_dir: str = "", overwrite: bool = False) -> str:
     """N0v — DEPRECATED (sima 0.2.5): route V from raw data is now
     build_univariate(route="V"). It is called here, and the answer says so.
@@ -1170,6 +1258,11 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
         s = _sess.open_session(name, paths)
     except Exception as e:                                # the engine says why
         return f"Cannot open the session: {e}"
+    try:                                  # a raw entry of the same name: its guion goes on
+        _r = _sess.get_raw(name)
+        s.guion.entries = list(_r.guion.entries) + list(s.guion.entries)
+    except KeyError:
+        pass
     s.route, s.v = rt, None
     txt = evidence.series_table(s.series)
     from . import scale as _sc
