@@ -55,7 +55,8 @@ def test_the_session_has_its_own_folder_beside_the_files(tmp_path):
 
 # (c) -------------------------------------------------------------------------
 def test_the_viewer_keys():
-    assert viewer.should_open(False, "posix", {}, False)
+    assert not viewer.should_open(False, "posix", {}, False)              # a script
+    assert viewer.should_open(False, "posix", {"SIMA_VIEWER": "1"}, False)
     assert not viewer.should_open(False, "posix", {}, True)                # pytest
     assert not viewer.should_open(False, "posix", {"SIMA_NO_VIEWER": "1"}, False)
     assert not viewer.should_open(True, "nt", {}, False)                   # Windows host

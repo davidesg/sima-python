@@ -8,9 +8,12 @@ handed to the desktop's viewer: os.startfile on Windows, `open` on macOS,
 (art's BUG-0111 and BUG-0121), with the same keys:
 
   SIMA_NO_VIEWER / pytest   off, always;
-  SIMA_VIEWER               on where it would be off: under the MCP server on
-                            Windows, whose desktop host intercepts os.startfile
-                            and turns it into "attach this file?".
+  outside the MCP server    off: a script that drives the tools (a worked
+                            example's run.py) would open every figure it draws
+                            (and the CI's macOS runners stalled on it);
+  SIMA_VIEWER               on where it would be off: outside the server, or
+                            under it on Windows, whose desktop host intercepts
+                            os.startfile and turns it into "attach this file?".
 
 Failing to open a window never fails the analysis, and never passes unseen:
 the reason is kept in LAST_ERROR.
@@ -30,9 +33,9 @@ def should_open(under_server: bool, osname: str, env, under_pytest: bool) -> boo
     """Is the shell asked to open the figure? Decides; does not act."""
     if under_pytest or env.get("SIMA_NO_VIEWER"):
         return False
-    if under_server and osname == "nt" and not env.get("SIMA_VIEWER"):
-        return False
-    return True
+    if env.get("SIMA_VIEWER"):
+        return True
+    return under_server and osname != "nt"
 
 
 def launch(path: str) -> str:

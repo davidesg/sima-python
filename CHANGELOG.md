@@ -27,8 +27,9 @@ guided lane on the compiled engines.
 - The session has its own folder, `sima_<name>/` in the folder that holds
   its files: the guion (`<name>.sima.json`, `.html`) and `figs/`. They went
   into the first series' folder.
-- Each figure is also opened in the desktop's viewer, as art does
-  (`SIMA_NO_VIEWER` turns it off; `SIMA_VIEWER` on under the server on Windows).
+- Under the MCP server, each figure is also opened in the desktop's viewer,
+  as art does (`SIMA_NO_VIEWER` turns it off; `SIMA_VIEWER` turns it on in a
+  script, or under the server on Windows).
 - `simplify` prints the coefficients in each series' units, as `estimate`.
 - The UNITS line of `load_pre` names what differs: different lambdas with a
   common factor need nothing in the files.
