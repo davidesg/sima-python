@@ -135,7 +135,7 @@ def irf_figure(L, horizon, bands=None, freq=12, resp=None):
         O = oirf(r.phi, r.theta, r.sigma, horizon)         # (H+1, m, m)
         LO = bands["oirf_lo"] if bands else None
         HI = bands["oirf_hi"] if bands else None
-        info = {"cumulative": False, "factor": None, "band_note": None}
+        info = {"levels": False, "factor": None, "band_note": None, "permanent": None}
     else:
         O, LO, HI, info = resp
     h = np.arange(horizon + 1)
@@ -144,18 +144,25 @@ def irf_figure(L, horizon, bands=None, freq=12, resp=None):
         for j in range(m):
             lo = LO[:, i, j] if LO is not None else None
             hi = HI[:, i, j] if HI is not None else None
-            lim, ticks = _panel_limit(O[:, i, j], lo, hi)
+            pe = info.get("permanent")
+            pv = float(pe[i, j]) if pe is not None and np.isfinite(pe[i, j]) else None
+            lim, ticks = _panel_limit(O[:, i, j], lo, hi,
+                                      None if pv is None else np.array([pv]))
             _impulse_panel(axes[i, j], h, O[:, i, j], lo, hi, lim, ticks, freq,
                            f"{names[i]} <- {names[j]}")
+            if pv is not None and pv != 0.0:      # the permanent effect, dotted
+                axes[i, j].axhline(pv, color="k", lw=0.9, ls=":", zorder=2)
     bn = info["band_note"] or bands
     sub = ("dashed: %d %% Monte-Carlo band, %d draws" % (round(100 * (1 - bn["alpha"])),
                                                          bn["ndraws_used"])
            if bn and LO is not None else "no band")
-    what = "Cumulated orthogonalised responses (the levels)" if info["cumulative"] \
+    what = "Impulse responses of the LEVELS" if info["levels"] \
         else "Orthogonalised impulse responses"
     if info["factor"]:
         j, size, _b, _c = info["factor"]
         sub += f"; shock to {names[j]} scaled to {size:g} at h = 0"
+    if info["levels"]:
+        sub += "; dotted: the permanent effect"
     fig.suptitle(f"{what} (Cholesky order: {', '.join(names)})\n{sub}", fontsize=10)
     fig.tight_layout()
     return fig

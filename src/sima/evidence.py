@@ -1027,7 +1027,7 @@ def irf_text(phi, theta, sigma, names, horizon, bands=None, why=None, resp=None,
         O = oirf(phi, theta, sigma, horizon)
         LO = bands["oirf_lo"] if bands is not None else None
         HI = bands["oirf_hi"] if bands is not None else None
-        info = {"cumulative": False, "factor": None, "band_note": None}
+        info = {"levels": False, "factor": None, "band_note": None, "permanent": None}
     else:
         O, LO, HI, info = resp
     out = ["IMPULSE RESPONSES (orthogonalised, Cholesky in the ORDER OF THE FILES:",
@@ -1035,13 +1035,20 @@ def irf_text(phi, theta, sigma, names, horizon, bands=None, why=None, resp=None,
            "series is not moved within the period by the others' innovations. With a",
            "strong contemporaneous correlation the answer depends on it; reorder the",
            "files and compare before reading a response as a finding."]
-    if info["cumulative"]:
-        out.append("CUMULATED responses: the running sum over h, the response of the LEVEL of "
-                   "a differenced series (of w = refactor*BoxCox(z)). The band is taken from "
-                   "the same draws, each cumulated; it is not the sum of the monthly bands.")
+    if info["levels"]:
+        dd = ", ".join(f"{nm} d={d}" + (f" D={D}" if D else "")
+                       for nm, (d, D, _s) in zip(names, info["diffs"]))
+        out += ["IMPULSE RESPONSE OF THE LEVEL: one shock at h = 0, and the response of each",
+                "series' level (of w = refactor*BoxCox(z)), its own differences undone",
+                f"({dd}). For d = 1 it is the running sum of the responses of the",
+                "differences: numerically the STEP response of the differences, but to a",
+                "SINGLE shock. The response of the differences dies out; that of the level",
+                "converges to the PERMANENT EFFECT (below). The band is taken from the same",
+                "draws, each transformed; it is not the sum of the monthly bands."]
     else:
-        out.append("Responses on the stationary (transformed, differenced) scale; "
-                   "cumulative=True gives the level.")
+        out.append("IMPULSE RESPONSE OF THE DIFFERENCES: the stationary (transformed, "
+                   "differenced) series, e.g. the monthly rate; it dies out. levels=True gives "
+                   "the response of each series' level and the permanent effect.")
     if units:
         out.append(units)
     if info["factor"]:
@@ -1061,6 +1068,24 @@ def irf_text(phi, theta, sigma, names, horizon, bands=None, why=None, resp=None,
                 cells = [f"{f'{O[h, i, j]:.5f} [{lo[i]:.5f}, {hi[i]:.5f}]':>{w}}"
                          for i in range(len(names))]
             out.append(f"  {h:<3}" + "".join(cells))
+        pe = info.get("permanent")
+        if pe is not None:
+            pl, ph = info.get("perm_lo"), info.get("perm_hi")
+            cells = []
+            for i in range(len(names)):
+                v = pe[i, j]
+                if not np.isfinite(v):
+                    cells.append(f"{'none':>{w}}")
+                elif pl is not None:
+                    cells.append(f"{f'{v:.5f} [{pl[i, j]:.5f}, {ph[i, j]:.5f}]':>{w}}")
+                else:
+                    cells.append(f"{v:>{w}.5f}")
+            out.append("  inf" + "".join(cells))
+    if info.get("permanent") is not None:
+        out += ["", "inf: the PERMANENT EFFECT on the level, Psi(1) P with Psi(1) = "
+                "Phi(1)^-1 Theta(1): where the level response converges (d = 1). 0 for a "
+                "series with d = 0, whose response dies out; 'none' where it does not "
+                "converge (d = 2 or a seasonal difference)."]
     return "\n".join(out)
 
 

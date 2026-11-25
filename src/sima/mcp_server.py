@@ -2595,7 +2595,7 @@ def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
 
 @mcp.tool()
 def impulse_response(name: str, horizon: int = 12, bands: bool = True,
-                     ndraws: int = 800, cumulative: bool = False, scale: str = "") -> str:
+                     ndraws: int = 800, levels: bool = False, scale: str = "") -> str:
     """N6 — Orthogonalised impulse responses of the last estimated model.
 
     Cholesky in the ORDER OF THE FILES: an identifying assumption, stated in the
@@ -2604,9 +2604,14 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
-    `cumulative`: the running sum over h — the response of the LEVEL of a
-    differenced series, as a VAR in differences is read — with its band from
-    the same draws, each cumulated. `scale`: "SERIES=size" rescales that
+    The responses are of the DIFFERENCES (the stationary series): one shock,
+    the response of the rates, which dies out. `levels`: the impulse response
+    of each series' LEVEL to the same single shock (its own differences
+    undone: summed for d = 1; a series with d = 0 left as it is), with its band
+    from the same draws, and the PERMANENT EFFECT Psi(1) P where the level
+    converges (d = 1) — as a VAR in differences is read. For d = 1 it equals
+    the step response of the differences, but it answers one shock, not one
+    every period. `scale`: "SERIES=size" rescales that
     series' shock so its own response at h = 0 is `size` in the table's units
     (e.g. "FF=25": 25 basis points for a rate in % with factor 100).
     On a VEC: the responses of the LEVELS (drvec), in drvec's order — the
@@ -2630,12 +2635,12 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
     b, why = _bands(s, int(horizon), bands, ndraws)
     L = _current(s)
     try:
-        resp = _rs.responses(L, int(horizon), b, cumulative, sc, ndraws)
+        resp = _rs.responses(L, int(horizon), b, levels, sc, ndraws)
     except ValueError as e:
         return f"{e}"
     s.guion.add("N6", "impulse_response",
                 {"horizon": horizon, "bands": b is not None, "model": _desc(s.current),
-                 **({"cumulative": True} if cumulative else {}),
+                 **({"levels": True} if levels else {}),
                  **({"scale": scale} if sc else {})},
                 "Cholesky, files order", kind="VARMA")
     return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why,
@@ -2754,7 +2759,7 @@ def kind_tool(kind):
         return "plot_identification"
     if kind == "rankboot":
         return "plot_rank_bootstrap"
-    return {"irf": "plot_impulse_response", "irf_cum": "plot_impulse_response",
+    return {"irf": "plot_impulse_response", "irf_levels": "plot_impulse_response",
             "fevd": "plot_variance_decomposition",
             "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
 
@@ -2838,7 +2843,7 @@ def _figures(s, items, text):
 
 @mcp.tool()
 def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
-                          ndraws: int = 500, path: str = "", cumulative: bool = False,
+                          ndraws: int = 500, path: str = "", levels: bool = False,
                           scale: str = "") -> list:
     """FIGURE — The orthogonalised impulse responses of the last estimated model.
 
@@ -2846,7 +2851,8 @@ def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
     one panel per (response, shock), thick impulses at h = 0..H, the seasonal
     grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
     order of the files, as impulse_response. The numbers are impulse_response's,
-    with its `cumulative` and `scale`. Each panel is fitted to its own largest
+    with its `levels` (the permanent effect dotted) and `scale`. Each panel is
+    fitted to its own largest
     value, band included, as the acf and pacf are.
     On a VEC: the level responses (drvec), with the bootstrap's 90 % band
     from irf_bands when it has run.
@@ -2867,15 +2873,15 @@ def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
         return [str(e)]
     b, why = _bands(s, int(horizon), bands, ndraws)
     try:
-        resp = _rs.responses(L, int(horizon), b, cumulative, sc, ndraws)
+        resp = _rs.responses(L, int(horizon), b, levels, sc, ndraws)
     except ValueError as e:
         return [str(e)]
     fig = figures.irf_figure(L, int(horizon), b, s.series[0].freq, resp=resp)
-    note = ("Cumulated orthogonalised responses" if cumulative
+    note = ("Impulse responses of the levels" if levels
             else "Orthogonalised impulse responses") \
         + (f", shock {scale}" if sc else "") + f" ({_desc(s.current)})" \
         + (f" (no band: {why})" if why else "")
-    kind = "irf_cum" if cumulative else "irf"
+    kind = "irf_levels" if levels else "irf"
     return _figure(s, fig, kind, path, note)
 
 

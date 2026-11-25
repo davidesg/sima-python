@@ -641,7 +641,7 @@ N2 — Jenkins and Alavi's (1981) two identifications, as matrices.
 | `horizon` | integer | no | `12` |
 | `bands` | boolean | no | `True` |
 | `ndraws` | integer | no | `800` |
-| `cumulative` | boolean | no | `False` |
+| `levels` | boolean | no | `False` |
 | `scale` | string | no | `` |
 
 N6 — Orthogonalised impulse responses of the last estimated model.
@@ -652,9 +652,14 @@ N6 — Orthogonalised impulse responses of the last estimated model.
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
-    `cumulative`: the running sum over h — the response of the LEVEL of a
-    differenced series, as a VAR in differences is read — with its band from
-    the same draws, each cumulated. `scale`: "SERIES=size" rescales that
+    The responses are of the DIFFERENCES (the stationary series): one shock,
+    the response of the rates, which dies out. `levels`: the impulse response
+    of each series' LEVEL to the same single shock (its own differences
+    undone: summed for d = 1; a series with d = 0 left as it is), with its band
+    from the same draws, and the PERMANENT EFFECT Psi(1) P where the level
+    converges (d = 1) — as a VAR in differences is read. For d = 1 it equals
+    the step response of the differences, but it answers one shock, not one
+    every period. `scale`: "SERIES=size" rescales that
     series' shock so its own response at h = 0 is `size` in the table's units
     (e.g. "FF=25": 25 basis points for a rate in % with factor 100).
     On a VEC: the responses of the LEVELS (drvec), in drvec's order — the
@@ -995,7 +1000,7 @@ FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the
 | `bands` | boolean | no | `True` |
 | `ndraws` | integer | no | `500` |
 | `path` | string | no | `` |
-| `cumulative` | boolean | no | `False` |
+| `levels` | boolean | no | `False` |
 | `scale` | string | no | `` |
 
 FIGURE — The orthogonalised impulse responses of the last estimated model.
@@ -1004,7 +1009,8 @@ FIGURE — The orthogonalised impulse responses of the last estimated model.
     one panel per (response, shock), thick impulses at h = 0..H, the seasonal
     grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
     order of the files, as impulse_response. The numbers are impulse_response's,
-    with its `cumulative` and `scale`. Each panel is fitted to its own largest
+    with its `levels` (the permanent effect dotted) and `scale`. Each panel is
+    fitted to its own largest
     value, band included, as the acf and pacf are.
     On a VEC: the level responses (drvec), with the bootstrap's 90 % band
     from irf_bands when it has run.

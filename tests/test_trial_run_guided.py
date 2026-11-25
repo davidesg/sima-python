@@ -71,24 +71,47 @@ def test_a_pairs_p_discounts_the_system_orders(ja):
 
 
 # (g) -------------------------------------------------------------------------
-def test_cumulated_and_scaled_responses(ja):
+def test_level_responses_and_the_permanent_effect(ja):
     from drvarma.irf import oirf
     L = M._current(S.get(ja))
     r = L.result
+    diffs = responses.differences(L)
     O = oirf(r.phi, r.theta, r.sigma, 8)
-    Oc, lo, hi, info = responses.responses(L, 8, None, cumulative=True)
-    assert np.allclose(Oc, np.cumsum(O, axis=0)) and lo is None and info["cumulative"]
+    Ol, lo, hi, info = responses.responses(L, 8, None, levels=True)
+    exp = np.stack([responses.undo(O[:, i, :], *diffs[i]) for i in range(O.shape[1])], axis=1)
+    assert np.allclose(Ol, exp) and lo is None and info["levels"]
+    # the level converges to the permanent effect where d = 1 (D = 0)
+    Olong, *_ = responses.responses(L, 400, None, levels=True)
+    pe = info["permanent"]
+    for i, (d, D, _s) in enumerate(diffs):
+        if d == 1 and D == 0:
+            assert np.allclose(Olong[-1, i], pe[i], atol=1e-6)
+        elif d == 0 and D == 0:
+            assert np.allclose(pe[i], 0.0)
     b = L.irf_fevd_bands(8, ndraws=60)
-    Oc, lo, hi, info = responses.responses(L, 8, b, cumulative=True, ndraws=60)
-    assert np.all(lo <= Oc + 1e-9) and np.all(Oc <= hi + 1e-9)
+    Ol, lo, hi, info = responses.responses(L, 8, b, levels=True, ndraws=60)
+    assert np.all(lo <= Ol + 1e-9) and np.all(Ol <= hi + 1e-9)
     j = 1
-    Os, lo, hi, info = responses.responses(L, 8, b, scale=(j, 25.0), ndraws=60)
+    Os, lo, hi, info2 = responses.responses(L, 8, b, levels=True, scale=(j, 25.0), ndraws=60)
+    c = 25.0 / Ol[0, j, j]
     assert Os[0, j, j] == pytest.approx(25.0)
-    assert np.allclose(Os[:, :, 0], O[:, :, 0])                     # other shocks: 1 s.d.
-    assert np.all(lo[:, :, j] <= hi[:, :, j])
-    t = _fn(M.impulse_response)(ja, horizon=6, ndraws=60, cumulative=True, scale="MINK=1")
-    assert "CUMULATED responses" in t and "SCALED: the shock to MINK" in t and "Units:" in t
+    assert np.allclose(Os[:, :, 0], Ol[:, :, 0])                    # other shocks: 1 s.d.
+    assert np.allclose(info2["permanent"][:, j], info["permanent"][:, j] * c, equal_nan=True)
+    t = _fn(M.impulse_response)(ja, horizon=6, ndraws=60, levels=True, scale="MINK=1")
+    assert "IMPULSE RESPONSE OF THE LEVEL" in t and "STEP response" in t
+    assert "PERMANENT EFFECT" in t and "  inf" in t
+    assert "SCALED: the shock to MINK" in t and "Units:" in t
+    t = _fn(M.impulse_response)(ja, horizon=4, bands=False)
+    assert "IMPULSE RESPONSE OF THE DIFFERENCES" in t and "dies out" in t
     assert "not one of the series" in _fn(M.impulse_response)(ja, scale="XX=1")
+
+
+def test_undo_each_difference():
+    x = np.array([1.0, 0.5, 0.25, 0.0, 0.0])
+    assert np.allclose(responses.undo(x, 0, 0, 12), x)
+    assert np.allclose(responses.undo(x, 1, 0, 12), np.cumsum(x))
+    assert np.allclose(responses.undo(x, 2, 0, 12), np.cumsum(np.cumsum(x)))
+    assert np.allclose(responses.undo(x, 0, 1, 2), [1.0, 0.5, 1.25, 0.5, 1.25])
 
 
 # (h) -------------------------------------------------------------------------
@@ -133,3 +156,17 @@ def test_a_failed_call_leaves_no_step(ja, monkeypatch):
     with pytest.raises(RuntimeError):
         _fn(M.check_residuals)(ja)         # through the lane wrapper
     assert len(s.guion.entries) == n
+
+
+def test_the_permanent_effect_keeps_box_and_jenkins_signs():
+    """Phi(B) = I - phi_1 B - ..., Theta(B) = I - theta_1 B - ... (drvarma and its
+    siblings): Psi(1) P must be the long sum of drvarma's own oirf, with an MA."""
+    from drvarma.irf import oirf
+    phi = np.array([[[0.5, 0.1], [0.2, 0.3]], [[-0.1, 0.0], [0.05, 0.1]]])
+    theta = np.array([[[0.4, -0.2], [0.1, -0.3]]])
+    sigma = np.array([[1.0, 0.3], [0.3, 2.0]])
+    long = oirf(phi, theta, sigma, 600).sum(axis=0)
+    pe = responses.permanent(phi, theta, sigma, [(1, 0, 12), (1, 0, 12)])
+    assert np.allclose(pe, long, atol=1e-8)
+    # the other sign would not do
+    assert not np.allclose(responses.permanent(phi, -theta, sigma, [(1, 0, 12)] * 2), long)
