@@ -11,11 +11,15 @@ guided lane on the compiled engines.
   adopted model, and the Cholesky order those responses rest on; and
   `record_decision(caveat=...)` records what a decision leaves open, which
   `hand_over` lists.
-- `impulse_response` and `plot_impulse_response` take `cumulative` (the
-  response of the level of a differenced series, its band from the same
-  draws, each cumulated) and `scale` ("FF=25": the shock rescaled so its own
-  response at h = 0 is 25 in the table's units). The table says the units of
-  each series.
+- `impulse_response` and `plot_impulse_response` take `levels`: the impulse
+  response of each series' LEVEL to the same single shock, its own
+  differences undone (summed for d = 1; a series with d = 0 left as it is),
+  its band from the same draws, and the PERMANENT EFFECT Psi(1) P where the
+  level converges (d = 1; dotted in the figure). The text says what it is: an
+  impulse response, numerically the step response of the differences but to
+  one shock; the responses of the differences die out, those of the level
+  converge. And `scale` ("FF=25": the shock rescaled so its own response at
+  h = 0 is 25 in the table's units). The table says the units of each series.
 - The IRF panels are fitted each to its own largest value, band included, as
   the acf and pacf are, with finer steps: one scale per row let a series' own
   shock flatten every cross response in its row. The same in the VEC's level
