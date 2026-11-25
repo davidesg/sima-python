@@ -15,3 +15,9 @@ src/sima/material/
 **/sima_jobs/*/runner.log
 **/sima_jobs/*/progress.json
 **/sima_jobs/*/c/
+
+# a session's own folder, sima_<name>/ (guion and figures), written beside the
+# files by the tests and the worked examples; the examples' job caches,
+# sima_jobs/, are not sessions and stay
+**/sima_*/
+!**/sima_jobs/

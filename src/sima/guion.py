@@ -6,8 +6,11 @@ analysts (or two models) be compared. sima keeps the same idea, smaller: one
 entry per protocol node, with the tool, its arguments, the evidence it produced
 in one line, and the decision the analyst took.
 
-The guion is saved as JSON next to the first file of the session
-(``<first>.sima.json``) so that it travels with the data.
+The guion is saved as JSON in the session's own folder, ``sima_<name>/``,
+beside the files (in the folder that holds them all), so that it travels with
+the data; its figures go to ``sima_<name>/figs/``. A session is about several
+series: its record is not one series' (art keeps a folder per series; sima
+keeps one per system).
 """
 from __future__ import annotations
 
@@ -92,14 +95,24 @@ class Guion:
         """The decisions still open, oldest first."""
         return [e for e in self.entries if e.status == "pending"]
 
-    def path(self):
+    def folder(self):
+        """The session's folder: sima_<name>/ in the folder that holds all its
+        files (their common parent), or in the working directory without files."""
         if not self.files:
-            return f"{self.name}.sima.json"
-        base = os.path.splitext(os.path.expanduser(self.files[0]))[0]
-        return f"{base}.sima.json"
+            return os.path.abspath(f"sima_{self.name}")
+        dirs = [os.path.dirname(os.path.abspath(os.path.expanduser(f))) for f in self.files]
+        try:
+            base = os.path.commonpath(dirs)
+        except ValueError:                                  # different drives (Windows)
+            base = dirs[0]
+        return os.path.join(base, f"sima_{self.name}")
+
+    def path(self):
+        return os.path.join(self.folder(), f"{self.name}.sima.json")
 
     def save(self, path=None):
         path = path or self.path()
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "w") as fh:
             json.dump({"name": self.name, "files": self.files,
                        "entries": [asdict(e) for e in self.entries]}, fh, indent=2)
@@ -109,13 +122,13 @@ class Guion:
         return os.path.splitext(self.path())[0] + ".html"
 
     def figures_dir(self):
-        """Where the figures go: next to the first file, so the HTML guion and
-        its figures travel with the data (art does the same)."""
-        base = os.path.dirname(os.path.abspath(self.path()))
-        return os.path.join(base, "figs")
+        """Where the figures go: the session folder's figs/, beside its HTML
+        guion, so the page and its figures travel together."""
+        return os.path.join(self.folder(), "figs")
 
     def save_html(self, path=None):
         path = path or self.html_path()
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(render_html(self, os.path.dirname(os.path.abspath(path))))
         return path

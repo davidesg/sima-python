@@ -56,6 +56,38 @@ def _nice(v):
     return 10.0 * e
 
 
+#: the steps of a response panel's limit, per decade: finer than _nice's, as
+#: fug's acf limit (0.40, 0.60, 0.80, 1.00) is finer than a decade
+FINE = (1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0)
+
+
+def _fine(v):
+    """A panel's symmetric limit: the smallest FINE step times a power of ten
+    at least v."""
+    if not v > 0 or not math.isfinite(v):
+        return 1.0
+    e = 10.0 ** math.floor(math.log10(v))
+    for f in FINE:
+        if f * e >= v * 1.0001:
+            return f * e
+    return 10.0 * e
+
+
+def _panel_limit(*arrays):
+    """(ylim, yticks) of one response panel, fitted to its own largest value,
+    band included — as the acf and pacf are fitted to theirs. One limit per
+    ROW let the series' own shock at h = 0 flatten every cross response in
+    the row (the trial run of 25-nov-2026: the IPI row at +-1 for an own
+    0.61, the cross responses near 0.06), and the cross responses are the
+    ones a system is estimated for. Each panel carries its ticks, so the
+    scales stay in view."""
+    vals = [np.abs(np.asarray(a, float)) for a in arrays if a is not None]
+    top = max((float(np.nanmax(v)) for v in vals if v.size and np.any(np.isfinite(v))),
+              default=0.0)
+    c = _fine(top) if top > 0 else 1.0
+    return (-c, c), [-c, -c / 2, 0.0, c / 2, c]
+
+
 def _seasonal_grid(ax, H, freq, x0):
     if freq > 1:
         grid = [freq * k for k in range(1, 4) if freq * k <= H]
@@ -88,33 +120,43 @@ def _impulse_panel(ax, h, vals, lo, hi, ylim, yticks, freq, title, zero=True,
     ax.set_title(title, loc="left", fontsize=9, pad=2)
 
 
-def irf_figure(L, horizon, bands=None, freq=12):
+def irf_figure(L, horizon, bands=None, freq=12, resp=None):
     """The orthogonalised IRF of the fitted ladder, m x m: row = response,
     column = shock (in the Cholesky order of the series). `bands` is
-    `Ladder.irf_fevd_bands` or None."""
+    `Ladder.irf_fevd_bands` or None; `resp` is sima.responses.responses'
+    (O, lo, hi, info) when the responses are cumulated or scaled. Each panel
+    is fitted to its own largest value (_panel_limit)."""
     from drvarma.irf import oirf
     plt = _plt()
     r = L.result
     names = [s.name for s in L.series]
     m = len(names)
-    O = oirf(r.phi, r.theta, r.sigma, horizon)             # (H+1, m, m)
+    if resp is None:
+        O = oirf(r.phi, r.theta, r.sigma, horizon)         # (H+1, m, m)
+        LO = bands["oirf_lo"] if bands else None
+        HI = bands["oirf_hi"] if bands else None
+        info = {"cumulative": False, "factor": None, "band_note": None}
+    else:
+        O, LO, HI, info = resp
     h = np.arange(horizon + 1)
     fig, axes = plt.subplots(m, m, figsize=(2.9 * m + 0.6, 2.1 * m + 0.6), squeeze=False)
     for i in range(m):
-        row = [np.abs(O[:, i, :])]
-        if bands:
-            row += [np.abs(bands["oirf_lo"][:, i, :]), np.abs(bands["oirf_hi"][:, i, :])]
-        c = _nice(max(float(np.max(x)) for x in row))
         for j in range(m):
-            lo = bands["oirf_lo"][:, i, j] if bands else None
-            hi = bands["oirf_hi"][:, i, j] if bands else None
-            _impulse_panel(axes[i, j], h, O[:, i, j], lo, hi, (-c, c),
-                           [-c, -c / 2, 0.0, c / 2, c], freq, f"{names[i]} <- {names[j]}")
-    sub = ("dashed: %d %% Monte-Carlo band, %d draws" % (round(100 * (1 - bands["alpha"])),
-                                                         bands["ndraws_used"])
-           if bands else "no band")
-    fig.suptitle(f"Orthogonalised impulse responses (Cholesky order: {', '.join(names)})\n{sub}",
-                 fontsize=10)
+            lo = LO[:, i, j] if LO is not None else None
+            hi = HI[:, i, j] if HI is not None else None
+            lim, ticks = _panel_limit(O[:, i, j], lo, hi)
+            _impulse_panel(axes[i, j], h, O[:, i, j], lo, hi, lim, ticks, freq,
+                           f"{names[i]} <- {names[j]}")
+    bn = info["band_note"] or bands
+    sub = ("dashed: %d %% Monte-Carlo band, %d draws" % (round(100 * (1 - bn["alpha"])),
+                                                         bn["ndraws_used"])
+           if bn and LO is not None else "no band")
+    what = "Cumulated orthogonalised responses (the levels)" if info["cumulative"] \
+        else "Orthogonalised impulse responses"
+    if info["factor"]:
+        j, size, _b, _c = info["factor"]
+        sub += f"; shock to {names[j]} scaled to {size:g} at h = 0"
+    fig.suptitle(f"{what} (Cholesky order: {', '.join(names)})\n{sub}", fontsize=10)
     fig.tight_layout()
     return fig
 
@@ -159,12 +201,20 @@ def q_lags(K, npar, n):
 
 
 def residual_npq(L):
-    """GraphMaker's p + q for the P of a residual pair: the largest AR order
-    plus the largest MA order of the fitted model (the expanded operators,
-    own and cross)."""
-    r = L.result
-    return int(np.shape(r.phi)[0] if np.size(r.phi) else 0) + \
-        int(np.shape(r.theta)[0] if np.size(r.theta) else 0)
+    """GraphMaker's p + q for the P of a residual pair: the system's orders,
+    the VARMA(p, q) the analyst estimated (the echelon form's largest index
+    for both). GraphMaker drew the CCFs of a VARMA(p, q); on route U the
+    diagonal also carries each series' univariate model, and its expanded
+    operators (an AR(3) x AR(1)_12 is an AR(15)) are not the system's order:
+    discounting them left a pair's P with 8 d.f. over 17 lags, which rejected
+    every pair of a clean fit (the trial run of 25-nov-2026). The univariate
+    parameters are discounted where they belong, in each series' own Q."""
+    p, q = getattr(L, "p", None), getattr(L, "q", None)
+    if p is None or q is None:                       # not a Ladder: the operators
+        r = L.result
+        return int(np.shape(r.phi)[0] if np.size(r.phi) else 0) + \
+            int(np.shape(r.theta)[0] if np.size(r.theta) else 0)
+    return int(p) + int(q)
 
 
 def _p_label(Q, K, npq):
@@ -417,15 +467,12 @@ def vec_irf_figure(G, names, freq=12, lo=None, hi=None, nboot=0, fevd=False):
     for i in range(m):
         if fevd:
             lim, ticks = (0.0, 100.0), [0, 25, 50, 75, 100]
-        else:
-            row = [np.abs(G[:, i, :])] + ([np.abs(np.asarray(lo)[:, i, :]),
-                                           np.abs(np.asarray(hi)[:, i, :])] if lo is not None else [])
-            c = _nice(max(float(np.max(x)) for x in row))
-            lim, ticks = (-c, c), [-c, -c / 2, 0.0, c / 2, c]
         for j in range(m):
             kb = 0 if lo is None else min(len(lo), len(h))
             lj = None if lo is None else np.r_[np.asarray(lo)[:kb, i, j], [np.nan] * (len(h) - kb)]
             hj = None if hi is None else np.r_[np.asarray(hi)[:kb, i, j], [np.nan] * (len(h) - kb)]
+            if not fevd:                    # each panel to its own largest value
+                lim, ticks = _panel_limit(G[:, i, j], lj, hj)
             _impulse_panel(axes[i, j], h, G[:, i, j], lj, hj, lim, ticks, freq,
                            f"{names[i]} <- {names[j]}" + ("  (%)" if fevd else ""),
                            zero=True, shade=fevd)

@@ -83,15 +83,35 @@ def load_notes(series):
                        "trusted on this file as it is.")
     u = units_of_series(series)
     if mixed(u):
-        out.append(
-            "UNITS — the files do not share one rescaling factor or one lambda ("
-            + ", ".join(f"{n}: lambda={l:g}, refactor={f:g}" for n, (l, f) in u.items())
-            + "). The engines work in w = refactor*BoxCox(z), so a coefficient "
-            "between two series carries the ratio of their factors, and standard "
-            "errors lose precision. sima presents its own tables and takes your "
-            "restrictions in each series' units; drvec's .out stays in the "
-            "engine's. A common factor (100 with logs) avoids all of it.")
+        out.append(units_note(u))
     return out
+
+
+def units_note(u):
+    """The UNITS line of load_pre. It names what actually differs: the
+    factors, the lambdas, or both. Only a difference of factors has a remedy
+    in the files (a common factor); different lambdas are the models'
+    (a log series and one in levels), and sima presents each coefficient in
+    its series' units."""
+    lams = {l for l, _ in u.values()}
+    facs = {f for _, f in u.values()}
+    listing = ", ".join(f"{n}: lambda={l:g}, refactor={f:g}" for n, (l, f) in u.items())
+    if len(facs) > 1:
+        what_ = ("one rescaling factor or one lambda" if len(lams) > 1
+                 else "one rescaling factor")
+        tail = (" A common factor (100 with logs) avoids the ratio of factors"
+                + ("; the different lambdas stay, and are the models'." if len(lams) > 1
+                   else "."))
+    else:
+        what_ = "one lambda"
+        tail = (f" They share the factor ({next(iter(facs)):g}): nothing to change in the "
+                "files. A coefficient between a series in logs and one in levels is a "
+                "semi-elasticity; the tables say which in each case.")
+    return ("UNITS — the files do not share " + what_ + " (" + listing + "). The "
+            "engines work in w = refactor*BoxCox(z), so a coefficient between two "
+            "series carries their units. sima presents its own tables and takes your "
+            "restrictions in each series' units; drvec's .out stays in the engine's."
+            + tail)
 
 
 def to_engine_b2(units, order, r, value_by_row):

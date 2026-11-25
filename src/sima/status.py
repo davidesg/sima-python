@@ -139,7 +139,7 @@ def _outliers(s):
     return out
 
 
-def caveats(s):
+def caveats(s, desc=None):
     from .raw import PROVENANCE
     out = []
     if getattr(s, "route", "U") == "V":
@@ -184,8 +184,56 @@ def caveats(s):
                        "bootstrap.")
         out.append("In a VEC the order of the series is the normalisation (β on the last "
                    f"r) and the Cholesky order: {' → '.join(vf.order)}.")
+    out += _final_on_other(s, desc)
+    for e in s.guion.entries:
+        c = (e.args or {}).get("caveat") if e.tool == "record_decision" else None
+        if c:
+            out.append(f"{c} (step {e.n}, {e.node}).")
     for e in s.guion.pending():
         out.append(f"An open decision: {e.node} (step {e.n}, {e.tool}).")
+    return out
+
+
+#: the tools whose result is the model's USE: what the analyst reads off a fit
+_USE = {"impulse_response": "responses", "plot_impulse_response": "responses",
+        "variance_decomposition": "decomposition", "plot_variance_decomposition": "decomposition",
+        "forecast": "forecasts", "plot_forecast": "forecasts"}
+
+
+def _final_on_other(s, desc=None):
+    """The responses, decompositions and forecasts read off a fit that is NOT
+    the adopted model — in the trial run of 25-nov-2026 the univariates were
+    adopted (rule 1) and the VAR's IRF and FEVD were read as an in-sample
+    finding, and the hand-over said "None recorded". They are reported with
+    the fit they came from, and the Cholesky order they rest on."""
+    a = getattr(s, "adopted", None)
+    if not a:
+        return []
+    adopted = None if a[0] == "UNIV" else a
+    by_model = {}
+    for e in s.guion.entries:
+        what = _USE.get(e.tool)
+        model = (e.args or {}).get("model")
+        if not what or not model or e.kind == "VEC":
+            continue
+        key = next((k for k in s.fits if desc and desc(k) == model), None)
+        if adopted is not None and adopted[0] == "VARMA" and key == adopted[1]:
+            continue
+        by_model.setdefault(model, []).append((e.n, what))
+    out = []
+    for model, items in by_model.items():
+        whats = sorted({w for _n, w in items})
+        steps = ", ".join(str(n) for n, _w in items)
+        out.append(f"The {' and '.join(whats)} (steps {steps}) were read off {model}, which is "
+                   "NOT the adopted model"
+                   + (" (the univariates were adopted: rule 1)" if adopted is None else "")
+                   + ": an in-sample reading, not the analysis' result.")
+        if "full covariance" in model and ("responses" in whats or "decomposition" in whats):
+            out.append("Those responses and that decomposition rest on the Cholesky order "
+                       + " → ".join(_names(s)) + ", an identifying assumption"
+                       + ("; another order was compared (reorder)."
+                          if any(e.tool == "reorder" for e in s.guion.entries)
+                          else "; no other order was compared."))
     return out
 
 
@@ -215,7 +263,7 @@ def hand_over(s, name, desc, vec_desc):
                      "most of them: keeping it needs the reason that the cells where it gains "
                      "are the ones the analysis is about — and that reason is in the adoption "
                      "above, or it is missing.")
-    cv = caveats(s)
+    cv = caveats(s, desc)
     L += ["", "## The caveats that stay open", ""] + ([f"- {c}" for c in cv] or ["None recorded."])
     if s.abandoned:
         L += ["", "## Set aside", ""] + [

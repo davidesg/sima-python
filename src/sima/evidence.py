@@ -1018,23 +1018,46 @@ def _band_note(bands, why=None):
             "non-stationary / non-invertible (a large share says the fit sits near a boundary)."]
 
 
-def irf_text(phi, theta, sigma, names, horizon, bands=None, why=None):
+def irf_text(phi, theta, sigma, names, horizon, bands=None, why=None, resp=None,
+             units=None):
+    """The IRF table. `resp` is sima.responses.responses' (O, lo, hi, info) when
+    the responses are cumulated or scaled; otherwise drvarma's, as they come."""
     from drvarma.irf import oirf
-    O = oirf(phi, theta, sigma, horizon)
+    if resp is None:
+        O = oirf(phi, theta, sigma, horizon)
+        LO = bands["oirf_lo"] if bands is not None else None
+        HI = bands["oirf_hi"] if bands is not None else None
+        info = {"cumulative": False, "factor": None, "band_note": None}
+    else:
+        O, LO, HI, info = resp
     out = ["IMPULSE RESPONSES (orthogonalised, Cholesky in the ORDER OF THE FILES:",
            f"{' -> '.join(names)}). That order is an identifying ASSUMPTION: the first",
            "series is not moved within the period by the others' innovations. With a",
            "strong contemporaneous correlation the answer depends on it; reorder the",
-           "files and compare before reading a response as a finding.",
-           "Responses on the stationary (transformed, differenced) scale."] + _band_note(bands, why)
-    w = 30 if bands is not None else 12
+           "files and compare before reading a response as a finding."]
+    if info["cumulative"]:
+        out.append("CUMULATED responses: the running sum over h, the response of the LEVEL of "
+                   "a differenced series (of w = refactor*BoxCox(z)). The band is taken from "
+                   "the same draws, each cumulated; it is not the sum of the monthly bands.")
+    else:
+        out.append("Responses on the stationary (transformed, differenced) scale; "
+                   "cumulative=True gives the level.")
+    if units:
+        out.append(units)
+    if info["factor"]:
+        j, size, base, c = info["factor"]
+        out.append(f"SCALED: the shock to {names[j]} is rescaled so that its own response at "
+                   f"h = 0 is {size:g} (one s.d. is {base:.5g}; factor {c:.4g}), point and "
+                   "band; the other shocks are one s.d.")
+    out += _band_note(info["band_note"] or bands, why)
+    w = 30 if LO is not None else 12
     for j, sj in enumerate(names):
         out += ["", f"shock to {sj}:", "  h  " + "".join(f"{s:>{w}}" for s in names)]
         for h in range(horizon + 1):
-            if bands is None:
+            if LO is None:
                 cells = [f"{O[h, i, j]:>12.5f}" for i in range(len(names))]
             else:
-                lo, hi = bands["oirf_lo"][h, :, j], bands["oirf_hi"][h, :, j]
+                lo, hi = LO[h, :, j], HI[h, :, j]
                 cells = [f"{f'{O[h, i, j]:.5f} [{lo[i]:.5f}, {hi[i]:.5f}]':>{w}}"
                          for i in range(len(names))]
             out.append(f"  {h:<3}" + "".join(cells))
@@ -1521,7 +1544,7 @@ def simplify_report(f, call, keycall):
         return "\n".join(lines)
     lines.append(f"to zero ({len(f['drop'])}):")
     for nm, v, t in f["drop"]:
-        lines.append(f"  {nm:<34} {v:+10.4f}   t {t:+6.2f}")
+        lines.append(f"  {nm:<34} {v:+12.6f}   t {t:+6.2f}")
     lines += ["", f"                       full        restricted",
               f"  parameters      {f['k_full']:>9d}   {f['k_r']:>12d}",
               f"  logL            {f['ll_full']:>12.4f}{f['ll_r']:>14.4f}",
@@ -1614,7 +1637,14 @@ def structure_report(f, call):
                          os.path.basename(x) for x in f["pre"]), "mtram (outside sima)"))
         opts.append(("stay in sima with the triangular restriction (a VARMA with the "
                      "zeros)", stand[0]["call"]))
-    opts.append(("stay in sima with the full system", "evaluate(...)"))
+    if f.get("adopted"):
+        # the model is already decided (adopt): this reading is the in-sample
+        # complement of N5, and what is left is to close (trial run, 25-nov-2026:
+        # after adopt(univariates) the only option offered was evaluate)
+        opts.append(("close the analysis with this reading beside the adopted model",
+                     f'hand_over(name="{call}")'))
+    else:
+        opts.append(("stay in sima with the full system", "evaluate(...)"))
     for k, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[k]})** {what}\n   `{cl}`")
     lines += ["", "sima offers the hand-back; it does not hand back on its own.", "",

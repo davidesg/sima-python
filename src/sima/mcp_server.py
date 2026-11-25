@@ -20,6 +20,7 @@ _w.filterwarnings("ignore", module=r"pydantic_settings.*",
 
 from mcp.server.fastmcp import FastMCP
 
+from . import viewer as _viewer
 from . import evidence, session as _sess
 from . import envelope as _env
 
@@ -1935,11 +1936,21 @@ def simplify(name: str, t: float = 1.0) -> str:
     r = L.result
     x, se = np.asarray(r.x, float), np.asarray(r.std_errors, float)
     cross_re = re.compile(r"(AR|MA)\d+\[.+<-.+\]")
+    from . import scale as _sc
+    _u = _sc.units_of_series(L.series)
+
+    def shown(nm, v):
+        # in each series' units, as estimate prints them (BUG-0012): the
+        # trial run showed FF<-WTI as 0.000789 in estimate and 0.0789 here
+        mm = re.search(r"\[(.+)<-(.+)\]", nm) if _sc.mixed(_u) else None
+        if mm and mm.group(1) in _u and mm.group(2) in _u:
+            return v * _sc.cross(_u, mm.group(1), mm.group(2))
+        return v
     drop = []
     for nm, v, e in zip(r.names, x, se):
         ok = cross_re.fullmatch(nm) or (_own_is_free(s, key) and _OWN.fullmatch(nm))
         if ok and np.isfinite(e) and e > 0 and abs(v / e) < float(t):
-            drop.append((nm, float(v), float(v / e)))
+            drop.append((nm, float(shown(nm, v)), float(v / e)))
     f = {"t": float(t), "desc": _desc(key), "route": s.route, "drop": drop}
     if drop:
         key2 = key[:5] + (_zeros(list(key[5]) + [d[0] for d in drop]),) + key[6:]
@@ -1973,7 +1984,13 @@ def structure(name: str, alpha: float = 0.05) -> str:
     NETWORK — a triangular VARMA is a transfer function model — and sima
     offers the hand-back to mtram with the same .pre files; it does not hand
     back on its own. The verdict is only as good as the order of the fit:
-    Tiao and Box's gas furnace shows a spurious feedback at low order."""
+    Tiao and Box's gas furnace shows a spurious feedback at low order.
+
+    COST: every test is a refit by exact ML — m(m-1) pairs and up to m!
+    orderings (fewer when they coincide; a pair already absent costs nothing).
+    With 4 series and a VAR(1) that was ~20 fits and ~12 minutes with the
+    compiled engine on one core (trial run, 25-nov-2026): say so before
+    calling it."""
     import itertools
     s = _sess.get(name)
     try:
@@ -2026,7 +2043,7 @@ def structure(name: str, alpha: float = 0.05) -> str:
         return f"A restricted fit failed: {e}"
     pre = s.files
     f = {"desc": _desc(key), "alpha": float(alpha), "pairs": pairs, "orders": orders,
-         "pre": pre}
+         "pre": pre, "adopted": bool(getattr(s, "adopted", None))}
     stand = [t["label"] for t in (orders or []) if t["df"] == 0 or t["p"] >= alpha]
     s.guion.add("N4t", "structure", {"model": _desc(key), "alpha": alpha},
                 ("orderings standing: " + "; ".join(stand)) if stand else
@@ -2072,7 +2089,7 @@ def check_residuals(name: str, nlags: int = 0) -> list:
                                       lambda t: s0.date_of(s0.nobs - n + t + 1))
     s.guion.add("N4", "check_residuals", {"nlags": K, "model": str(s.current)},
                 f"{facts['n_beyond']} residual correlations beyond the band; "
-                f"{facts['large']} large transformed residuals")
+                f"{len(facts['large_dates'])} date(s) with large transformed residuals")
     p_, q_, dc_, lk_, cr_, zs_, ech_ = s.current
     head_ = (f"echelon form, indices {', '.join(map(str, ech_))}" if ech_
              else f"cross p = {p_}, q = {q_}")
@@ -2133,7 +2150,8 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     items.append((figures.residual_ccf_figure(L, Kc, freq), "ccf"))
     lines.append(f"\nThe residual ccf's P is GraphMaker's: Hosking's portmanteau over {Kc} lags "
                  f"with 4(K - (p + q)) = {4 * (Kc - npq)} degrees of freedom, p + q = {npq} "
-                 "(the largest AR plus the largest MA order of the fitted model)"
+                 "(the system's orders, the VARMA(p, q) estimated; the univariate "
+                 "models' parameters are discounted in each series' own Q)"
                  + (f"; K moved up from GraphMaker's {K0} to leave at least "
                     f"{figures.MIN_DF_LAGS} lags beyond p + q." if Kc > K0 else ".")
                  + " The acf's Q of each series keeps the same minimum.")
@@ -2577,7 +2595,7 @@ def forecast_uncertainty(name: str, horizon: int = 0, estwin: int = 0) -> str:
 
 @mcp.tool()
 def impulse_response(name: str, horizon: int = 12, bands: bool = True,
-                     ndraws: int = 800) -> str:
+                     ndraws: int = 800, cumulative: bool = False, scale: str = "") -> str:
     """N6 — Orthogonalised impulse responses of the last estimated model.
 
     Cholesky in the ORDER OF THE FILES: an identifying assumption, stated in the
@@ -2586,6 +2604,11 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
+    `cumulative`: the running sum over h — the response of the LEVEL of a
+    differenced series, as a VAR in differences is read — with its band from
+    the same draws, each cumulated. `scale`: "SERIES=size" rescales that
+    series' shock so its own response at h = 0 is `size` in the table's units
+    (e.g. "FF=25": 25 basis points for a rate in % with factor 100).
     On a VEC: the responses of the LEVELS (drvec), in drvec's order — the
     VEC's normalisation order — and their permanent effect; the bands come
     only from the parametric bootstrap (irf_bands, a job), never from the
@@ -2599,10 +2622,24 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
         r = _current(s).result
     except Exception as e:
         return f"{e}"
+    from . import responses as _rs
+    try:
+        sc = _rs.parse_scale(scale, _names(s))
+    except ValueError as e:
+        return str(e)
     b, why = _bands(s, int(horizon), bands, ndraws)
-    s.guion.add("N6", "impulse_response", {"horizon": horizon, "bands": b is not None},
+    L = _current(s)
+    try:
+        resp = _rs.responses(L, int(horizon), b, cumulative, sc, ndraws)
+    except ValueError as e:
+        return f"{e}"
+    s.guion.add("N6", "impulse_response",
+                {"horizon": horizon, "bands": b is not None, "model": _desc(s.current),
+                 **({"cumulative": True} if cumulative else {}),
+                 **({"scale": scale} if sc else {})},
                 "Cholesky, files order", kind="VARMA")
-    return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
+    return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why,
+                             resp=resp, units=_rs.units_line(L, _names(s)))
 
 
 @mcp.tool()
@@ -2698,7 +2735,8 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
     except Exception as e:
         return f"{e}"
     b, why = _bands(s, int(horizon), bands, ndraws)
-    s.guion.add("N6", "variance_decomposition", {"horizon": horizon, "bands": b is not None},
+    s.guion.add("N6", "variance_decomposition", {"horizon": horizon, "bands": b is not None,
+                                                 "model": _desc(s.current)},
                 "Cholesky, files order", kind="VARMA")
     return evidence.fevd_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
 
@@ -2716,7 +2754,8 @@ def kind_tool(kind):
         return "plot_identification"
     if kind == "rankboot":
         return "plot_rank_bootstrap"
-    return {"irf": "plot_impulse_response", "fevd": "plot_variance_decomposition",
+    return {"irf": "plot_impulse_response", "irf_cum": "plot_impulse_response",
+            "fevd": "plot_variance_decomposition",
             "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
 
 
@@ -2737,6 +2776,7 @@ def _figure(s, fig, kind, path, note, report=None, node=None):
     p = path
     vec = kind == "ccf"                  # the CCF also in vectors (SVG, PDF)
     figures.save(fig, p, vectors=vec)
+    _viewer.show(p)                      # and in the desktop's viewer, as art
     # the node the figure belongs to: the identification is N2; the residual
     # CCFs are in-sample evidence (N4); the IRF, the FEVD and the forecasts are
     # the use of the model (N6)
@@ -2744,6 +2784,8 @@ def _figure(s, fig, kind, path, note, report=None, node=None):
     files = {"png": [p]}
     if vec:
         files["vectors"] = figures.vector_paths(p)
+    if node == "N6" and s.current_kind() == "VARMA" and s.current is not None:
+        files["model"] = _desc(s.current)  # which fit: hand_over's caveats read it
     s.guion.add(node, kind_tool(kind), files, note, kind=s.current_kind())
     text = f"{report or note}\n" + "".join(
         f"{v.rsplit('.', 1)[1].upper()}: {v}\n" for v in files.get("vectors", [])) + f"PNG: {p}"
@@ -2759,7 +2801,7 @@ def _figure(s, fig, kind, path, note, report=None, node=None):
 
 def _figures(s, items, text):
     """Several figures INSIDE the answer, after the report (as art's
-    diagnosis), each also written as a PNG next to the files; recorded at N4."""
+    diagnosis), each also written as a PNG in the session folder; recorded at N4."""
     import base64
     import tempfile
     from . import figures
@@ -2772,6 +2814,7 @@ def _figures(s, items, text):
     for fig, kind in items:
         p = os.path.join(d, f"sima_{s.name}_{kind}.png")
         figures.save(fig, p, vectors=kind == "ccf")    # the CCF also in vectors
+        _viewer.show(p)                                 # and in the viewer, as art
         paths.append(p)
         if kind == "ccf":
             vectors += figures.vector_paths(p)
@@ -2795,13 +2838,16 @@ def _figures(s, items, text):
 
 @mcp.tool()
 def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
-                          ndraws: int = 500, path: str = "") -> list:
+                          ndraws: int = 500, path: str = "", cumulative: bool = False,
+                          scale: str = "") -> list:
     """FIGURE — The orthogonalised impulse responses of the last estimated model.
 
     Drawn as what an impulse response is, a function of the lag like an ACF:
     one panel per (response, shock), thick impulses at h = 0..H, the seasonal
     grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
-    order of the files, as impulse_response. The numbers are impulse_response's.
+    order of the files, as impulse_response. The numbers are impulse_response's,
+    with its `cumulative` and `scale`. Each panel is fitted to its own largest
+    value, band included, as the acf and pacf are.
     On a VEC: the level responses (drvec), with the bootstrap's 90 % band
     from irf_bands when it has run.
     """
@@ -2814,10 +2860,23 @@ def plot_impulse_response(name: str, horizon: int = 24, bands: bool = True,
         L = _current(s)
     except KeyError as e:
         return [str(e)]
+    from . import responses as _rs
+    try:
+        sc = _rs.parse_scale(scale, _names(s))
+    except ValueError as e:
+        return [str(e)]
     b, why = _bands(s, int(horizon), bands, ndraws)
-    fig = figures.irf_figure(L, int(horizon), b, s.series[0].freq)
-    note = "Orthogonalised impulse responses" + (f" (no band: {why})" if why else "")
-    return _figure(s, fig, "irf", path, note)
+    try:
+        resp = _rs.responses(L, int(horizon), b, cumulative, sc, ndraws)
+    except ValueError as e:
+        return [str(e)]
+    fig = figures.irf_figure(L, int(horizon), b, s.series[0].freq, resp=resp)
+    note = ("Cumulated orthogonalised responses" if cumulative
+            else "Orthogonalised impulse responses") \
+        + (f", shock {scale}" if sc else "") + f" ({_desc(s.current)})" \
+        + (f" (no band: {why})" if why else "")
+    kind = "irf_cum" if cumulative else "irf"
+    return _figure(s, fig, kind, path, note)
 
 
 @mcp.tool()
@@ -3041,7 +3100,7 @@ def plot_forecast(name: str, horizon: int = 24, series: str = "", path: str = ""
 @mcp.tool()
 def record_decision(name: str, node: str, decision: str, reason: str = "",
                     evidence: str = "", alternatives: str = "",
-                    decided_by: str = "analyst") -> str:
+                    decided_by: str = "analyst", caveat: str = "") -> str:
     """Record a decision, WHY, on WHAT evidence, and what was set aside.
 
     Every node that opens a decision (which files, which candidate, keep the
@@ -3052,11 +3111,16 @@ def record_decision(name: str, node: str, decision: str, reason: str = "",
     full: better in sample (LR p 0.01), worse out of sample". In the
     AUTONOMOUS lane this is where your reasoning is written down, with
     decided_by="LLM"; a decision without its reason is not documented.
+    `caveat`: what the decision leaves OPEN and the reader must know (a
+    diagnosis accepted with a known defect, a result read with a reservation);
+    hand_over lists it among the caveats that stay open.
     """
     s = _sess.get(name)
     args = {"decided_by": decided_by}
     if alternatives:
         args["alternatives"] = alternatives
+    if caveat.strip():
+        args["caveat"] = caveat.strip()
     e = s.guion.add(node, "record_decision", args, evidence,
                     decision + (f" -- because {reason}" if reason else ""))
     from .guion import NODES
@@ -3190,12 +3254,13 @@ def export_guion(name: str, save: bool = True, html: bool = True) -> str:
     """The path of the analysis, node by node, with its evidence and decisions.
 
     This is what makes the analysis reviewable and repeatable: every tool call
-    and every recorded decision, in order. Saved next to the first file as
-    <first>.sima.json when `save`, so that the record travels with the data;
-    with `html` (default) also <first>.sima.html, a self-contained page in
+    and every recorded decision, in order. Saved in the session's folder,
+    sima_<name>/ beside the files (in the folder that holds them all), as
+    <name>.sima.json when `save`, so that the record travels with the data;
+    with `html` (default) also <name>.sima.html, a self-contained page in
     art's style: the steps in a table, a section per node with the evidence,
     the decisions highlighted (who decided, what was set aside) and the
-    figures drawn at each step (they are saved in figs/ next to the files).
+    figures drawn at each step (they are saved in the session folder's figs/).
     """
     s = _sess.get(name)
     txt = s.guion.render()
@@ -3256,6 +3321,7 @@ def _cli_flags():
 
 def main():
     _cli_flags()
+    _viewer.UNDER_SERVER = True
     mcp.run()
 
 
