@@ -2,6 +2,26 @@
 
 ## 0.2.5 — unreleased
 
+**The autonomous trial run (25-nov-2026), what it found.** The US monetary VAR
+from raw data, the univariate models built in art's autonomous lane with
+`art_brief`.
+- In the autonomous lane the figures are written to disk and linked from the
+  guion, but not returned as images nor opened in the viewer: they cost the
+  agent tokens and the windows get in the way. `SIMA_FIGURES=1` shows them in
+  any lane, `SIMA_FIGURES=0` hides them in any lane.
+- `record_decision` records the raw entry's nodes (N0c, N1b, N0a) before
+  `load_pre`; they go on in the session `load_pre` opens.
+- The menus of `characterize` and `canonical_analysis` offer `art_brief` and
+  sima's builder on either route (`build_univariate(route="V")`), not the
+  retired `write_specs`.
+- `art_brief` says how interventions are specified: ask art for the form
+  first (`suggest_intervention_form`), in levels (a spike in the differences
+  is a step in the level), depart from it only with a written reason (art's
+  BUG-0264); and name the files with the series' name.
+- A tool called with an argument it does not take refuses it, naming it (it
+  was ignored in silence: `levels=True` sent to a server one version behind
+  returned the responses of the differences).
+
 **The guided trial run (25-nov-2026), what it found.** The US monetary VAR
 (IPI, IPC, WTI, FF; 1990-2007), walked from `load_pre` to `hand_over` in the
 guided lane on the compiled engines.
