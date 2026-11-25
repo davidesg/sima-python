@@ -134,6 +134,12 @@ def wrap(fn, sessions):
         try:
             out = fn(*args, **kw)
         except Exception as err:
+            # a call that failed leaves no step in the guion: what it recorded
+            # before failing describes an answer nobody received (the trial
+            # run's check_residuals, failed on a missing pyfug module, stayed
+            # as a step and was counted again on the retry)
+            if before is not None and sessions._SESSIONS.get(name) is before:
+                del before.guion.entries[n0:]
             if _tm.folder():
                 _tm.record(fn.__name__, _bound(fn, args, kw), name, t0, error=err)
             raise

@@ -27,7 +27,7 @@ def test_export_guion_writes_a_page_with_steps_decisions_and_figures(tmp_path):
                            alternatives="p = 1 on both pairs", decided_by="analyst")
     _fn(M.plot_impulse_response)("gh", horizon=8, ndraws=60)
     txt = _fn(M.export_guion)("gh")
-    html = tmp_path / "M6_EI.sima.html"
+    html = tmp_path / "sima_gh" / "gh.sima.html"
     assert f"HTML: {html}" in txt and html.exists()
     page = html.read_text(encoding="utf-8")
     for part in ("<h2>The path</h2>", "N1 — the diagonal gate", "N3 — estimation of a candidate",
@@ -35,5 +35,5 @@ def test_export_guion_writes_a_page_with_steps_decisions_and_figures(tmp_path):
                  "decided by: analyst", "Set aside:</b> p = 1 on both pairs",
                  "<img src='figs/sima_gh_irf.png'"):
         assert part in page, part
-    assert (tmp_path / "figs" / "sima_gh_irf.png").exists()
-    assert (tmp_path / "M6_EI.sima.json").exists()
+    assert (tmp_path / "sima_gh" / "figs" / "sima_gh_irf.png").exists()
+    assert (tmp_path / "sima_gh" / "gh.sima.json").exists()

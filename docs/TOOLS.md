@@ -473,12 +473,13 @@ The worked examples that come with sima, to see how it works in real
 The path of the analysis, node by node, with its evidence and decisions.
 
     This is what makes the analysis reviewable and repeatable: every tool call
-    and every recorded decision, in order. Saved next to the first file as
-    <first>.sima.json when `save`, so that the record travels with the data;
-    with `html` (default) also <first>.sima.html, a self-contained page in
+    and every recorded decision, in order. Saved in the session's folder,
+    sima_<name>/ beside the files (in the folder that holds them all), as
+    <name>.sima.json when `save`, so that the record travels with the data;
+    with `html` (default) also <name>.sima.html, a self-contained page in
     art's style: the steps in a table, a section per node with the evidence,
     the decisions highlighted (who decided, what was set aside) and the
-    figures drawn at each step (they are saved in figs/ next to the files).
+    figures drawn at each step (they are saved in the session folder's figs/).
 
 ---
 
@@ -640,6 +641,8 @@ N2 — Jenkins and Alavi's (1981) two identifications, as matrices.
 | `horizon` | integer | no | `12` |
 | `bands` | boolean | no | `True` |
 | `ndraws` | integer | no | `800` |
+| `cumulative` | boolean | no | `False` |
+| `scale` | string | no | `` |
 
 N6 — Orthogonalised impulse responses of the last estimated model.
 
@@ -649,6 +652,11 @@ N6 — Orthogonalised impulse responses of the last estimated model.
     With `bands` (default): 95% Monte-Carlo bands from the covariance of the
     estimates, redrawing the whole model through the ladder's cast; a response
     whose band covers zero is not a finding.
+    `cumulative`: the running sum over h — the response of the LEVEL of a
+    differenced series, as a VAR in differences is read — with its band from
+    the same draws, each cumulated. `scale`: "SERIES=size" rescales that
+    series' shock so its own response at h = 0 is `size` in the table's units
+    (e.g. "FF=25": 25 basis points for a rate in % with factor 100).
     On a VEC: the responses of the LEVELS (drvec), in drvec's order — the
     VEC's normalisation order — and their permanent effect; the bands come
     only from the parametric bootstrap (irf_bands, a job), never from the
@@ -987,13 +995,17 @@ FIGURE — Jenkins and Alavi's (1981) identification, pair by pair: the
 | `bands` | boolean | no | `True` |
 | `ndraws` | integer | no | `500` |
 | `path` | string | no | `` |
+| `cumulative` | boolean | no | `False` |
+| `scale` | string | no | `` |
 
 FIGURE — The orthogonalised impulse responses of the last estimated model.
 
     Drawn as what an impulse response is, a function of the lag like an ACF:
     one panel per (response, shock), thick impulses at h = 0..H, the seasonal
     grid, and the 95 % Monte-Carlo band dashed (it follows h). Cholesky in the
-    order of the files, as impulse_response. The numbers are impulse_response's.
+    order of the files, as impulse_response. The numbers are impulse_response's,
+    with its `cumulative` and `scale`. Each panel is fitted to its own largest
+    value, band included, as the acf and pacf are.
     On a VEC: the level responses (drvec), with the bootstrap's 90 % band
     from irf_bands when it has run.
 
@@ -1150,6 +1162,7 @@ C1 — The cointegration rank, by PARAMETRIC BOOTSTRAP (drvec's sequential
 | `evidence` | string | no | `` |
 | `alternatives` | string | no | `` |
 | `decided_by` | string | no | `analyst` |
+| `caveat` | string | no | `` |
 
 Record a decision, WHY, on WHAT evidence, and what was set aside.
 
@@ -1161,6 +1174,9 @@ Record a decision, WHY, on WHAT evidence, and what was set aside.
     full: better in sample (LR p 0.01), worse out of sample". In the
     AUTONOMOUS lane this is where your reasoning is written down, with
     decided_by="LLM"; a decision without its reason is not documented.
+    `caveat`: what the decision leaves OPEN and the reader must know (a
+    diagnosis accepted with a known defect, a result read with a reservation);
+    hand_over lists it among the caveats that stay open.
 
 ---
 
@@ -1270,6 +1286,12 @@ N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On
     offers the hand-back to mtram with the same .pre files; it does not hand
     back on its own. The verdict is only as good as the order of the fit:
     Tiao and Box's gas furnace shows a spurious feedback at low order.
+
+    COST: every test is a refit by exact ML — m(m-1) pairs and up to m!
+    orderings (fewer when they coincide; a pair already absent costs nothing).
+    With 4 series and a VAR(1) that was ~20 fits and ~12 minutes with the
+    compiled engine on one core (trial run, 25-nov-2026): say so before
+    calling it.
 
 ---
 

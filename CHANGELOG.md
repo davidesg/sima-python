@@ -2,6 +2,41 @@
 
 ## 0.2.5 — unreleased
 
+**The guided trial run (25-nov-2026), what it found.** The US monetary VAR
+(IPI, IPC, WTI, FF; 1990-2007), walked from `load_pre` to `hand_over` in the
+guided lane on the compiled engines.
+- `hand_over` listed "None recorded" as caveats when the responses and the
+  decomposition had been read off a VAR that was not adopted (the univariates
+  were, by rule 1). It now lists what was read off a fit other than the
+  adopted model, and the Cholesky order those responses rest on; and
+  `record_decision(caveat=...)` records what a decision leaves open, which
+  `hand_over` lists.
+- `impulse_response` and `plot_impulse_response` take `cumulative` (the
+  response of the level of a differenced series, its band from the same
+  draws, each cumulated) and `scale` ("FF=25": the shock rescaled so its own
+  response at h = 0 is 25 in the table's units). The table says the units of
+  each series.
+- The IRF panels are fitted each to its own largest value, band included, as
+  the acf and pacf are, with finer steps: one scale per row let a series' own
+  shock flatten every cross response in its row. The same in the VEC's level
+  responses; the variance decomposition keeps 0-100.
+- The P of a residual pair discounts the system's orders, p + q, as
+  GraphMaker did for a VARMA(p, q); it discounted the univariate operators as
+  expanded (an AR(3) x AR(1)12 is an AR(15)), which left 8 d.f. over 17 lags
+  and rejected every pair of a clean fit.
+- The session has its own folder, `sima_<name>/` in the folder that holds
+  its files: the guion (`<name>.sima.json`, `.html`) and `figs/`. They went
+  into the first series' folder.
+- Each figure is also opened in the desktop's viewer, as art does
+  (`SIMA_NO_VIEWER` turns it off; `SIMA_VIEWER` on under the server on Windows).
+- `simplify` prints the coefficients in each series' units, as `estimate`.
+- The UNITS line of `load_pre` names what differs: different lambdas with a
+  common factor need nothing in the files.
+- A tool call that fails leaves no step in the guion; the guion counts the
+  dates with large residuals, as the report does.
+- After an adoption, `structure` offers `hand_over`, not `evaluate`; its
+  docstring states its cost (a refit per test: ~12 minutes with 4 series).
+
 **N0a, `art_brief`: the univariate models built in art.** From raw data,
 instead of sima's light builder, the agent can build each series' model in
 art, the analyst's tool, one series after another (art's rule), and load the
