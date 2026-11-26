@@ -1311,10 +1311,15 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False,
                     "from these levels."))
     lines += ["", "## 4 · DECISION — alternatives", ""]
     if raw:
-        opts = [("keep the characterization's differences: route U (the univariate "
-                 "models first)", f'build_univariate(name="{call}")'),
-                ("keep them: route V (the vector first, the univariates only as the "
-                 "yardstick)", f'write_specs(name="{call}")')]
+        # the univariate models in art (N0a) or by sima's light builder (N0u),
+        # on either route; write_specs is retired (#46), art_brief is #47
+        opts = [("keep the characterization's differences and build the univariate "
+                 "models in art, the analyst's tool, one series after another",
+                 f'art_brief(name="{call}")'),
+                ("keep them, sima's light builder: route U (the univariate models "
+                 "first)", f'build_univariate(name="{call}")'),
+                ("keep them, sima's light builder: route V (the vector first, through "
+                 "the same gate)", f'build_univariate(name="{call}", route="V")')]
     else:
         # N2's order (P6): route U opens with the residual CCFs, route V (no
         # univariate residuals) with the matrices
@@ -1350,7 +1355,8 @@ def canonical_report(x, names, d, freq, p=0, near=NEAR_ONE, call="", raw=False,
                         f'characterize(name="{call}", set="SERIES: d=0")'))
         opts.insert(2, ("build the files (route U or V), then ask the cointegration "
                         "question at N1c: the rank by drvec's bootstrap", "prepare_vec, "
-                        "after build_univariate or write_specs and run_gate"))
+                        "after the univariate models (art_brief or build_univariate), "
+                        "load_pre and run_gate"))
     if p_used != max(1, p_tb) or p_tb != 1:
         opts.append(("the same reading at another VAR order",
                      f'canonical_analysis(name="{call}", p=1)'))
@@ -1461,17 +1467,17 @@ def characterize_report(chars, freq, call, changes=()):
                  + (", and the seasonal treatment (harmonics or D) is the analyst's choice."
                     if freq > 1 else "."))
     lines += ["", "## 4 · DECISION — alternatives", ""]
-    opts = [("route U: build the univariate models first, then the system (Jenkins "
-             "and Alavi; the ladder)", f'build_univariate(name="{call}")'),
-            ("route V: the vector first, the univariates only as the yardstick (Tiao and "
-             "Box)", f'write_specs(name="{call}")'),
+    opts = [("build the univariate models in art, the analyst's tool, one series "
+             "after another (the brief for each)", f'art_brief(name="{call}")'),
+            ("route U with sima's light builder: the univariate models first, then the "
+             "system (Jenkins and Alavi; the ladder)", f'build_univariate(name="{call}")'),
+            ("route V with sima's light builder: the vector first, through the same "
+             "gate (Tiao and Box)", f'build_univariate(name="{call}", route="V")'),
             ("change a series' lambda, d, D or harmonics",
              f'characterize(name="{call}", set="SERIES: lam=0, d=1; ...")')]
     if len(nd) >= 2:
-        opts.insert(1, ("read the levels first: Box and Tiao's canonical analysis",
+        opts.insert(0, ("read the levels first: Box and Tiao's canonical analysis",
                         f'canonical_analysis(name="{call}")'))
-    opts.append(("take a series to art, to build its model there with every node",
-                 "art (outside sima)"))
     for t, (what, cl) in enumerate(opts):
         lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{cl}`")
     lines += ["", _env.STOP]

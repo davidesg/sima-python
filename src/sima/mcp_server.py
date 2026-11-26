@@ -296,7 +296,10 @@ THE AUTONOMOUS LANE — YOU ARE THE ANALYST
 ══════════════════════════════════════════════════════
 You decide every node yourself: there is no human to confirm. That does NOT
 mean going fast. It means each decision is yours and has to be reasoned in
-writing. The same nodes as the guided lane, in the same order, ONE AT A TIME:
+writing. The same nodes as the guided lane, in the same order, ONE AT A TIME.
+In this lane the figures are written to disk and linked from the guion, but not
+returned as images nor opened (you read the numbers; SIMA_FIGURES=1 shows them).
+From raw data, record_decision records the nodes before load_pre (N0c, N1b, N0a).
 
   N0 load_pre         the files are given; note any series trimmed to the
                       common window (it changes the sample of the others).
@@ -1164,8 +1167,13 @@ def art_brief(name: str, out_dir: str = "") -> str:
               "would need three or more extra parameters or leaves the residuals dirty). "
               "In a tie, estimate both as art's rule asks, then apply this; say it at the "
               "node." + ("" if auto else " (A proposal to the analyst.)"),
-              "  - interventions: art's protocol. Outside information about an event only "
+              "  - interventions: ask art for the form first (suggest_intervention_form), "
+              "which specifies in LEVELS: a spike in the differences is a step in the "
+              "level, not an impulse; never hand-fix an intervention art was not asked "
+              "about. You may depart from art's form only with your reason written at "
+              "the node (art's protocol, node 7). Outside information about an event only "
               "from the analyst; if you use your own knowledge, say so at the node.",
+              "  - name the files with the series' name (<SERIES>_mNN.*), in its folder.",
               "  - stop when the diagnosis is clean (then the formal tests), or after two "
               "reformulations that do not improve it (then say so: the model is handed "
               "back with its caveat).",
@@ -2764,6 +2772,25 @@ def kind_tool(kind):
             "ccf": "plot_residual_ccf"}.get(kind, "plot_forecast")
 
 
+def _figures_shown(s):
+    """Are the figures RETURNED (as images) and opened in the viewer? Not in
+    the autonomous lane: there they cost the agent tokens it does not need
+    (it reads the numbers) and the windows get in the way of other work
+    (David, 25-nov-2026). They are still written to disk and linked from the
+    guion. SIMA_FIGURES=1 shows them in any lane; SIMA_FIGURES=0 hides them
+    in any lane."""
+    v = os.environ.get("SIMA_FIGURES", "").strip().lower()
+    if v in ("1", "on", "yes", "true"):
+        return True
+    if v in ("0", "off", "no", "false"):
+        return False
+    return getattr(s, "lane", "guided") != "autonomous"
+
+
+_NOT_SHOWN = ("(autonomous lane: the figure is written to disk and linked from the "
+              "guion, not returned nor opened; SIMA_FIGURES=1 shows it)")
+
+
 def _figure(s, fig, kind, path, note, report=None, node=None):
     """The figure INSIDE the answer (as art and mtram), and a PNG on disk.
     `note` is the guion's one line; `report` (default: the note) is what the
@@ -2781,7 +2808,9 @@ def _figure(s, fig, kind, path, note, report=None, node=None):
     p = path
     vec = kind == "ccf"                  # the CCF also in vectors (SVG, PDF)
     figures.save(fig, p, vectors=vec)
-    _viewer.show(p)                      # and in the desktop's viewer, as art
+    shown = _figures_shown(s)
+    if shown:
+        _viewer.show(p)                  # and in the desktop's viewer, as art
     # the node the figure belongs to: the identification is N2; the residual
     # CCFs are in-sample evidence (N4); the IRF, the FEVD and the forecasts are
     # the use of the model (N6)
@@ -2794,6 +2823,8 @@ def _figure(s, fig, kind, path, note, report=None, node=None):
     s.guion.add(node, kind_tool(kind), files, note, kind=s.current_kind())
     text = f"{report or note}\n" + "".join(
         f"{v.rsplit('.', 1)[1].upper()}: {v}\n" for v in files.get("vectors", [])) + f"PNG: {p}"
+    if not shown:
+        return [text + "\n" + _NOT_SHOWN]
     try:
         from mcp.types import ImageContent, TextContent
         with open(p, "rb") as fh:
@@ -2819,7 +2850,8 @@ def _figures(s, items, text):
     for fig, kind in items:
         p = os.path.join(d, f"sima_{s.name}_{kind}.png")
         figures.save(fig, p, vectors=kind == "ccf")    # the CCF also in vectors
-        _viewer.show(p)                                 # and in the viewer, as art
+        if _figures_shown(s):
+            _viewer.show(p)                             # and in the viewer, as art
         paths.append(p)
         if kind == "ccf":
             vectors += figures.vector_paths(p)
@@ -2829,6 +2861,8 @@ def _figures(s, items, text):
     s.guion.add("N4", "check_residuals", files, "diagnosis figures")
     text = (text + "\n" + "".join(f"{v.rsplit('.', 1)[1].upper()}: {v}\n" for v in vectors)
             + "\n".join(f"PNG: {p}" for p in paths))
+    if not _figures_shown(s):
+        return [text + "\n" + _NOT_SHOWN]
     try:
         from mcp.types import ImageContent, TextContent
         out = [TextContent(type="text", text=text)]
@@ -3121,7 +3155,16 @@ def record_decision(name: str, node: str, decision: str, reason: str = "",
     diagnosis accepted with a known defect, a result read with a reservation);
     hand_over lists it among the caveats that stay open.
     """
-    s = _sess.get(name)
+    try:
+        s = _sess.get(name)
+    except KeyError:
+        # the raw entry (load_data, characterize, canonical_analysis,
+        # art_brief) has its guion before any load_pre: its decisions are
+        # recorded there and go on in the session load_pre opens (the
+        # autonomous trial run could not record N0c and N1b)
+        if not _sess.has_raw(name):
+            raise
+        s = _sess.get_raw(name)
     args = {"decided_by": decided_by}
     if alternatives:
         args["alternatives"] = alternatives
@@ -3336,6 +3379,26 @@ from . import mcp_vec as _mcp_vec          # noqa: E402,F401
 from .mcp_vec import (add_exogenous, estimate_vec, irf_bands, job_cancel,  # noqa: E402,F401
                       job_result, job_status, jobs_list, long_run, plot_rank_bootstrap,
                       prepare_vec, rank_test, sweep, test_restriction)
+
+
+def _forbid_unknown_arguments():
+    """A tool called with an argument it does not take REFUSES it, naming it.
+    FastMCP's argument models ignore extra keys: in the trial run of
+    25-nov-2026 impulse_response(levels=True), sent to a server one version
+    behind, silently returned the responses of the differences. Every tool's
+    argument model is replaced by a subclass with extra="forbid"."""
+    from pydantic import ConfigDict
+    for t in mcp._tool_manager.list_tools():
+        meta = getattr(t, "fn_metadata", None)
+        base = getattr(meta, "arg_model", None)
+        if base is None or base.model_config.get("extra") == "forbid":
+            continue
+        cfg = ConfigDict(**{**base.model_config, "extra": "forbid"})
+        meta.arg_model = type(base.__name__, (base,), {"model_config": cfg,
+                                                       "__module__": base.__module__})
+
+
+_forbid_unknown_arguments()
 
 
 if __name__ == "__main__":
