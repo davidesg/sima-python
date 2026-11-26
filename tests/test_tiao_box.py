@@ -80,7 +80,7 @@ def test_the_flour_example_in_real_time(tmp_path):
     t = _fn(M.load_example)("flour_prices", session="fl", dest=str(tmp_path))
     assert "sima://example/flour_prices" in t
     g = _fn(M.run_gate)("fl")
-    assert "GATE: PASSED" in g and "Next: canonical_analysis" in g
+    assert "GATE: PASSED" in g and 'canonical_analysis(name="fl")' in g
     c = _fn(M.canonical_analysis)("fl")
     assert "1  0.758    0.870" in c and "3  0.943    0.971" in c
     assert "there may be 1 stationary combination(s) of the levels" in c

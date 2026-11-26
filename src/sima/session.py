@@ -78,6 +78,18 @@ def declare_purpose(name, purpose):
     return _PURPOSES.get(name)
 
 
+# The checkpoint at the univariate base (sima.package): on unless the analyst
+# declared checkpoint=False at a load; by name, as the lane.
+_CHECKPOINTS: dict = {}
+
+
+def declare_checkpoint(name, checkpoint):
+    """None keeps what session `name` has (on by default). Returns it."""
+    if checkpoint is not None:
+        _CHECKPOINTS[name] = bool(checkpoint)
+    return _CHECKPOINTS.get(name, True)
+
+
 def declare_lane(name, lane):
     """Fix the lane of session `name`; "" keeps the one it has (or none).
     Returns the lane in force, or raises ValueError for an unknown one."""

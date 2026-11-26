@@ -185,7 +185,8 @@ def _finish(fn, args, kw, out, name, before, n0, sessions):
             if new:
                 _dec.close(s.guion, new[0], fn.__name__, _bound(fn, args, kw))
                 text = "\n".join(t for _, t in _texts(out)[1])
-                if _env.STOP in text:
+                from .package import CHECKPOINT
+                if _env.STOP in text or CHECKPOINT in text:
                     _dec.open_pending(new[-1], text)
             note = _dec.adoption_note(s, fn.__name__)
             if note:
