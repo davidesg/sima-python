@@ -165,7 +165,7 @@ def provenance(x):
                     "an .inp: its model was not validated")
         return ("a fue file with no art guion beside it: its history is not on record", None)
     lane = {"autonomo": "autonomous", "guiado": "guided"}.get(a["lane"], a["lane"] or "?")
-    g = os.path.join(os.path.basename(os.path.dirname(a["guion"])), "guion.json")
+    g = os.path.basename(os.path.dirname(a["guion"])) + "/guion.json"   # the same on every OS
     line = (f"art, {lane} lane: version {a['version']} of {g}, "
             f"{a['status'] or 'no status'}")
     if a["unchanged"] is False:
