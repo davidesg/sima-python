@@ -243,13 +243,18 @@ N3  lag_order         the order of the VAR by LR: VAR(0) -> ... -> VAR(pmax) by
                       on the pairs identify_cross found (its option (d)).
                       `indices` fits the echelon form instead (route U: with
                       the row factor's LR check).
-N4  (in estimate)     LR against the same model without cross terms (the
-                      univariates for a plain VARMA on route U), residuals,
-                      convergence.
-    check_residuals   Jenkins and Alavi's checking: large residuals on the
-                      uncorrelated transformed residuals (with dates, the entry
-                      to interventions), the residual correlation matrices,
-                      the portmanteau matrix.
+N4  (in estimate)     THE ITERATION IS ONE ANSWER, as art's: the specification,
+                      the estimated model (LR against the same model without
+                      cross terms, convergence), the diagnosis (check_residuals'
+                      table: large residuals on the uncorrelated transformed
+                      residuals, with dates — the entry to interventions —,
+                      the residual correlation matrices, the portmanteau
+                      matrix), and THE REFORMULATION, always stated: what the
+                      evidence asks of the model, or "none: to the yardstick".
+                      Read the four before deciding. In the guided lane the
+                      diagnosis' figures come with it.
+    check_residuals   the same diagnosis on its own: other lags, the figures
+                      again.
 N4s simplify          Tiao and Box's simplification: coefficients |t| < 1 at
                       zero, refitted, tested by LR (and AIC, BIC); adopt with
                       the estimate call it gives (cached). Several rounds.
@@ -340,9 +345,12 @@ From raw data, record_decision records the nodes before load_pre (N0c, N1b, N0a)
                       route V starts here, it has no univariate residuals) →
                       identify_echelon when the orders point to an MA or a fit
                       reaches the MA wall.
-  N3/N4 estimate      one candidate at a time. A tie (LR p near 0.05, or two
-                      candidates that read the same) is resolved by ESTIMATING
-                      BOTH and comparing, not by choosing on paper.
+  N3/N4 estimate      one candidate at a time: the estimate AND its diagnosis
+                      come in one answer, with the reformulation stated;
+                      record the decision on it (node N3). A tie (LR p
+                      near 0.05, or two candidates that read the same) is
+                      resolved by ESTIMATING BOTH and comparing, not by
+                      choosing on paper.
   N4b study_estimation if a fit stops on the MA wall. Decide from its menu and
                       write why; never report a point on the wall as an optimum.
   N5 evaluate         (then adopt or abandon, with why=)
@@ -529,29 +537,7 @@ def _id_route(s):
     return "V" if s.route == "V" else "U"
 
 
-def _ladder(files, p, q, diagcov, estwin=None, links=None, start=None,
-            cross="additive", zeros=None, lik="elf", echelon=None, own="spec",
-            own_zeros=None, route="u"):
-    """start None: the Ladder's default (ols with q = 0, else zero). own
-    "free": the echelon rows' own part replaces each univariate model's
-    regular ARMA (route U); `own_zeros` holds some of its lags at zero
-    (BUG-0003). route "v": the engine's route V (own_zeros are then the free
-    AR(p)/MA(q)'s lags held at zero)."""
-    from drvarma.ladder import Ladder
-    if echelon:
-        p = q = 0                       # the indices give the orders
-    if route == "v":
-        return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
-                      links=links or None, start=start, cross=cross,
-                      zeros=list(zeros) if zeros else None, lik=lik,
-                      echelon=tuple(echelon) if echelon else None,
-                      own_zeros=own_zeros or None, route="v")
-    return Ladder(list(files), p, q, diagcov=diagcov, estwin=estwin,
-                  links=links or None, start=start, cross=cross,
-                  zeros=list(zeros) if zeros else None, lik=lik,
-                  echelon=tuple(echelon) if echelon else None,
-                  own=own if echelon else "spec",
-                  own_zeros=own_zeros if (echelon and own == "free") else None)
+from .parallel import build_ladder as _ladder               # noqa: E402
 
 
 _OWN = re.compile(r"(phi|theta)_(.+)\[B\^(\d+)\]")
@@ -787,19 +773,26 @@ def _fit_paths(s, key, start):
 def _model_ladder(s, key, estwin=None, start=None, lik="elf"):
     """The Ladder of a fit key (p, q, diagcov, links, cross, zeros, indices)
     on its files."""
+    args, kw = _ladder_spec(s, key, estwin=estwin, start=start, lik=lik)
+    return _ladder(*args, **kw)
+
+
+def _ladder_spec(s, key, estwin=None, start=None, lik="elf"):
+    """The plain arguments of _ladder for a fit key: what a worker process
+    needs to build the same Ladder (sima.parallel)."""
     p, q, dc, lk, cr, zs, ech = key
     cross, own = _split_zeros(s, zs, echelon=bool(ech))
-    files = s.files
+    files = list(s.files)
+    kw = dict(estwin=estwin, links=lk, start=start, cross=cr, zeros=cross, lik=lik,
+              echelon=ech or None)
     if _engine_v(s) and (ech or p or q):
         # the engine's route V; with p = q = 0 there is no vector part and
         # the model is the diagonal one, the same on both routes
-        return _ladder(files, p, q, dc, estwin=estwin, links=lk, start=start, cross=cr,
-                       zeros=cross, lik=lik, echelon=ech or None,
-                       own_zeros=own or None, route="v")
-    free = bool(ech) and s.route != "V"
-    return _ladder(files, p, q, dc, estwin=estwin, links=lk, start=start, cross=cr,
-                   zeros=cross, lik=lik, echelon=ech or None,
-                   own="free" if free else "spec", own_zeros=own if free else None)
+        kw.update(own_zeros=own or None, route="v")
+    else:
+        free = bool(ech) and s.route != "V"
+        kw.update(own="free" if free else "spec", own_zeros=own if free else None)
+    return (files, p, q, dc), kw
 
 
 def _factor_check(s, L):
@@ -1702,8 +1695,19 @@ def identify_echelon(name: str, max_index: int = 3, criterion: str = "SC") -> st
 @mcp.tool()
 def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
              reason: str = "", links: str = "", start: str = "",
-             cross: str = "additive", zeros: str = "", indices: str = "") -> str:
-    """N3/N4 — Estimate a candidate: cross orders p, q; full or diagonal covariance.
+             cross: str = "additive", zeros: str = "", indices: str = "") -> list:
+    """N3 + N4 — Estimate a candidate and diagnose it, in ONE answer: the
+    iteration, as art packs it (specification, estimated model, diagnosis,
+    reformulation). Cross orders p, q; full or diagonal covariance.
+
+    The answer: the specification (the call), the estimated model, the
+    diagnosis of check_residuals (Jenkins and Alavi, 1981, §5.2: the large
+    residuals, R_k(a), the portmanteau matrix; with its figures in the guided
+    lane, written to disk only in the autonomous one), and THE REFORMULATION,
+    always stated: what the evidence asks of this model (an intervention in
+    art, a model for the residuals, simplify, another start), or "none: to the
+    yardstick". A fit that is not an optimum (the MA wall, the fold) is not
+    diagnosed: study_estimation first.
 
     Each series keeps its univariate model on the diagonal (its ARMA factors are
     re-estimated jointly, its deterministic terms stay as in its file). Reports
@@ -1843,10 +1847,10 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
 
 
 def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
-    """N3's envelope (sima.envelope). Before, estimate ended with «Next:
-    evaluate» and the guided lane skipped N4 — the residuals of the estimated
-    model, each series' and each pair's — and N4s/N4t: whoever did not know the
-    tool went from the estimate to the yardstick without ever seeing them."""
+    """The iteration package (package B, 26-nov-2026): N3's estimate and N4's
+    diagnosis in one envelope, with the reformulation always stated, as art's
+    envuelve_iteracion. Before, the estimate and its diagnosis were two calls,
+    and the autonomous lane read the first without the second."""
     from . import envelope as E
     freq = s.series[0].freq
     f = evidence.estimation_facts(L, max(8, 2 * freq))
@@ -1860,8 +1864,8 @@ def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
              "without cross terms, in sample: necessary, not sufficient — the cross terms "
              "have to pay for themselves out of sample (N5).",
              "The optimiser's stop says whether the point is a demonstrated maximum; the "
-             "residuals' Hosking Q is a first look at what the model leaves: check_residuals "
-             "reads them series by series and pair by pair, with their figures."]
+             "diagnosis in the table reads what the model leaves, series by series and "
+             "pair by pair."]
     if f["not_started"]:
         # BUG-0011: no LR, no reading of a table that is the seeds
         return E.envelope(
@@ -1875,18 +1879,22 @@ def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
              ("start the search elsewhere", f'estimate({q_}, {spec}, start="zero")'),
              ("other orders: back to the identification", f"identify_matrices({q_})")])
     concl = []
+    unreadable = False
     if f["wall"]:
         concl.append("The fit stopped on the MA invertibility wall: not an optimum. Its "
                      "numbers are not to be read before studying it.")
+        unreadable = True
     elif f["fold"]:
         # BUG-0008: the fold of the cast is a wall of one coefficient
         concl.append(f"The fit stopped at the fold of an own MA(1) ({', '.join(f['fold'])}): "
                      "not an optimum. Its numbers are not to be read before studying it.")
+        unreadable = True
     elif f.get("own_ma_outside"):
         concl.append("An own MA factor ended outside the unit circle read alone ("
                      + ", ".join(f"{o[0]}, modulus {o[4]:.4f}" for o in f["own_ma_outside"])
                      + "): the optimiser stopped, but this is not a model to read. "
                      "Another start, or another model.")
+        unreadable = True
     elif not f["converged"]:
         concl.append(f"Optimiser: {f['stop']}. The point is not certified by the "
                      "gradient.")
@@ -1900,26 +1908,76 @@ def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
                      "|t| <= 1.96" + (f" ({', '.join(f['weak_cross'][:6])}"
                                       + (", …" if len(f["weak_cross"]) > 6 else "") + ")"
                                       if f["weak_cross"] else "") + ".")
-    if f["hosking_p"] is not None:
+    # N4 in the same answer (package B): the diagnosis of the fit, as art's
+    # iteration packs the estimate, the diagnosis and the reformulation
+    d = None
+    if not unreadable:
+        d = _diagnosis(s, name, L)
+        s.guion.add("N4", "check_residuals", {"nlags": d["K"], "model": str(s.current),
+                                              "in": "estimate"}, d["record"])
+    elif f["hosking_p"] is not None:
         concl.append("The residuals' Hosking Q "
                      + ("does not reject white noise" if f["hosking_p"] > 0.05 else
                         "REJECTS white noise: the model leaves dynamics")
                      + f" (p = {f['hosking_p']:.4f}).")
-    opts = []
-    if f["wall"] or f["fold"]:
-        opts.append(("study the fit first: restarts from other points, and the MA "
-                     "wall or the fold", f"study_estimation({q_})"))
-    opts.append(("N4 — the residuals of this model: each series' diagnosis and the CCF "
-                 "of each pair, with their figures", f"check_residuals({q_})"))
-    if f["weak_cross"]:
-        opts.append((f"N4s — simplify: drop the cross coefficients with small t "
-                     f"({len(f['weak_cross'])} here)", f"simplify({q_})"))
-    if f["n_cross"]:
-        opts.append(("N4t — the structure: which series feed which, by LR, pair by pair",
-                     f"structure({q_})"))
+    # THE REFORMULATION, always stated: what the evidence asks of the model,
+    # in the order it is to be read (Jenkins and Alavi: a large residual with
+    # a cause before anything else)
+    ref = []
+    if unreadable:
+        ref.append(("study the fit before reading it: restarts from other points, and the "
+                    "MA wall or the fold", f"study_estimation({q_})"))
+    else:
+        dz = d["facts"]
+        if dz["worst_z"] > 3.0:
+            ref.append((f"the large residual at {dz['worst']} ({dz['worst_z']:.1f} s.d.): with "
+                        "a known cause, an intervention in art on the series' own model, "
+                        "from art's proposal, in levels; then the ladder again",
+                        "art: suggest_intervention_form(...)"))
+        if d["structure"]:
+            ref.append(("the residuals carry structure: a model for them, identified as at "
+                        "N2 (a higher order, or the residual form)",
+                        f'plot_identification({q_}, method=2)'))
+        if f["weak_cross"]:
+            ref.append((f"simplify: the {len(f['weak_cross'])} cross coefficients with small "
+                        "t to zero, tested by LR (N4s)", f"simplify({q_})"))
+        if not f["converged"]:
+            ref.append(("the point is not certified by the gradient: restarts from other "
+                        "points, to see whether the optimum moves", f"study_estimation({q_})"))
+    if ref:
+        refl = ["**The reformulation** — what the evidence asks of this model, in the "
+                "order to read it:"] + [f"{i + 1}. {w}" for i, (w, _c) in enumerate(ref)]
+    else:
+        refl = ["**The reformulation** — none: the estimate is an optimum, the residuals "
+                "carry no structure beyond chance and no cross coefficient is weak. The "
+                "model goes to the yardstick (N5) as it is."]
+    opts = list(ref)
     opts.append(("N5 — the yardstick: does it forecast better than the univariates?",
                  f"evaluate({q_}, {spec}, estwin=...)"))
-    return E.envelope(f"# N3 · Estimated — {_desc(s.current)}", txt, shows, concl, opts)
+    if f["n_cross"] and not unreadable:
+        opts.append(("N4t — the structure: which series feed which, by LR, pair by pair "
+                     "(one exact-ML refit per test)", f"structure({q_})"))
+    if not unreadable:
+        opts.append(("the diagnosis again, with other lags, and its figures",
+                     f"check_residuals({q_}, nlags=...)"))
+    title = f"# Iteration · N3 + N4 — {_desc(s.current)}"
+    table = [f"### The specification\n\n`estimate({q_}, {spec})` — route {s.route}, "
+             f"start {L.start_used}", "", "### The estimated model", "", txt]
+    if d:
+        table += ["", "### The diagnosis — Jenkins and Alavi (1981, §5.2)", ""] + d["table"]
+        shows = shows + ["", "**The diagnosis.**"] + d["shows"]
+        concl = concl + d["concl"]
+    else:
+        table += ["", "### The diagnosis", "", "Not read: the fit is not an optimum."]
+    text = E.envelope(title, table, shows, concl + [""] + refl, opts)
+    if d and _figures_shown(s):
+        # the guided lane sees the diagnosis as art shows it: report, figures
+        try:
+            items, note = _diagnosis_figures(L, s.series[0].freq, d["n"])
+        except Exception as e:                               # noqa: BLE001
+            return text + f"\n\n(the figures of the diagnosis could not be drawn: {e})"
+        return _figures(s, items, text + "\n" + note)
+    return text
 
 
 def _desc(key):
@@ -2028,10 +2086,12 @@ def structure(name: str, alpha: float = 0.05) -> str:
     Tiao and Box's gas furnace shows a spurious feedback at low order.
 
     COST: every test is a refit by exact ML — m(m-1) pairs and up to m!
-    orderings (fewer when they coincide; a pair already absent costs nothing).
-    With 4 series and a VAR(1) that was ~20 fits and ~12 minutes with the
-    compiled engine on one core (trial run, 25-nov-2026): say so before
-    calling it."""
+    orderings (fewer when they coincide; a pair already absent costs nothing,
+    a fit already made is reused). The refits are independent and run in
+    parallel, one process each (sima.parallel; SIMA_WORKERS, default cores -
+    1): with 4 series and a VAR(1), ~20 fits that took ~12 minutes on one
+    core (trial run, 25-nov-2026) take about that divided by the workers.
+    Say so before calling it."""
     import itertools
     s = _sess.get(name)
     try:
@@ -2051,37 +2111,59 @@ def structure(name: str, alpha: float = 0.05) -> str:
         return [f"{k}{l}[{names[i]}<-{names[j]}]" for k, lo, top in (("AR", 0, p), ("MA", 1, q))
                 for l in range(lo, top + 1) if f"{k}{l}[{names[i]}<-{names[j]}]" in free]
 
+    # every restriction first, then their fits at once, in parallel (i)
+    want = []                                   # (label, extra), pairs then orderings
+    for i in range(m):
+        for j in range(m):
+            if i != j:
+                want.append(("pair", f"{names[j]} -> {names[i]}", pair_zeros(i, j), None))
+    if m <= 4:
+        seen = set()
+        for perm in itertools.permutations(range(m)):
+            pos = {v: k for k, v in enumerate(perm)}
+            extra = sorted(z for i in range(m) for j in range(m)
+                           if i != j and pos[j] > pos[i] for z in pair_zeros(i, j))
+            if tuple(extra) in seen:
+                continue
+            seen.add(tuple(extra))
+            want.append(("order", " -> ".join(names[v] for v in perm), extra, perm))
+    kof = lambda extra: key[:5] + (_zeros(list(zs) + extra),) + key[6:]   # noqa: E731
+    todo = sorted({kof(e) for _, _, e, _ in want if e} - set(s.fits), key=str)
+    import time as _time
+    from . import parallel as _par
+    t0 = _time.time()
+    nw = _par.workers(len(todo))
+    fitted = _par.fit_many([_ladder_spec(s, k) for k in todo], nw) if todo else []
+    for k2, L2 in zip(todo, fitted):
+        if isinstance(L2, Exception):
+            return f"A restricted fit failed: {L2}"
+        s.fits[k2] = L2
+    allk = {kof(e) for _, _, e, _ in want if e}
+    cost = (f"{len(todo)} refit(s) by exact ML on {nw} process(es) in "
+            f"{_time.time() - t0:.0f} s" + (f"; {len(allk) - len(todo)} already made, "
+                                            "reused" if len(allk) > len(todo) else ""))
     tests = {}
 
     def test(extra, label):
         if not extra:
             return {"label": label, "lr": 0.0, "df": 0, "p": 1.0}
-        k2 = key[:5] + (_zeros(list(zs) + extra),) + key[6:]
+        k2 = kof(extra)
         if k2 not in tests:
-            tests[k2] = _lr(L, _fit_key(s, k2))
+            tests[k2] = _lr(L, s.fits[k2])
         return dict(tests[k2], label=label, key=k2)
 
-    try:
-        pairs = [test(pair_zeros(i, j), f"{names[j]} -> {names[i]}")
-                 for i in range(m) for j in range(m) if i != j]
-        orders = None
-        if m <= 4:
-            orders, seen = [], set()
-            for perm in itertools.permutations(range(m)):
-                pos = {v: k for k, v in enumerate(perm)}
-                extra = sorted(z for i in range(m) for j in range(m)
-                               if i != j and pos[j] > pos[i] for z in pair_zeros(i, j))
-                tag = tuple(extra)
-                if tag in seen:
-                    continue
-                seen.add(tag)
-                t = test(extra, " -> ".join(names[v] for v in perm))
-                t["arrows"] = ", ".join(f"{names[a]} -> {names[b]}"
-                                        for a, b in zip(perm, perm[1:]))
-                t["call"] = _estimate_call(name, t.get("key", key))
-                orders.append(t)
-    except Exception as e:                                   # noqa: BLE001
-        return f"A restricted fit failed: {e}"
+    pairs = [test(e, lab) for kind, lab, e, _ in want if kind == "pair"]
+    orders = None
+    if m <= 4:
+        orders = []
+        for kind, lab, e, perm in want:
+            if kind != "order":
+                continue
+            t = test(e, lab)
+            t["arrows"] = ", ".join(f"{names[a]} -> {names[b]}"
+                                    for a, b in zip(perm, perm[1:]))
+            t["call"] = _estimate_call(name, t.get("key", key))
+            orders.append(t)
     pre = s.files
     f = {"desc": _desc(key), "alpha": float(alpha), "pairs": pairs, "orders": orders,
          "pre": pre, "adopted": bool(getattr(s, "adopted", None))}
@@ -2089,7 +2171,9 @@ def structure(name: str, alpha: float = 0.05) -> str:
     s.guion.add("N4t", "structure", {"model": _desc(key), "alpha": alpha},
                 ("orderings standing: " + "; ".join(stand)) if stand else
                 "no triangular ordering stands: feedback")
-    return evidence.structure_report(f, name)
+    rep = evidence.structure_report(f, name)
+    head, _, rest = rep.partition("\n")
+    return f"{head}\n*({cost}.)*\n{rest}"
 
 
 @mcp.tool()
@@ -2114,60 +2198,75 @@ def check_residuals(name: str, nlags: int = 0) -> list:
     portmanteaus keep at least 2 lags beyond the parameters: the legacy lags
     move up when a long model in annual data would leave none.
     """
-    from . import figures
     s = _sess.get(name)
     try:
         L = _current(s)
     except KeyError as e:
         return [str(e)]
+    d = _diagnosis(s, name, L, nlags)
+    s.guion.add("N4", "check_residuals", {"nlags": d["K"], "model": str(s.current)},
+                d["record"])
+    from . import envelope as E
+    text = E.envelope(
+        "# Checking — Jenkins and Alavi (1981, §5.2)\n" + f"*({d['desc']}; n = {d['n']})*",
+        d["table"], d["shows"], d["concl"], d["opts"])
+    items, note = _diagnosis_figures(L, s.series[0].freq, d["n"])
+    if note:
+        text += "\n" + note
+    return _figures(s, items, text)
+
+
+def _diagnosis(s, name, L, nlags=0):
+    """N4's reading of a fit, as Jenkins and Alavi (1981, §5.2) and art's
+    diagnosis: the table (large residuals, R_k(a), the portmanteau matrix),
+    what it shows, the conclusions and the options. One function for
+    check_residuals and for estimate's iteration package (package B)."""
+    from . import figures
     r = L.result
     freq = s.series[0].freq
     K = int(nlags) or max(6, freq)
     s0 = L.series[L._act[0]]
     n = r.residuals.shape[0]
     names = _names(s)
+    npq = figures.residual_npq(L)
     txt, facts = evidence.ja_checking(r.residuals, r.sigma, names, K, freq,
-                                      lambda t: s0.date_of(s0.nobs - n + t + 1))
-    s.guion.add("N4", "check_residuals", {"nlags": K, "model": str(s.current)},
-                f"{facts['n_beyond']} residual correlations beyond the band; "
-                f"{len(facts['large_dates'])} date(s) with large transformed residuals")
+                                      lambda t: s0.date_of(s0.nobs - n + t + 1), npq=npq)
     p_, q_, dc_, lk_, cr_, zs_, ech_ = s.current
     head_ = (f"echelon form, indices {', '.join(map(str, ech_))}" if ech_
              else f"cross p = {p_}, q = {q_}")
     desc = (f"{head_}, {'diagonal' if dc_ else 'full'} covariance"
             + (f", links {lk_}" if lk_ else "") + (f", cross MA {cr_}" if q_ else "")
             + (f", {len(zs_)} coefficients at zero" if zs_ else ""))
-    lines = ["# Checking — Jenkins and Alavi (1981, §5.2)",
-             f"*({desc}; n = {n})*", "",
-             "## 1 · TABLE", "",
-             "_[Claude: show the block below AS IT IS; do not build your own table]_", "",
-             "```", txt, "```", "",
-             "## 2 · WHAT IT SHOWS", ""]
-    lines.append(f"- Residual correlations beyond the band: {facts['n_beyond']} "
-                 f"(about {facts['expected']:.1f} expected by chance)"
-                 + (": " + ", ".join(f"({names[i]}, {names[j]}) at {k}"
-                                     for k, i, j in facts["beyond"]) if facts["beyond"] else "")
-                 + ".")
-    lines.append("- Portmanteau matrix: " + (
-        "significant for " + ", ".join(f"({a}, {b})" for a, b in facts["significant_Q"])
-        if facts["significant_Q"] else "nothing significant") + ".")
+    table = ["_[Claude: show the block below AS IT IS; do not build your own table]_", "",
+             "```", txt, "```"]
+    shows = [f"- Residual correlations beyond the band: {facts['n_beyond']} "
+             f"(about {facts['expected']:.1f} expected by chance; P(at least as many) = "
+             f"{facts['binom_p']:.3f})"
+             + (": " + ", ".join(f"({names[i]}, {names[j]}) at {k}"
+                                 for k, i, j in facts["beyond"]) if facts["beyond"] else "")
+             + "."]
+    sq, bq = facts["significant_Q"], facts["bonferroni_Q"]
+    shows.append("- Portmanteau matrix (chi-square with %d d.f. per cell): " % facts["q_df"] + (
+        "significant at 5 %% for %s" % ", ".join(f"({a}, {b})" for a, b in sq)
+        + (f"; beyond Bonferroni for {', '.join(f'({a}, {b})' for a, b in bq)}" if bq else
+           f"; none beyond Bonferroni ({len(sq)} of {len(names) ** 2} cells at 5 %, "
+           f"about {facts['expected_Q']:.1f} expected by chance)")
+        if sq else "nothing significant") + ".")
     nd = len(facts["large_dates"])
-    lines.append(f"- Large transformed residuals (beyond 2): {nd} date(s)"
+    shows.append(f"- Large transformed residuals (beyond 2): {nd} date(s)"
                  + (f" — {', '.join(facts['large_dates'])}; the largest {facts['worst']}, "
                     f"{facts['worst_z']:.1f} s.d" if nd else "") + ".")
-    lines += ["", "## 3 · CONCLUSIONS", ""]
-    structure = facts["n_beyond"] > facts["expected"] + 1 or facts["significant_Q"]
-    lines.append("The residual matrices show structure the model does not carry: a "
-                 "model for the residuals is entertained (as at identification)."
-                 if structure else
-                 "The residual matrices show no structure beyond chance: the model "
-                 "carries the dynamics.")
+    structure = facts["structure"]
+    concl = ["The residual matrices show structure the model does not carry: a "
+             "model for the residuals is entertained (as at identification)."
+             if structure else
+             "The residual matrices show no structure beyond chance: the model "
+             "carries the dynamics."]
     if facts["worst_z"] > 3.0:
-        lines.append(f"A large residual stands out ({facts['worst']}, "
+        concl.append(f"A large residual stands out ({facts['worst']}, "
                      f"{facts['worst_z']:.1f} s.d.): with a known cause it is treated by "
                      "intervention in art, on the series' own model, before reading "
                      "anything else; without one it stays as an open caveat.")
-    lines += ["", "## 4 · DECISION — alternatives", ""]
     opts = [("the yardstick (N5): does it forecast better than the univariates?",
              f'evaluate(name="{name}", p={p_}, q={q_}, estwin=...'
              + (f', links="{lk_}"' if lk_ else "") + (f', cross="{cr_}"' if q_ else "") + ")")]
@@ -2179,26 +2278,34 @@ def check_residuals(name: str, nlags: int = 0) -> list:
                      f'plot_identification(name="{name}", method=2)'))
     opts.append(("Jenkins and Alavi's V(l) against the univariates (in sample)",
                  f'forecast_uncertainty(name="{name}")'))
-    for t, (what, call) in enumerate(opts):
-        lines.append(f"**{'ABCDEF'[t]})** {what}\n   `{call}`")
-    lines += ["", _env.STOP]
-    # the figures, as drvus' diagnosis: a panel per series, a ccf per pair
+    record = (f"{facts['n_beyond']} residual correlations beyond the band; "
+              f"{len(facts['large_dates'])} date(s) with large transformed residuals"
+              + ("; structure" if structure else ""))
+    return {"K": K, "n": n, "desc": desc, "facts": facts, "table": table, "shows": shows,
+            "concl": concl, "opts": opts, "structure": structure, "record": record}
+
+
+def _diagnosis_figures(L, freq, n):
+    """The figures of the diagnosis, as drvus drew it and their figure 7:
+    fue's panel for each residual series, the residual ccf of each pair; and
+    the note on the ccf's P."""
+    from . import figures
     items = [(fig, f"resid_{nm}") for nm, fig in figures.residual_panels(L)]
     from pyfug.graphics.ccf import ccf_default_lags
     npq = figures.residual_npq(L)
     K0 = min(ccf_default_lags(freq), n // 4)
     Kc = figures.q_lags(K0, npq, n)
     items.append((figures.residual_ccf_figure(L, Kc, freq), "ccf"))
-    lines.append(f"\nThe residual ccf's P is GraphMaker's: Hosking's portmanteau over {Kc} lags "
-                 f"with 4(K - (p + q)) = {4 * (Kc - npq)} degrees of freedom, p + q = {npq} "
-                 "(the system's orders, the VARMA(p, q) estimated; the univariate "
-                 "models' parameters are discounted in each series' own Q)"
-                 + (f"; K moved up from GraphMaker's {K0} to leave at least "
-                    f"{figures.MIN_DF_LAGS} lags beyond p + q." if Kc > K0 else ".")
-                 + " The acf's Q of each series keeps the same minimum.")
+    note = (f"\nThe residual ccf's P is GraphMaker's: Hosking's portmanteau over {Kc} lags "
+            f"with 4(K - (p + q)) = {4 * (Kc - npq)} degrees of freedom, p + q = {npq} "
+            "(the system's orders, the VARMA(p, q) estimated; the univariate "
+            "models' parameters are discounted in each series' own Q)"
+            + (f"; K moved up from GraphMaker's {K0} to leave at least "
+               f"{figures.MIN_DF_LAGS} lags beyond p + q." if Kc > K0 else ".")
+            + " The acf's Q of each series keeps the same minimum.")
     if not items[:-1]:
-        lines.append("\n(pyfug is not installed: the per-series panels are missing.)")
-    return _figures(s, items, "\n".join(lines))
+        note += "\n\n(pyfug is not installed: the per-series panels are missing.)"
+    return items, note
 
 
 @mcp.tool()

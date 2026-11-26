@@ -568,7 +568,7 @@ def ja_identification(w, res, names, K, qmax, freq, route="U", call="NAME"):
     return text, facts
 
 
-def ja_checking(res, sigma, names, K, freq, date_of):
+def ja_checking(res, sigma, names, K, freq, date_of, npq=0):
     """Jenkins and Alavi's checking of a fitted model [§5.2].
 
     (1) the large residuals, on the UNCORRELATED transformed residuals
@@ -578,7 +578,15 @@ def ja_checking(res, sigma, names, K, freq, date_of):
     correlation matrices R_k(a); (3) the portmanteau matrix
     Q_ij = n SUM_k r_ij(k)^2 — which, they warn, deserves less attention than
     the individual matrices, "the only ones that give clues how the model can
-    be changed for the better". `date_of(t)` dates residual t (0-based)."""
+    be changed for the better". `date_of(t)` dates residual t (0-based).
+
+    `npq`: the system's p + q, discounted from each cell's degrees of freedom
+    (K - npq, Hosking's per cell). The reading `structure` asks for more than
+    one cell (observation t of the trial run, 26-nov-2026: one cell at p < 0.05
+    out of 16, with 6 correlations beyond the band against 9.6 expected, read
+    as "structure the model does not carry"): the count of correlations beyond
+    the band has to exceed chance (binomial, 5 %), or a cell of the portmanteau
+    has to stand beyond Bonferroni's 0.05 / m^2."""
     from scipy.stats import chi2
     from drvarma.identification_mv import corr_matrices, symbols
     a = np.asarray(res, float)
@@ -618,14 +626,24 @@ def ja_checking(res, sigma, names, K, freq, date_of):
     out.append("  beyond the band: " + (", ".join(f"({names[i]}, {names[j]}) at {k}"
                                                   for k, i, j in beyond) if beyond else "none")
                + f"  (about {0.05 * K * m * m:.1f} expected by chance)")
+    from scipy.stats import binom
     Qij = n * (R ** 2).sum(0)
-    p = chi2.sf(Qij, K)
+    df = max(1, int(K) - int(npq))
+    p = chi2.sf(Qij, df)
+    bonf = 0.05 / (m * m)
+    ntests = K * m * m
+    binom_p = float(binom.sf(len(beyond) - 1, ntests, 0.05)) if beyond else 1.0
     out += ["", f"(3) Portmanteau matrix Q_ij = n SUM r_ij(k)^2, k <= {K} "
                 "(a summary; the individual matrices above are what give clues):"]
     for i in range(m):
-        out.append(f"  {names[i]:<12}" + "".join(f"{Qij[i, j]:9.1f}{'*' if p[i, j] < 0.05 else ' '}"
-                                                  for j in range(m)))
-    out.append("  * p < 0.05 against chi-square(K), no parameters discounted.")
+        out.append(f"  {names[i]:<12}" + "".join(
+            f"{Qij[i, j]:9.1f}{'**' if p[i, j] < bonf else '* ' if p[i, j] < 0.05 else '  '}"
+            for j in range(m)))
+    out.append(f"  * p < 0.05 against chi-square({df})"
+               + (f" = chi-square(K - (p + q)), the system's p + q = {npq} discounted"
+                  if npq else ", K lags")
+               + f"; ** beyond Bonferroni's 0.05 / {m * m} = {bonf:.4f}: of {m * m} cells, "
+               f"about {0.05 * m * m:.1f} are expected at * by chance.")
     lab = (lambda t: "%d.%02d" % date_of(t) if freq > 1 else str(date_of(t)[0]))
     facts = {"n_beyond": len(beyond), "beyond": beyond, "large": len(big),
              "expected": 0.05 * K * m * m,
@@ -633,7 +651,11 @@ def ja_checking(res, sigma, names, K, freq, date_of):
              "worst": lab(max(big)[1]) if big else None,
              "worst_z": float(max(big)[0]) if big else 0.0,
              "significant_Q": [(names[i], names[j]) for i in range(m) for j in range(m)
-                               if p[i, j] < 0.05]}
+                               if p[i, j] < 0.05],
+             "bonferroni_Q": [(names[i], names[j]) for i in range(m) for j in range(m)
+                              if p[i, j] < bonf],
+             "q_df": df, "binom_p": binom_p, "expected_Q": 0.05 * m * m}
+    facts["structure"] = bool(binom_p < 0.05 or facts["bonferroni_Q"])
     return "\n".join(out), facts
 
 

@@ -203,8 +203,15 @@ the `ols` start and says so (BUG-0019; the starts in
 
 ## N4 — The in-sample evidence
 
-`check_residuals`: large residuals (with dates: the entry to interventions,
-which belong to art), the residual correlation matrices, the portmanteau.
+`estimate` answers with the whole iteration, as art packs it: the
+specification, the estimated model, the diagnosis (`check_residuals`' table:
+large residuals with dates — the entry to interventions, which belong to art —,
+the residual correlation matrices, the portmanteau) and the reformulation,
+always stated. The decision after it is N4's. The residual matrices show
+structure when the correlations beyond the band exceed chance (binomial, 5 %)
+or a portmanteau cell stands beyond Bonferroni's 0.05 / m²: one cell at 5 %
+out of m² is not enough. `check_residuals` gives the same diagnosis on its
+own (other lags, the figures again).
 **Guided:** the analyst reads them. **Autonomous:** a residual problem in one
 series goes back to art for that series; one between series, back to N2.
 
