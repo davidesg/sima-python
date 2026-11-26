@@ -22,6 +22,7 @@ from datetime import datetime
 NODES = {
     "N0r": "raw data: the table",
     "N0c": "raw data: each series' transformation",
+    "N0a": "raw data: who builds the univariate models (art or sima)",
     "N0u": "route U: the univariate models built by sima",
     "N0": "entry: the univariate models (fue files)",
     "N1": "the diagonal gate",
@@ -126,18 +127,18 @@ class Guion:
         guion, so the page and its figures travel together."""
         return os.path.join(self.folder(), "figs")
 
-    def save_html(self, path=None):
+    def save_html(self, path=None, front=None):
         path = path or self.html_path()
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "w", encoding="utf-8") as fh:
-            fh.write(render_html(self, os.path.dirname(os.path.abspath(path))))
+            fh.write(render_html(self, os.path.dirname(os.path.abspath(path)), front))
         return path
 
     def render(self):
         out = [f"GUION — {self.name}", f"files: {', '.join(self.files)}", ""]
         for e in self.entries:
             out.append(f"[{e.n}] {e.node} {NODES.get(e.node, '')} — {e.tool}"
-                       f"({', '.join(f'{k}={v}' for k, v in e.args.items())})")
+                       f"({', '.join(f'{k}={v}' for k, v in e.args.items() if k != 'digest')})")
             out.append(f"    evidence: {e.evidence}")
             if e.decision:
                 out.append(f"    decision: {e.decision}")
@@ -192,6 +193,9 @@ summary { font-size:16px; font-weight:bold; color:#283593; cursor:pointer; }
 .alt { background:#fce4ec; border-left:4px solid #e91e63; padding:8px 14px; margin:6px 0; }
 img { max-width:100%; border:1px solid #c5cae9; border-radius:4px; margin:10px 0; }
 .meta { color:#555; font-size:12px; margin:2px 0; }
+.package { background:#fff; border:1px solid #c5cae9; border-radius:6px; padding:4px 22px 14px; }
+.package h2 { border-bottom:2px solid #c5cae9; padding-bottom:4px; }
+.package table { width:auto; }
 """
 
 
@@ -201,10 +205,84 @@ def _esc(x):
 
 
 def _args(a):
-    return ", ".join(f"{k}={v}" for k, v in a.items() if k not in ("png", "vectors", "decided_by", "alternatives"))
+    return ", ".join(f"{k}={v}" for k, v in a.items() if k not in ("png", "vectors", "decided_by", "alternatives",
+                                                                  "digest"))
 
 
-def render_html(g, base_dir=None):
+def _inline(x):
+    import re
+    x = _esc(x)
+    x = re.sub(r"`([^`]+)`", r"<code>\1</code>", x)
+    x = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", x)
+    return re.sub(r"(?<![*\w])\*([^*]+)\*(?![*\w])", r"<i>\1</i>", x)
+
+
+def md_html(text):
+    """The packages' Markdown (sima.package) as HTML: headings, tables, lists,
+    fenced blocks, `code`, **bold** and *italic*. Only what the packages write."""
+    out, table, fence, lst = [], None, None, None
+
+    def flush():
+        nonlocal table, lst
+        if table is not None:
+            out.append("<table>" + "".join(table) + "</table>")
+            table = None
+        if lst is not None:
+            out.append(f"<{lst}>" + "".join(items) + f"</{lst}>")
+            lst = None
+    items = []
+    for ln in str(text).splitlines():
+        if fence is not None:
+            if ln.strip().startswith("```"):
+                out.append("<pre class='evidence'>" + _esc("\n".join(fence)) + "</pre>")
+                fence = None
+            else:
+                fence.append(ln)
+            continue
+        s = ln.strip()
+        if s.startswith("```"):
+            flush()
+            fence = []
+            continue
+        if s.startswith("|"):
+            if lst is not None:
+                flush()
+            cells = [c.strip() for c in s.strip("|").split("|")]
+            if all(set(c) <= set("-: ") for c in cells):
+                continue
+            tag = "th" if table is None else "td"
+            table = table or []
+            table.append("<tr>" + "".join(f"<{tag}>{_inline(c)}</{tag}>" for c in cells) + "</tr>")
+            continue
+        import re
+        m = re.match(r"^(- |\d+\. )(.*)$", s)
+        if m and not ln.startswith("   "):
+            kind = "ul" if m.group(1) == "- " else "ol"
+            if table is not None or (lst is not None and lst != kind):
+                flush()
+            if lst is None:
+                lst, items = kind, []
+            items.append(f"<li>{_inline(m.group(2))}</li>")
+            continue
+        if lst is not None and ln.startswith("   ") and s:
+            items[-1] = items[-1][:-5] + f"<br>{_inline(s)}</li>"
+            continue
+        flush()
+        if not s:
+            continue
+        h = re.match(r"^(#{1,4}) (.*)$", s)
+        if h:
+            n = min(len(h.group(1)) + 1, 5)
+            out.append(f"<h{n}>{_inline(h.group(2))}</h{n}>")
+        else:
+            out.append(f"<p>{_inline(s)}</p>")
+    if fence is not None:
+        out.append("<pre class='evidence'>" + _esc("\n".join(fence)) + "</pre>")
+    flush()
+    return "<div class='package'>" + "\n".join(out) + "</div>"
+
+
+def render_html(g, base_dir=None, front=None):
     """The guion as a self-contained HTML page: the steps in a table, then
     one section per protocol node with each step's evidence, its decision
     (highlighted, with who decided and what was set aside, as art's) and the
@@ -219,6 +297,10 @@ def render_html(g, base_dir=None):
     if g.entries:
         L.append(f"<p class='meta'>From {_esc(g.entries[0].when)} to {_esc(g.entries[-1].when)}"
                  f" &nbsp;·&nbsp; {len(g.entries)} steps</p>")
+    if front:
+        # the hand-over package first (sima.package): the models, the
+        # yardstick, the results, the decisions -- the path follows
+        L.append(md_html(front))
     if not g.entries:
         L.append("<p><em>No steps recorded.</em></p></body></html>")
         return "\n".join(L)
@@ -256,6 +338,8 @@ def render_html(g, base_dir=None):
                          + (f" &nbsp;·&nbsp; model: {_esc(e.kind)}" if e.kind else "") + "</p>")
             if e.evidence:
                 L.append(f"<div class='evidence'>{_esc(e.evidence)}</div>")
+            if e.args.get("digest"):
+                L.append(md_html(e.args["digest"]))
             if e.decision:
                 by = e.args.get("decided_by")
                 L.append(f"<div class='decision'><b>Decision:</b> {_esc(e.decision)}"

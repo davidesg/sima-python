@@ -116,6 +116,12 @@ the pause (⏸ Your decision) and you stop there; in the autonomous lane the
 pause is replaced by the record_decision call for that node, already filled
 with the node and its evidence -- write the decision and the reason, call it,
 and go on. Undeclared, the lane is guided, and every pause says so.
+ONE STOP IN BOTH LANES: the CHECKPOINT at the univariate base (run_gate, ⏸
+Checkpoint). Present the package to the analyst -- each series' model, where
+it comes from (art's guion: version, lane, diagnosis, why art kept it), the
+gate, the order, the purpose, the route -- and wait for "go on", in the
+autonomous lane too: it is the critical point before the system. Only a load
+with checkpoint=False skips it (an unattended run), and the hand-over says so.
 
 If the user is new to sima, or asks to see how it works, offer a WORKED
 EXAMPLE first: `examples()` lists them, `load_example(<name>)` loads one (the
@@ -142,7 +148,8 @@ N0  load_pre          the files, their models, the common window. With
                       by a free AR(p)/MA(q). The univariates give the mean,
                       the deterministic terms, the interventions and the
                       yardstick. Route U is the default.
-N1  run_gate          the univariate base, certified. If it FAILS, stop: the
+N1  run_gate          the univariate base, as one package, ending in the
+                      CHECKPOINT (both lanes). If the gate FAILS, stop: the
                       joint model does not reproduce the univariate ones, and
                       nothing on top of it can be trusted. On route U, if a
                       file is a SPECIFICATION (it moved), offer to go back to
@@ -270,9 +277,12 @@ N6  forecast, impulse_response, variance_decomposition — with the chosen model
     Their figures: plot_forecast, plot_impulse_response (an ACF-like panel per
     response and shock), plot_variance_decomposition (the same layout, 0-100 %),
     and plot_residual_ccf for what the model leaves.
-N7  hand_over        the close: the adopted model (or the univariates), the
-                      yardstick that decided it, the caveats that stay open;
-                      then export_guion. At any point, where(name) says where
+N7  hand_over        the close, as one package: the models first (the
+                      univariates and the system adopted), the yardstick that
+                      decided it, what the model says (the responses and the
+                      decomposition as read), the decisions with their
+                      reasons, the caveats, the figures; then export_guion
+                      (its HTML opens with the same package). At any point, where(name) says where
                       the analysis stands.
 Record every decision with its reason: export_guion shows the path.
 
@@ -303,7 +313,9 @@ From raw data, record_decision records the nodes before load_pre (N0c, N1b, N0a)
 
   N0 load_pre         the files are given; note any series trimmed to the
                       common window (it changes the sample of the others).
-  N1 run_gate         if it FAILS, stop and say why. If a file MOVED (it was a
+  N1 run_gate         THE CHECKPOINT: present the univariate base and STOP for
+                      the analyst, as in the guided lane (unless the load said
+                      checkpoint=False). If it FAILS, stop and say why. If a file MOVED (it was a
                       specification, not an optimum), decide whether to go on
                       and write it down: its univariate model has not been
                       validated here.
@@ -354,10 +366,12 @@ DOCUMENTATION — mandatory. After EVERY node:
 A branch you abandon is recorded too: what a failed candidate contributes is
 the reason it failed.
 
-WHAT YOU HAND OVER at the end: hand_over(name) gathers it — the adopted model,
-or the univariate models if no VARMA beat them; the yardstick numbers (N5) that
-decided it; the caveats that stay open (a fit on the MA wall, a moved file,
-the Cholesky order); then export_guion. At any point, where(name) says where
+WHAT YOU HAND OVER at the end: hand_over(name) gathers it as one package — the
+models first (the univariates and the adopted system, or the univariates if no
+VARMA beat them); the yardstick numbers (N5) that decided it; what the model
+says (the responses and the decomposition as read); your decisions with their
+reasons; the caveats that stay open (a fit on the MA wall, a moved file, the
+Cholesky order); the figures. Present it in that order; then export_guion. At any point, where(name) says where
 the analysis stands and what is open (sima://doc/DECISION_NODES).
 
 ══════════════════════════════════════════════════════
@@ -873,7 +887,7 @@ def examples() -> str:
 
 @mcp.tool()
 def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
-                 lane: str = "", purpose: str = "") -> str:
+                 lane: str = "", purpose: str = "", checkpoint: bool | None = None) -> str:
     """N0 for a worked example: copy its files to a working folder (`dest`,
     default ~/sima-examples/<name>; files already there are kept) and load
     them. An example from univariate models loads them as load_pre does, and
@@ -890,6 +904,8 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
     `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
     session (the first question). Undeclared, guided, and every decision says
     so; a later load of the same session keeps the lane it has.
+    `checkpoint`: the stop at the univariate base (run_gate), in both lanes; on
+    by default, False skips it in the autonomous lane (see load_pre).
     `purpose`: "forecast" or "long run" -- what the model is for, asked with
     the first question and recorded at N0. Optional here; N1c (prepare_vec)
     inherits it instead of asking again. It decides the role of the yardstick
@@ -926,6 +942,7 @@ def load_example(name: str = "jenkins_alavi", session: str = "", dest: str = "",
     try:
         _sess.declare_lane(session, lane)
         _sess.declare_purpose(session, purpose)
+        _sess.declare_checkpoint(session, checkpoint)
     except ValueError as e:
         return str(e)
     if raw:
@@ -964,7 +981,7 @@ def _fn_load_pre(name, paths_json):
 
 @mcp.tool()
 def load_data(name: str, path: str, freq: int = 0, start: str = "",
-              lane: str = "", purpose: str = "") -> str:
+              lane: str = "", purpose: str = "", checkpoint: bool | None = None) -> str:
     """N0r — RAW DATA: an analyst with series and no univariate models
     (docs/STUDY-raw-entry.md). An Excel (.xlsx/.xls) or CSV table, one column
     per series in ORIGINAL levels (never transformed or differenced), a header
@@ -979,6 +996,8 @@ def load_data(name: str, path: str, freq: int = 0, start: str = "",
     `lane`: "guided" or "autonomous" -- who decides the nodes, set ONCE for the
     session (the first question). Undeclared, guided, and every decision says
     so; a later load of the same session keeps the lane it has.
+    `checkpoint`: the stop at the univariate base (run_gate), in both lanes; on
+    by default, False skips it in the autonomous lane (see load_pre).
     `purpose`: "forecast" or "long run" -- what the model is for, asked with
     the first question and recorded at N0. Optional here; N1c (prepare_vec)
     inherits it instead of asking again. It decides the role of the yardstick
@@ -987,6 +1006,7 @@ def load_data(name: str, path: str, freq: int = 0, start: str = "",
     try:
         _lane_now = _sess.declare_lane(name, lane)
         _pur_now = _sess.declare_purpose(name, purpose)
+        _ck_now = _sess.declare_checkpoint(name, checkpoint)
     except ValueError as e:
         return str(e)
     from . import raw
@@ -1219,7 +1239,7 @@ def write_specs(name: str, out_dir: str = "", overwrite: bool = False) -> str:
 
 @mcp.tool()
 def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
-             route: str = "U") -> str:
+             route: str = "U", checkpoint: bool | None = None) -> str:
     """N0 — Start a session from the univariate models: one fue file per series.
 
     `paths_json` is a JSON list of paths to fue files — `.pre` (optima, from art
@@ -1238,6 +1258,11 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
     the first question and recorded at N0. Optional here; N1c (prepare_vec)
     inherits it instead of asking again. It decides the role of the yardstick
     for a VEC (rule 9).
+    `checkpoint`: the stop at the univariate base (run_gate), in BOTH lanes:
+    the models, where they come from and the gate, before any system is
+    built. On by default; False skips it in the autonomous lane (an
+    unattended run), and the hand-over says nobody saw the base. None keeps
+    what the session has.
     `route`: "U" (default) -- each univariate model stays on the diagonal and
     estimate adds the cross terms (Jenkins and Alavi); or "V" -- the vector
     first (Tiao and Box) THROUGH THE SAME GATE: the univariate models are the
@@ -1254,6 +1279,7 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
     try:
         _lane_now = _sess.declare_lane(name, lane)
         _pur_now = _sess.declare_purpose(name, purpose)
+        _ck_now = _sess.declare_checkpoint(name, checkpoint)
     except ValueError as e:
         return str(e)
     try:
@@ -1280,7 +1306,7 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
         txt += "\n\n" + "\n".join("! " + n for n in _notas)
     s.guion.add("N0", "load_pre", {"files": len(paths), "lane": _lane_now,
                                    "purpose": _pur_now, "order": _names(s),
-                                   "route": rt},
+                                   "route": rt, "checkpoint": _ck_now},
                 f"{len(paths)} series: {', '.join(_names(s))} (route {rt})")
     nd = sum(int(x.model.d or 0) == 1 for x in s.series)
     coint = ("\n\nTwo or more series have d = 1: after the gate and the canonical "
@@ -1363,26 +1389,33 @@ def run_gate(name: str) -> str:
             + ", ".join(built) + ". The gate certifies the cast, not the models."
             if built else "")
     nd = sum(int(x.model.d or 0) >= 1 for x in s.series)
-    nxt = ("Next: canonical_analysis — "
-           f"{nd} series are differenced, and Box and Tiao's reading of the levels "
-           "says whether they need every difference jointly; then N1c, the "
-           "cointegration question (prepare_vec: the rank by drvec's bootstrap), or "
-           "identify_cross."
-           if nd >= 2 else "Next: identify_cross.")
+    q_ = f'name="{name}"'
+    opts = []
+    if nd >= 2:
+        opts.append((f"N1b — the canonical analysis of the levels: {nd} series are "
+                     "differenced, and Box and Tiao's reading says whether they need every "
+                     "difference jointly (then N1c, the cointegration question)",
+                     f"canonical_analysis({q_})"))
     if _engine_v(s):
+        opts.append(("N2 (route V) — Tiao and Box's M(l) and the whole matrices: route V "
+                     "reads the vector", f"identify_matrices({q_})"))
         prov += ("\n\nRoute V (the engine's): this gate is the same as route U's -- the "
                  "univariate models are the yardstick and give the mean, the deterministic "
                  "terms and the stationary series. Past it, estimate(p, q) replaces each "
                  "series' regular ARMA by a free AR(p)/MA(q); its seasonal and "
                  "fixed-frequency factors multiply its whole row.")
-    if _engine_v(s):
-        nxt = ("Next: canonical_analysis (the levels) if two or more series are "
-               "differenced, then identify_matrices -- Tiao and Box's M(l) and the "
-               "whole matrices: route V reads the vector.")
+    else:
+        if nd >= 2:
+            opts.append(("N1c — the cointegration question (the rank by drvec's bootstrap)",
+                         f"prepare_vec({q_})"))
+        opts.append(("N2 — the cross identification: the CCFs of the univariate innovations",
+                     f"identify_cross({q_})"))
     gt = evidence.gate_text(s.gate)
     if built:
         gt = gt.replace("the base is the analysts' models", "the base is the models in the files")
-    return gt + prov + "\n\n" + nxt
+    from . import package as _pk
+    return _pk.base_envelope(s, name, gt, opts, checkpoint=_sess.declare_checkpoint(name, None),
+                             notes=[p.strip() for p in prov.split("\n\n") if p.strip()])
 
 
 # --------------------------------------------------------------------------- #
@@ -2646,10 +2679,16 @@ def impulse_response(name: str, horizon: int = 12, bands: bool = True,
         resp = _rs.responses(L, int(horizon), b, levels, sc, ndraws)
     except ValueError as e:
         return f"{e}"
+    from . import package as _pk
+    try:
+        _dg = _pk.irf_digest(_names(s), resp[0], resp[1], resp[2], resp[3], int(horizon))
+    except Exception:                                     # noqa: BLE001
+        _dg = ""
     s.guion.add("N6", "impulse_response",
                 {"horizon": horizon, "bands": b is not None, "model": _desc(s.current),
                  **({"levels": True} if levels else {}),
-                 **({"scale": scale} if sc else {})},
+                 **({"scale": scale} if sc else {}),
+                 **({"digest": _dg} if _dg else {})},
                 "Cholesky, files order", kind="VARMA")
     return evidence.irf_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why,
                              resp=resp, units=_rs.units_line(L, _names(s)))
@@ -2748,8 +2787,16 @@ def variance_decomposition(name: str, horizon: int = 12, bands: bool = True,
     except Exception as e:
         return f"{e}"
     b, why = _bands(s, int(horizon), bands, ndraws)
+    from . import package as _pk
+    try:
+        from drvarma.irf import fevd as _fevd
+        _dg = _pk.fevd_digest(_names(s), _fevd(r.phi, r.theta, r.sigma, int(horizon)),
+                              int(horizon))
+    except Exception:                                     # noqa: BLE001
+        _dg = ""
     s.guion.add("N6", "variance_decomposition", {"horizon": horizon, "bands": b is not None,
-                                                 "model": _desc(s.current)},
+                                                 "model": _desc(s.current),
+                                                 **({"digest": _dg} if _dg else {})},
                 "Cholesky, files order", kind="VARMA")
     return evidence.fevd_text(r.phi, r.theta, r.sigma, _names(s), int(horizon), b, why)
 
@@ -3310,6 +3357,8 @@ def export_guion(name: str, save: bool = True, html: bool = True) -> str:
     art's style: the steps in a table, a section per node with the evidence,
     the decisions highlighted (who decided, what was set aside) and the
     figures drawn at each step (they are saved in the session folder's figs/).
+    The page opens with the hand-over package: the models, the yardstick,
+    what the model says, the decisions, the caveats.
     """
     s = _sess.get(name)
     txt = s.guion.render()
@@ -3317,7 +3366,9 @@ def export_guion(name: str, save: bool = True, html: bool = True) -> str:
         try:
             txt += f"\n\nSaved to {s.guion.save()}"
             if html:
-                txt += f"\nHTML: {s.guion.save_html()}"
+                from . import status as _st
+                front = _st.hand_over(s, name, _desc, _vec_desc)[0]
+                txt += f"\nHTML: {s.guion.save_html(front=front)}"
         except OSError as e:
             txt += f"\n\n(not saved: {e})"
     return txt

@@ -2,6 +2,27 @@
 
 ## 0.2.5 — unreleased
 
+**The packages: the univariate base and the hand-over.** sima was unbalanced
+against art's lanes in how it packs the information (`sima.package`).
+- `run_gate` answers with the univariate base as one package: each series'
+  model as its file carries it (Box-Jenkins notation, interventions dated),
+  where it comes from (art's guion beside the file: the version, the lane,
+  why art kept it, its diagnosis, and whether the file was edited since),
+  the gate, and the order, purpose and route the system is built on.
+- It ends in the CHECKPOINT, in both lanes: the autonomous lane stops there
+  too, for the analyst to see the models before the system. A load with
+  `checkpoint=False` skips it (an unattended run), and the hand-over says
+  nobody saw the base.
+- `hand_over` is one package, the models first: the univariates and the
+  system adopted (its cross coefficients), the yardstick, what the model says
+  (the responses and the decomposition as read, kept in the guion), the
+  decisions with their reasons, the caveats, what was set aside, the figures.
+  The HTML guion opens with it.
+- The hand-over no longer says characterize's outliers are modelled nowhere
+  when the models come from art, which decided them; it lists art's own
+  caveats instead (a model delivered with a failed Q or JB, not the adopted
+  version, edited since). N0a is in the guion's nodes.
+
 **The autonomous trial run (25-nov-2026), what it found.** The US monetary VAR
 from raw data, the univariate models built in art's autonomous lane with
 `art_brief`.

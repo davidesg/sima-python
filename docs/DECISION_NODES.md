@@ -57,7 +57,7 @@ reason); route U, the ladder, unless the analyst asked for V.
 
 ---
 
-## N1 — The gate  · a STOP when it fails
+## N1 — The gate  · a STOP when it fails · the CHECKPOINT in both lanes
 
 `run_gate`: does the joint cast reproduce the univariate models? Not a node:
 **a failed gate stops the analysis** (rule 2) — it is a defect of the engine or
@@ -69,6 +69,18 @@ validated in art.
 **Guided:** offer to go back to art first. **Autonomous:** go on, and write
 down that the file moved and that its model is not validated here; the
 hand-over lists it among the caveats.
+
+**The checkpoint (both lanes).** When the gate passes, `run_gate` answers with
+the univariate base as one package (`sima.package`): each series' model as its
+file carries it, where it comes from (art's guion beside the file: the
+version, the lane, why art kept it, its diagnosis, whether the file was edited
+since), the gate, and what the system is about to be built on — the order,
+the purpose, the route. It ends in the checkpoint, `⏸ Checkpoint`, which the
+lane filter does not replace: **the autonomous lane stops here too**, because
+everything after inherits these models and this is the last point where
+taking one back to art is cheap (the autonomous trial run of 25/26-nov-2026).
+A load with `checkpoint=False` skips it for an unattended run; the hand-over
+then says that nobody saw the base.
 
 ## N1b — The canonical analysis · not a node
 
@@ -279,6 +291,7 @@ nodes on the same univariate models, through the same gate:
 | where | the stop |
 |---|---|
 | N1 | the gate fails |
+| N1 | the checkpoint: the univariate base, seen by the analyst (both lanes; `checkpoint=False` skips it) |
 | C1 | no finished bootstrap: no rank, no β, no equilibrium |
 | C1 | the model under H0 is not I(1, r) |
 | C3 | weak exogeneity holds: the conditional model is mtram's |

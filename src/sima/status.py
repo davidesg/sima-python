@@ -159,7 +159,29 @@ def caveats(s, desc=None):
         elif path.lower().endswith(".inp"):
             out.append(f"{x.name}: a specification (.inp), re-estimated at the load; its "
                        "univariate model was not validated in art.")
+        else:
+            from .package import provenance as _pv
+            try:
+                _c = _pv(x)[1]
+            except Exception:                                # noqa: BLE001
+                _c = None
+            if _c:
+                out.append(f"{x.name}: {_c}.")
+    from . import session as _ss
+    if s.lane == "autonomous" and not _ss._CHECKPOINTS.get(s.name, True):
+        out.append("The checkpoint at the univariate base was skipped (checkpoint=False): "
+                   "nobody saw the models before the system was built on them.")
+    built = set()
+    for x in s.series:
+        try:
+            with open(getattr(x, "path", "") or "") as fh:
+                if PROVENANCE in fh.read():
+                    built.add(x.name)
+        except OSError:
+            pass
     for nm, k, dates in _outliers(s):
+        if nm not in built:          # a model from art: its outliers were decided there
+            continue
         out.append(f"{nm}: characterize flagged {k} outlier(s) ({dates}), modelled nowhere"
                    + ": the models built from the raw data carry no interventions"
                    + (", and on route V the outliers stay in the system's dynamics."
@@ -238,23 +260,35 @@ def _final_on_other(s, desc=None):
 
 
 def hand_over(s, name, desc, vec_desc):
+    """The hand-over as one package (sima.package): the models first, then the
+    yardstick that decided, what the model says, the decisions with their
+    reasons, the caveats, what was set aside, and the record."""
+    from . import package as P
     ad = _desc_adopted(s, desc, vec_desc)
-    L = [f"# The hand-over — {name}", "", "## The result", ""]
+    a = s.adopted
+    L = [f"# The hand-over — {name}", ""]
     if not ad:
-        L += ["NOTHING ADOPTED: the analysis is not closed. Adopt a model, or the "
-              f'univariates, with its reason: adopt(name="{name}", model="...", why="...").']
+        L += ["**NOTHING ADOPTED: the analysis is not closed.** Adopt a model, or the "
+              f'univariates, with its reason: adopt(name="{name}", model="...", why="...").', ""]
     else:
         L.append(f"Adopted: **{ad}**.")
         why = [e for e in s.guion.entries if e.tool == "adopt"]
         if why:
             L.append(f"Why (step {why[-1].n}): {why[-1].evidence}")
-        if s.adopted[0] == "UNIV":
+        if a[0] == "UNIV":
             L.append("No system beat the univariate models where it matters: that is the "
                      "finding, stated plainly (rule 1).")
+        L.append("")
+    L += ["## 1 · The models", "", "### The univariate models (each series' yardstick)", ""]
+    L += P.models_block(s.series, why=False)
+    if a and a[0] == "VARMA":
+        L += ["", "### The system adopted", ""] + P.system_block(s, a[1], desc)
+    elif a and a[0] == "VEC":
+        L += ["", "### The system adopted", "", ad]
     ys = _yardstick_lines(s)
-    L += ["", "## The yardstick that decided it", ""]
+    L += ["", "## 2 · The yardstick that decided it", ""]
     L += ys or ["NOT EVALUATED: rule 1 needs the yardstick (evaluate) before a system is kept."]
-    if ys and s.adopted and s.adopted[0] == "VARMA":
+    if ys and a and a[0] == "VARMA":
         import re
         m = re.search(r"lower RMSE in (\d+) of (\d+) cells", ys[-1])
         if m and 2 * int(m.group(1)) <= int(m.group(2)):
@@ -263,13 +297,22 @@ def hand_over(s, name, desc, vec_desc):
                      "most of them: keeping it needs the reason that the cells where it gains "
                      "are the ones the analysis is about — and that reason is in the adoption "
                      "above, or it is missing.")
+    use = P.use_block(s, desc)
+    L += ["", "## 3 · What the model says", ""]
+    L += use or ["Nothing read off a model yet (impulse_response, variance_decomposition)."]
+    dec = P.decisions_block(s)
+    L += ["", "## 4 · The decisions, with their reasons", ""]
+    L += dec or ["None recorded with record_decision: the path below has them as steps."]
     cv = caveats(s, desc)
-    L += ["", "## The caveats that stay open", ""] + ([f"- {c}" for c in cv] or ["None recorded."])
+    L += ["", "## 5 · The caveats that stay open", ""] + ([f"- {c}" for c in cv] or ["None recorded."])
     if s.abandoned:
-        L += ["", "## Set aside", ""] + [
+        L += ["", "## 6 · Set aside", ""] + [
             "- " + (desc(k) if kd == "VARMA" else vec_desc(s.vec_fits[k])) + f": {why}"
             for kd, k, why in s.abandoned]
-    L += ["", "## The record", "",
-          f'The path, node by node: `export_guion(name="{name}")` (JSON and HTML, next to '
-          "the files)."]
+    figs = P.figures_block(s)
+    L += ["", f"## {7 if s.abandoned else 6} · The record", ""]
+    if figs:
+        L += ["The figures:"] + [f"- {f}" for f in figs] + [""]
+    L.append(f'The path, node by node: `export_guion(name="{name}")` (JSON and HTML, next to '
+             "the files; the HTML opens with this hand-over).")
     return "\n".join(L), ad, len(cv)
