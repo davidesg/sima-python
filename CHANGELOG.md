@@ -2,6 +2,20 @@
 
 ## 0.2.5 — unreleased
 
+**The iteration in one answer (package B).** `estimate` answers as art's
+iteration: the specification, the estimated model, the diagnosis and the
+reformulation, always stated (an intervention in art for a large residual, a
+model for the residuals, simplify, a restart; or none: to the yardstick). In
+the guided lane the diagnosis' figures come with it; in the autonomous lane
+they are written to disk only. A fit that is not an optimum is not diagnosed.
+- The residual diagnosis no longer reads one portmanteau cell at 5 % as
+  structure (observation t of the trial run): the correlations beyond the
+  band must exceed chance (binomial), or a cell must stand beyond Bonferroni;
+  each cell's degrees of freedom discount the system's p + q.
+- `structure`'s refits run in parallel, one process each (`sima.parallel`,
+  `SIMA_WORKERS`, default cores - 1), and fits already made are reused
+  (observation i).
+
 **The packages: the univariate base and the hand-over.** sima was unbalanced
 against art's lanes in how it packs the information (`sima.package`).
 - `run_gate` answers with the univariate base as one package: each series'

@@ -40,7 +40,8 @@ def test_where_lists_the_open_decision_with_its_options(ja):
     w = _fn(M.where)(ja)
     assert "N2 identify_cross — decided (A)" in w
     assert "N3 estimate — OPEN" in w
-    assert '**A)** `check_residuals(name="wh")`' in w
+    assert '`art: suggest_intervention_form(...)`' in w      # the reformulation, first
+    assert '`evaluate(name="wh", p=1, q=0, estwin=...)`' in w
     assert "decide the open decision of N3" in w
 
 

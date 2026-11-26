@@ -60,10 +60,11 @@ def test_every_option_carries_a_call_to_a_tool_that_exists(ja, tool):
 
 def test_estimate_leads_to_the_residuals_before_the_yardstick(ja):
     """The residuals of the estimated model — each series' diagnosis and the CCF
-    of every pair — come before N5, not after (it used to say «Next: evaluate»)."""
+    of every pair — come before N5, not after (it used to say «Next: evaluate»).
+    Since package B they come in the same answer, before the decision."""
     t = ja["estimate"]
     assert "Next: evaluate" not in t
-    assert t.index("check_residuals(") < t.index("evaluate(")
+    assert t.index("### The diagnosis") < t.index(E.DECISION) < t.index("evaluate(")
 
 
 def test_the_conclusions_are_readings_not_a_recommendation(ja):

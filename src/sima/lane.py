@@ -177,8 +177,11 @@ def _finish(fn, args, kw, out, name, before, n0, sessions):
     node = evidence = None
     if s is not None:
         new = s.guion.entries[n0:] if s is before else s.guion.entries
+        # the decision belongs to the tool's own step (estimate records N3 and
+        # then its diagnosis, N4: the iteration's decision is the estimate's)
+        own = next((e for e in reversed(new) if e.tool == fn.__name__), new[-1]) if new else None
         if new:
-            node, evidence = new[-1].node, new[-1].evidence
+            node, evidence = own.node, own.evidence
         # the bookkeeping never costs the answer: a failure here is the
         # record's, and the tool's result goes out as it is
         try:
@@ -187,7 +190,7 @@ def _finish(fn, args, kw, out, name, before, n0, sessions):
                 text = "\n".join(t for _, t in _texts(out)[1])
                 from .package import CHECKPOINT
                 if _env.STOP in text or CHECKPOINT in text:
-                    _dec.open_pending(new[-1], text)
+                    _dec.open_pending(own, text)
             note = _dec.adoption_note(s, fn.__name__)
             if note:
                 out = _prepend(out, note)

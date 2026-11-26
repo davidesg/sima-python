@@ -36,10 +36,10 @@ def test_the_path_n0_to_n6(trio_json, tmp_path):
     assert "Cholesky" in M.impulse_response("t", 4)
     assert "IPC_DE" in M.variance_decomposition("t", 6)
     s = session.get("t")
-    assert [e.node for e in s.guion.entries] == ["N0", "N1", "N2", "N3", "N6", "N6", "N6"]
+    assert [e.node for e in s.guion.entries] == ["N0", "N1", "N2", "N3", "N4", "N6", "N6", "N6"]
     path = s.guion.save(str(tmp_path / "g.json"))
     from sima.guion import load
-    assert len(load(path).entries) == 7
+    assert len(load(path).entries) == 8
 
 
 def test_n5_the_yardstick(ext_json):

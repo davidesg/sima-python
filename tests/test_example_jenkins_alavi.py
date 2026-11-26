@@ -19,7 +19,8 @@ def _fn(tool):
 def test_the_example_files_and_the_manuals_numbers(tmp_path):
     _fn(M.load_pre)("ex", json.dumps(FILES))
     assert "GATE: PASSED" in _fn(M.run_gate)("ex")
-    t = _fn(M.plot_identification)("ex", method=2, path=str(tmp_path / "i.png"))[0].text
+    t = _fn(M.plot_identification)("ex", method=2, path=str(tmp_path / "i.png"))[0]
+    t = getattr(t, "text", t)                    # a str when the figures are off
     assert "+1    -0.36*    -0.39*" in t and "S* ( 21 ) = 45.7" in t
     _fn(M.estimate)("ex", 2, 0, False, links="MUSKRAT<-MINK, MINK<-MUSKRAT",
                     start="preliminary")
