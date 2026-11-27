@@ -64,6 +64,34 @@ def _fit(spec):
     return L
 
 
+def job_structure_fits(job, folder):
+    """The job behind `structure` (BUG-0021): its restricted fits, in
+    parallel, in a detached process that outlives the MCP server and its
+    client. The fitted Ladders go to fits.pkl; result.json holds the logL of
+    each, for the record. A fit that fails fails the job (not cached)."""
+    import pickle
+    from . import jobs
+    with open(job["extra_files"][0], "rb") as fh:       # written by structure
+        specs = pickle.load(fh)
+    tk = jobs.Ticks(folder, len(specs), "restricted fits")
+    w = workers(len(specs))
+    out = []
+    for k in range(0, len(specs), w):            # a wave per round: the progress
+        out += fit_many(specs[k:k + w], w)
+        for _ in specs[k:k + w]:
+            tk()
+    bad = [L for L in out if isinstance(L, Exception)]
+    if bad:                      # a failed job is not cached: the same call runs again
+        raise RuntimeError(f"a restricted fit failed: {bad[0]}")
+    fits = out
+    tmp = os.path.join(folder, "fits.pkl.part")
+    with open(tmp, "wb") as fh:
+        pickle.dump(fits, fh)
+    os.replace(tmp, os.path.join(folder, "fits.pkl"))
+    return {"tool": "structure_fits", "n": len(specs), "workers": w,
+            "logL": [float(L.result.logL) for L in fits], "files": ["fits.pkl"]}
+
+
 def _run_one(specs, tmp):
     """Some fits in a fresh interpreter (`python -m sima.parallel IN OUT`), one
     after another (the interpreter's start, ~1 s, is paid once): no

@@ -1310,6 +1310,10 @@ def load_pre(name: str, paths_json: str, lane: str = "", purpose: str = "",
         coint += ("\n\nROUTE V: the univariate models go through the gate as on route U; "
                   "past it estimate(p, q) fits the full VARMA(p, q), each series' regular "
                   "ARMA replaced by a free AR(p)/MA(q).")
+    from .provenance import engine_notice
+    _eng = engine_notice()
+    if _eng:
+        txt = _eng + "\n\n" + txt
     return (txt + coint + "\n\n" + _order_text(s) + "\n\nNext: run_gate — the univariate "
             "base has to be certified before anything is built on it.\n" + _lane_line(name)
             + ("\nPurpose: " + _pur_now + " (recorded at N0; N1c inherits it)." if _pur_now else ""))
@@ -1792,7 +1796,11 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
         if s.route == "V" and cross == "residual":
             return ('cross="residual" is Jenkins and Alavi\'s model for UNIVARIATE '
                     "residuals; route V has none. Use the default.")
+        import time as _time
+        _t0 = _time.time()
         L, path_note = _fit_paths(s, key, start)
+        if getattr(L, "sima_seconds", None) is None:     # what structure's cost reads
+            L.sima_seconds = _time.time() - _t0
     except Exception as e:
         s.guion.add("N3", "estimate", {"p": p, "q": q, "diagcov": diagcov, "links": lk,
                                        "cross": cross, "indices": ", ".join(map(str, ech))},
@@ -1843,7 +1851,21 @@ def estimate(name: str, p: int = 0, q: int = 0, diagcov: bool = False,
                                    "indices": ", ".join(map(str, ech))},
                 f"logL {L.result.logL:.4f}, {L.result.npar} parameters;{lr}", reason,
                 kind="VARMA")
-    return _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech)
+    return _with_engine_notice(_estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech))
+
+
+def _with_engine_notice(out):
+    """The engine notice (BUG-0020) ahead of a tool's output, a text or a list
+    of contents whose first text it goes into."""
+    from .provenance import engine_notice
+    note = engine_notice()
+    if not note:
+        return out
+    if isinstance(out, str):
+        return note + "\n\n" + out
+    if isinstance(out, list):
+        return [note] + out
+    return out
 
 
 def _estimate_envelope(name, s, L, txt, p, q, diagcov, lk, cross, zs, ech):
@@ -1998,6 +2020,50 @@ def _fit_key(s, key):
     return s.fits[key]
 
 
+def _structure_job(s, name, todo, alpha, max_seconds, wait):
+    """structure's refits as a job (BUG-0021). -> (elapsed, workers) with the
+    fits in s.fits, or the text to return (running, failed)."""
+    import pickle
+    from . import jobs
+    specs = [_ladder_spec(s, k) for k in todo]
+    # the specs as they are (sets, tuples) in a pickle the job reads, named
+    # by its content: the job's key hashes it as an extra file. Absolute
+    # paths: the job runs from another folder.
+    import hashlib
+    import tempfile
+    specs = [((([os.path.abspath(f) for f in a[0]]),) + tuple(a[1:]), kw) for a, kw in specs]
+    blob = pickle.dumps(specs, protocol=4)
+    d = os.path.join(tempfile.gettempdir(), "sima_structure_specs")
+    os.makedirs(d, exist_ok=True)
+    spath = os.path.join(d, hashlib.sha256(blob).hexdigest()[:24] + ".pkl")
+    if not os.path.exists(spath):
+        with open(spath, "wb") as fh:
+            fh.write(blob)
+    try:
+        jid, state = jobs.submit("structure_fits", {"n": len(specs)}, s.files,
+                                 bootstrap=False, session=name, extra_files=[spath],
+                                 label=f"structure: {len(todo)} restricted fit(s)")
+    except Exception as e:                                   # noqa: BLE001
+        return f"The refits of structure could not be submitted: {e}"
+    st = jobs.wait(jid, 0 if state == "cached" else float(wait))
+    if st["status"] in ("failed", "cancelled"):
+        return (f"The refits of structure {st['status']}: {st.get('error') or ''} "
+                f"(folder {st['folder']}).")
+    if st["status"] != "done":
+        from .mcp_vec import _job_text
+        return _with_engine_notice(_job_text(
+            jid, state, st, f"structure ({len(todo)} restricted fits)",
+            f'structure(name="{name}", alpha={alpha:g}, max_seconds={float(max_seconds):g})'))
+    with open(os.path.join(st["folder"], "fits.pkl"), "rb") as fh:
+        fits = pickle.load(fh)
+    for k2, L2 in zip(todo, fits):
+        if isinstance(L2, str):
+            return f"A restricted fit failed: {L2}"
+        s.fits[k2] = L2
+    res = jobs.result(jid)
+    return st.get("elapsed", 0.0), res.get("workers", 1)
+
+
 def _lr(full, restr):
     from scipy.stats import chi2
     lr = max(0.0, 2.0 * (full.result.logL - restr.result.logL))
@@ -2074,7 +2140,8 @@ def simplify(name: str, t: float = 1.0) -> str:
 
 
 @mcp.tool()
-def structure(name: str, alpha: float = 0.05) -> str:
+def structure(name: str, alpha: float = 0.05, max_seconds: float = 600,
+              wait: float = 20) -> str:
     """N4t — Is the system simultaneous? (Tiao and Box 1981, §3.1, §5.2.) On
     the current fit: for each ordered pair, the LR test that series j does not
     enter series i's equation (all its cross AR and MA lags at zero); with up
@@ -2091,7 +2158,17 @@ def structure(name: str, alpha: float = 0.05) -> str:
     parallel, one process each (sima.parallel; SIMA_WORKERS, default cores -
     1): with 4 series and a VAR(1), ~20 fits that took ~12 minutes on one
     core (trial run, 25-nov-2026) take about that divided by the workers.
-    Say so before calling it."""
+    `max_seconds` (default 600): structure first predicts its cost from the
+    time the current fit took, and beyond the budget it does not start: it
+    says the prediction and how to run it anyway (max_seconds=0, no limit).
+    An MCP client gives up after minutes, and the server goes on computing
+    (BUG-0021). Say the cost to the analyst before calling it.
+
+    The refits run as a JOB (job_status, job_cancel), detached: they survive
+    the client's timeout and the server. structure waits up to `wait`
+    seconds (about 20); if they are not done it returns the job id and its
+    progress, and the same call again -- or job_result -- gives the tests
+    once they are."""
     import itertools
     s = _sess.get(name)
     try:
@@ -2133,14 +2210,35 @@ def structure(name: str, alpha: float = 0.05) -> str:
     from . import parallel as _par
     t0 = _time.time()
     nw = _par.workers(len(todo))
-    fitted = _par.fit_many([_ladder_spec(s, k) for k in todo], nw) if todo else []
-    for k2, L2 in zip(todo, fitted):
-        if isinstance(L2, Exception):
-            return f"A restricted fit failed: {L2}"
-        s.fits[k2] = L2
+    per = getattr(L, "sima_seconds", None)
+    if todo and per and max_seconds and float(max_seconds) > 0:
+        import math
+        # a restricted fit costs about what the current one did (measured on
+        # the US monetary VAR(1), 27-nov-2026: 28 s the fit, ~23 s each of the
+        # 36 refits on 3 processes, 279 s in all)
+        pred = math.ceil(len(todo) / nw) * per
+        if pred > float(max_seconds):
+            from .provenance import drvarma_backend
+            port = drvarma_backend() == "python"
+            return _with_engine_notice(
+                f"structure NOT STARTED: it would refit {len(todo)} model(s) by exact ML, "
+                f"about {pred / 60:.0f} minute(s) on {nw} process(es) (the current fit took "
+                f"{per:.0f} s{', on the pure-Python port' if port else ''}), over the "
+                f"budget max_seconds = {float(max_seconds):g}. An MCP client gives up "
+                "long before, and the computation would go on without it. Tell the "
+                "analyst the cost; to run it anyway: "
+                f'structure(name="{name}", alpha={alpha:g}, max_seconds=0)'
+                + (". First choice: install the compiled engine (above)." if port else "."))
+    if todo:
+        got = _structure_job(s, name, todo, alpha, max_seconds, wait)
+        if isinstance(got, str):
+            return got                       # still running, or failed: its text
+        elapsed, nw = got
+    else:
+        elapsed = 0.0
     allk = {kof(e) for _, _, e, _ in want if e}
     cost = (f"{len(todo)} refit(s) by exact ML on {nw} process(es) in "
-            f"{_time.time() - t0:.0f} s" + (f"; {len(allk) - len(todo)} already made, "
+            f"{elapsed:.0f} s" + (f"; {len(allk) - len(todo)} already made, "
                                             "reused" if len(allk) > len(todo) else ""))
     tests = {}
 
@@ -2173,7 +2271,7 @@ def structure(name: str, alpha: float = 0.05) -> str:
                 "no triangular ordering stands: feedback")
     rep = evidence.structure_report(f, name)
     head, _, rest = rep.partition("\n")
-    return f"{head}\n*({cost}.)*\n{rest}"
+    return _with_engine_notice(f"{head}\n*({cost}.)*\n{rest}")
 
 
 @mcp.tool()

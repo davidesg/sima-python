@@ -6,6 +6,15 @@ missing, in order:
 
 ## Next
 
+- [ ] **structure: seed each restricted refit from the unrestricted optimum**
+      (BUG-0021, measured 2026-11-27). On the US monetary VAR(1) each of the
+      36 refits costs about a whole fit (~23 s; 279 s in all on 3 processes);
+      skipping the gate, the diagonal and the Hessian saved only 9 %. The
+      optimisation is the cost, and the unrestricted optimum is close. It
+      changes the start, so the C's ladder needs it first (an option to start
+      from a given vector), its battery, then drvarma's port, then sima: the
+      golden rule. Also pending: a budget for `estimate`.
+
 - [x] **No feedback in a VEC: an LR on blocks of Gamma** (done 2026-10-24: drvec C 8626a2d -gzero, drvec-python 61cd4d8, sima 7da7dca test_restriction(gamma=); found in the shakedown
       of 0.2.0, 2026-10-23, Martín Manjón and Treadway 1997 on 1985–2008;
       the analyst calls it fundamental). With R30 and R3 weakly exogenous

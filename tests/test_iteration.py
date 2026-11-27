@@ -2,6 +2,7 @@
 the specification, the estimated model, the diagnosis and the reformulation,
 always stated; observation t of the trial run (one portmanteau cell is not
 structure); observation i (structure's refits in parallel)."""
+import pytest
 import tempfile
 import warnings
 
@@ -14,6 +15,13 @@ from sima import parallel
 from sima import session as S
 
 _fn = lambda f: getattr(f, "fn", f)                      # noqa: E731
+
+
+@pytest.fixture(autouse=True)
+def _jobs_aside(tmp_path, monkeypatch):
+    """structure's refits run as a job (BUG-0021): its folder out of tests/data."""
+    monkeypatch.setenv("SIMA_JOBS_DIR", str(tmp_path / "jobs"))
+    monkeypatch.setenv("SIMA_JOBS_HOME", str(tmp_path / "home"))
 
 
 def _ja(name, lane="guided"):
