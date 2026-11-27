@@ -586,9 +586,10 @@ def _selftest(job, folder):
 
 
 def _tools():
-    from . import vec
+    from . import parallel, vec
     return {"_selftest": _selftest, "rank_test": vec.job_rank_test,
-            "irf_bands": vec.job_irf_bands, "fit_cell": vec.job_fit_cell}
+            "irf_bands": vec.job_irf_bands, "fit_cell": vec.job_fit_cell,
+            "structure_fits": parallel.job_structure_fits}
 
 
 def run(folder):

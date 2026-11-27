@@ -357,6 +357,11 @@ def job_result(job_id: str) -> str:
                 f"({res['nfail']} failed), responses to k = {res['K']}. "
                 "impulse_response, variance_decomposition and their plots now draw them.\n"
                 + _prov_text(st, res))
+    if res.get("tool") == "structure_fits":
+        sess = st.get("session") or "?"
+        return (f"STRUCTURE'S REFITS (job {jid}): {res['n']} restricted fit(s) done. "
+                f'The tests: structure(name="{sess}") again reads them (they are not '
+                "refitted).\n" + _prov_text(st, res))
     if res.get("tool") == "fit_cell":
         return (f"SWEEP CELL (job {jid}): p = {res['p']}, case {res['case']}"
                 + (f", estwin {res['estwin']}" if res.get("estwin") else "")

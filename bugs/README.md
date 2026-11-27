@@ -4,7 +4,7 @@ In-repo bug tracker for **SIMA (sima-tseries)**.  One Markdown file per bug (`BU
 
 New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  A fix commit references the id, e.g. `fix(pipeline): BUG-0001 …`.
 
-**19 report(s), 0 open.**
+**21 report(s), 0 open.**
 
 | id | status | sev | component | title | fixed in |
 |----|--------|-----|-----------|-------|----------|
@@ -26,5 +26,7 @@ New report: `art-bug new` (or copy `TEMPLATE.md`).  Validate: `art-bug check`.  
 | [BUG-0017](BUG-0017-a-failing-cache-test-leaves-its-bootstrap-running.md) | fixed | low | tests | A cache test that fails leaves its bootstrap running, detached, with nothing to stop it | 0.2.5 |
 | [BUG-0018](BUG-0018-canonical-analysis-reads-the-levels-with-the-deterministic-terms-inside.md) | fixed | medium | evidence | canonical_analysis read the levels with each model's harmonics and interventions inside; in route U it inflated lam and the order by M(l), which went on to prepare_vec as p | 0.2.5 |
 | [BUG-0019](BUG-0019-estimate-reused-the-cached-fit-whatever-the-start-and-kept-a-fit-below-its-nested-model.md) | fixed | high | server | estimate reused the cached fit whatever the start, so the second path never ran, and it kept a VAR(2) below the VAR(1) it nests as if it were an optimum | 0.2.5 |
+| [BUG-0020](BUG-0020-no-dice-que-drvarma-calcula-en-python.md) | fixed | high | server | When drvarma computes on its pure-Python port no tool says so — the warning goes to the server's stderr, and the provenance records neither the Python version nor why the engine did not load | unreleased (after 0.2.4) |
+| [BUG-0021](BUG-0021-estimate-y-structure-sin-limite-de-tiempo.md) | fixed | medium | server | estimate and structure run with no time budget, no progress and no estimate of their cost; structure takes ~7 minutes on a four-series VAR(1) even with the engine, and a client that gives up loses the session | unreleased (after 0.2.4) |
 | [BUG-0015](BUG-0015-the-job-key-includes-the-drvarma-version.md) | wontfix | medium | jobs | The key of a job carries the version of drvarma (and of fue) — every drvarma release invalidates the example caches | by design (0.2.5) |
 

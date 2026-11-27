@@ -71,6 +71,60 @@ def drvarma_backend():
         return "unknown"
 
 
+def python_string():
+    """The interpreter, with what decides whether a binary wheel exists for it
+    (BUG-0020): version, implementation, bitness, free-threaded."""
+    bits = "64-bit" if sys.maxsize > 2**32 else "32-bit"
+    ft = ""
+    try:
+        if not sys._is_gil_enabled():                     # 3.13+ free-threaded
+            ft = ", free-threaded"
+    except AttributeError:
+        pass
+    return f"{_pf.python_implementation()} {sys.version.split()[0]} ({bits}{ft})"
+
+
+def _load_error(module):
+    try:
+        import importlib
+        return importlib.import_module(module).engine_load_error()
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+def _backend(module):
+    try:
+        import importlib
+        return importlib.import_module(module).engine_backend()
+    except Exception:                                        # noqa: BLE001
+        return "unknown"
+
+
+def engine_notice():
+    """A block for the tools' output when drvarma or fue computes on its
+    pure-Python port, or "" (BUG-0020). Their own warning is a RuntimeWarning
+    on stderr, which an MCP client shows to nobody; in the P08 five groups
+    waited hours on the port without knowing it, and two left sima."""
+    import os
+    ports = [(eng, _load_error(f"{eng}._engine"))
+             for eng in ("drvarma", "fue") if _backend(f"{eng}._engine") == "python"]
+    if not ports:
+        return ""
+    asked = [e for e, _ in ports if os.environ.get(f"{e.upper()}_NO_ENGINE")]
+    names = " and ".join(e for e, _ in ports)
+    why = "; ".join(f"{e}: {err or 'the compiled engine is not installed'}" for e, err in ports)
+    out = (f"! ENGINE: {names} compute{'s' if len(ports) == 1 else ''} on the "
+           f"pure-Python port, not on the compiled engine ({python_string()}; {why}).")
+    if len(asked) == len(ports):
+        return out + " Asked for with the *_NO_ENGINE variable."
+    return out + (
+        " Same numbers, but 20-250 times slower: a VAR(1) of four series can take more "
+        "than an hour and structure longer. Tell the analyst NOW, before any long "
+        "fit. The usual cause is a Python without binary wheels (a new CPython, a "
+        "free-threaded or a 32-bit build): reinstall the suite on a supported one, "
+        "e.g. `uv tool install --python 3.13 --reinstall atsw`.")
+
+
 def eigensolver():
     try:
         from drvec._gsl import backend
@@ -86,7 +140,12 @@ def base():
         _BASE = {"sima": _version("sima-tseries"), "drvarma": _version("drvarma"),
                  "fue": _version("fue"), "drvec": _version("drvec"),
                  "backend": f"drvarma engine {drvarma_backend()}, eigensolver {eigensolver()}",
-                 "platform": platform_string(), "tier": platform_tier()}
+                 "platform": platform_string(), "tier": platform_tier(),
+                 "python": python_string()}
+        for eng in ("drvarma", "fue"):           # why an engine did not load (BUG-0020)
+            err = _load_error(f"{eng}._engine")
+            if err:
+                _BASE[f"{eng}_load_error"] = err
     return dict(_BASE)
 
 
@@ -111,6 +170,8 @@ def line(p):
     bits = [f"{k} {p[k]}" for k in ("sima", "drvarma", "fue", "drvec") if p.get(k)]
     out = "PROVENANCE: " + ", ".join(bits) + f"; {p.get('backend', '')}; " \
           f"{p.get('platform', '')} (tier {p.get('tier', '')})"
+    if p.get("python"):
+        out += f"; Python {p['python']}"
     if p.get("engine"):
         out += f"; bootstrap engine {p['engine']}"
     if "seed" in p:
